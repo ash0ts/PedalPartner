@@ -5,7 +5,7 @@
 const $=id=>document.getElementById(id);
 const STATE_FIELDS=['active_ms','session_ms','xp','level','fragments','goal_minutes','running','calibrated','active','tuning','calibrating','gate','rms','peak','stage','saved_slot','sequence','power','pitch_midi','pitch_cents','pitch_valid','uncertain','hz','probability','now_ms'];
 const BOOLS=new Set(['running','calibrated','active','tuning','calibrating','power','pitch_valid','uncertain']);
-const POSES=['idle','riff','sleep','blink','riff2','cheer','listen','levelup'];
+const POSES=['idle','blink','strum','cheer','levelup','listen','sleep'];   // order of art/vex/manifest.json animations
 const BLOCK=128,RATE=44100,BLOCK_MS=1000*BLOCK/RATE;
 const sim={now:0,stage:4,speed:1,paused:false,raw:{mode:0,quest:0,foot:0},inject:{rms:.1,peak:.3,hz:0,prob:.99,on:true},
  source:null,audioClock:0,carry:0,lastDraw:-1000,dirty:true,lastNotice:'',notices:[],telemetry:[],record:[],recordStart:0,span:null,
@@ -191,7 +191,7 @@ let lastT=performance.now();
 function frame(t){
  const real=Math.min(t-lastT,250);lastT=t;
  if(!sim.paused){sim.carry+=real*sim.speed;let n=Math.floor(sim.carry);sim.carry-=n;if(n>30000)n=30000;for(let i=0;i<n;i++)step();if(n)sim.dirty=true;}
- if(sim.dirty&&(!$('cadence').checked||sim.now-sim.lastDraw>=200||sim.now<sim.lastDraw)){sim.lastDraw=sim.now;sim.dirty=false;M._vex_render(sim.now);ctx.putImageData(image,0,0);}
+ if(sim.dirty&&(!$('cadence').checked||sim.now-sim.lastDraw>=sim.displayMs||sim.now<sim.lastDraw)){sim.lastDraw=sim.now;sim.dirty=false;M._vex_render(sim.now);ctx.putImageData(image,0,0);}
  updatePanels();persistIfChanged();requestAnimationFrame(frame);
 }
 function togglePause(){sim.paused=!sim.paused;$('pause').textContent=sim.paused?'Run':'Pause';$('pause').classList.toggle('on',sim.paused);}
@@ -232,6 +232,7 @@ VexModule().then(mod=>{
  M=mod;audioPtr=M._vex_audio_ptr();const sp=M._vex_store_ptr();storeBytes=M.HEAPU8.subarray(sp,sp+128);
  const fp=M._vex_frame_ptr();image=new ImageData(new Uint8ClampedArray(M.HEAPU8.buffer,fp,240*240*4),240,240);
  ctx=$('screen').getContext('2d');
+ sim.displayMs=M._vex_display_ms();$('cadence-ms').textContent=String(sim.displayMs);
  sim.speed=Number(localStorage.getItem('vex.speed')||'1');$('speed').value=String(sim.speed);
  if(localStorage.getItem('vex.cadence')==='0')$('cadence').checked=false;
  restoreStore();storeSig=-1;boot();wire();closeSpan();

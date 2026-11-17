@@ -8,7 +8,7 @@
   "components": 72,
   "mesh_manifest_sha256": "9892e92027f5ad46266fef025fb287250116e17ded1fcb549ff4092b77a6c13d",
   "screen": "assets/screen.png",
-  "screen_sha256": "099df3e64d4585161e9340dbd6e64165705d3cb719458dee97c4ee382312a3d2",
+  "screen_sha256": "a84b4f57b1ef2174bc19e25ede2741e9ddeb7ed97eb69e2af1991333cef8a617",
   "scope": "Existing STEP geometry; studio materials/lighting, existing decal labels and shared UI texture. Proposed finish, not a photograph or physical validation.",
   "generative_imagery": false,
   "outputs": [
@@ -16,15 +16,15 @@
       "path": "assets/marketing/vex-hero.jpg",
       "width": 1920,
       "height": 1080,
-      "bytes": 136934,
-      "sha256": "4e12b274b32d694e9f535b43745b922eec573e4ceeab29eb65044baa1a2fa498"
+      "bytes": 136709,
+      "sha256": "5edb74cfa2813869f7091be1bdc853756f97881ead63125917047af0218c67f1"
     },
     {
       "path": "assets/marketing/vex-social.jpg",
       "width": 1200,
       "height": 630,
-      "bytes": 69696,
-      "sha256": "042e0eb46208d2ca73960ea5876aad372cef2d96f7c43542669d0a030cc60375"
+      "bytes": 69631,
+      "sha256": "dd4b316e2f222373f028689a1117671b39f8383ecdda423c78f07e02439a6957"
     }
   ],
   "reproduce": "make hero",

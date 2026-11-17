@@ -108,8 +108,14 @@ def cad_top(c):
  arrow(c,ox,oy,ox+44,oy,RED);arrow(c,ox,oy,ox,oy+44,RED);text(c,'+X',ox+47,oy-4,9);text(c,'+Y rear',ox-24,oy+48,9)
  text(c,'86 mm',ox-18,oy-73*scale-20,10);text(c,'146 mm',ox+43*scale+8,oy,10)
  text(c,'Front / foot',ox-30,oy-73*scale-39,9,MUTED)
+def sprite_frame(name,index):
+ """One 32x32 frame from an art/vex strip, upscaled without smoothing on the screen background."""
+ from PIL import Image
+ strip=Image.open(R/'art/vex'/f'{name}.png').convert('RGBA');frame=strip.crop((index*32,0,index*32+32,32))
+ im=Image.new('RGBA',(32,32),(24,36,40,255));im.alpha_composite(frame);return im.resize((128,128),Image.NEAREST)
 def ui(c):
- for i,n in enumerate(['idle','riff','sleep']):imagebox(c,R/'assets'/f'vex_{n}.png',355+i*145,250,140,140);center(c,n.upper(),425+i*145,225,10,RED,'VexBold')
+ for i,(n,idx,label) in enumerate([('idle',0,'IDLE'),('strum',1,'STRUM'),('sleep',0,'SLEEP')]):
+  im=sprite_frame(n,idx);iw,ih=im.size;c.drawImage(ImageReader(im),355+i*145+6,256,iw,ih,mask='auto');center(c,label,425+i*145,225,10,RED,'VexBold')
  box(c,'Participation XP = active time<br/>Quest reward = one fragment per completed session',374,143,405,55)
 
 def exploded_key(c):
@@ -232,7 +238,7 @@ add('Assembly 5: harness, close and test','Finish with service access and repeat
  ('3 / CLOSE','Inspect from every side while lowering the lid. If it resists, reopen and find the obstruction. Tighten4M3x10 case screws evenly; do not force the printed posts.'),
  ('4 / ACCEPT','Run the CSV acceptance log: electrical, software, optical, mechanical, thermal and rig-noise checks. Keep the Lock In/G3S tuner until the new tuner passes reference tests.')],fig='05_loaded',check='A valid STEP does not establish real wiring clearance or foot strength. The mentor signs the physical acceptance results.')
 add('Develop it after the first working build','Small code changes with observable results',[
- ('1 / PERSONALITY','Edit tools/make_sprites.py; regenerate sprites.h, then run make sim-build and tools/render_screen.py. Shared ui.h renders the pet on desktop and device.'),
+ ('1 / PERSONALITY','Edit the PNG/JSON art in art/ and run tools/make_sprites.py to regenerate the headers, then make sim-build and tools/render_screen.py. Shared ui.h renders the pet on desktop and device.'),
  ('2 / A NEW REWARD','Change quest rules in core.h. Add a test proving the reward happens once at the threshold and persists after save/restore. Run tests before uploading.'),
  ('3 / BETTER CHALLENGES','Add rhythm/bend scoring as separate exercises with known targets. Keep participation XP independent. Test noise, chords and wrong notes before trusting scores.'),
  ('4 / HARDWARE NEXT','Larger screen, dome, MIDI or9V power each needs a new wiring/CAD revision. Freeze the working R1 files and change one subsystem at a time.')],diagram='ui',check='No new feature should silently change pin ownership, saved-record layout or the meaning of a practice score.')

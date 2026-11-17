@@ -1,0 +1,48 @@
+{
+ "_comment": "Order defines the firmware enum. frames are 32x32 cells left to right in <pose>.png; frame_ms must be a multiple of DISPLAY_MS (config.h). loop=false plays once from the event that triggered it.",
+ "size": 32,
+ "animations": [
+  {
+   "name": "idle",
+   "frames": 2,
+   "frame_ms": 1000,
+   "loop": true
+  },
+  {
+   "name": "blink",
+   "frames": 3,
+   "frame_ms": 100,
+   "loop": false
+  },
+  {
+   "name": "strum",
+   "frames": 4,
+   "frame_ms": 100,
+   "loop": true
+  },
+  {
+   "name": "cheer",
+   "frames": 2,
+   "frame_ms": 200,
+   "loop": true
+  },
+  {
+   "name": "levelup",
+   "frames": 2,
+   "frame_ms": 200,
+   "loop": true
+  },
+  {
+   "name": "listen",
+   "frames": 1,
+   "frame_ms": 1000,
+   "loop": true
+  },
+  {
+   "name": "sleep",
+   "frames": 2,
+   "frame_ms": 1000,
+   "loop": true
+  }
+ ]
+}

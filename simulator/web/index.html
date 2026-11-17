@@ -71,7 +71,7 @@ textarea{width:100%;min-height:140px;resize:vertical}
   </div>
   <div class="devbar"><span><i class="led" id="led"></i>LED</span>
    <label><input type="checkbox" id="truesize"> true size (32.4 mm)</label>
-   <label><input type="checkbox" id="cadence" checked> 200 ms display refresh, like the pedal</label>
+   <label><input type="checkbox" id="cadence" checked> <span id="cadence-ms">100</span> ms display refresh, like the pedal</label>
    <span class="spacer"></span><span class="mono" id="pose"></span></div>
   <div id="notice" class="mono"></div>
   <p class="limits">Shared <code>app.h</code>, <code>analyzer.h</code> and <code>ui.h</code> compiled with Emscripten; the loop steps one millisecond at a time in the sketch's order (observe, controls, tick). Not emulated: Teensy CPU timing, SGTL5000 line-in, attenuator and gain, SPI/I²S transfer, electrical noise, EEPROM flash timing. Analysis time is this machine's, not the Teensy's. Mac audio is not the pedal's line-in path.</p>

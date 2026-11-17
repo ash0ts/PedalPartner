@@ -542,7 +542,7 @@ Small code changes with observable results
 
 ### 1 / PERSONALITY
 
-Edit tools/make_sprites.py; regenerate sprites.h, then run make sim-build and tools/render_screen.py. Shared ui.h renders the pet on desktop and device.
+Edit the PNG/JSON art in art/ and run tools/make_sprites.py to regenerate the headers, then make sim-build and tools/render_screen.py. Shared ui.h renders the pet on desktop and device.
 
 ### 2 / A NEW REWARD
 

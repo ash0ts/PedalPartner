@@ -2,9 +2,14 @@
 calibrate
 press foot 100
 audio 3000 .1 .3
-golden riff_frame_a
-audio 250 .1 .3
-golden riff_frame_b
+# Four-frame strum at DISPLAY_MS steps (wind-up, down, follow-through, rest), one frame per cadence.
+golden strum_frame_a
+audio 100 .1 .3
+golden strum_frame_b
+audio 100 .1 .3
+golden strum_frame_c
+audio 100 .1 .3
+golden strum_frame_d
 # Fragment banner appears for three seconds after the claim, then the pet keeps riffing.
 audio 297000 .1 .3
 expect fragments=1

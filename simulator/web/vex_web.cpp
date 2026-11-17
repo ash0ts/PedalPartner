@@ -69,7 +69,8 @@ EMSCRIPTEN_KEEPALIVE uint8_t* vex_store_ptr(){return store.bytes;}
 // After JS copies bytes into the store (e.g. from localStorage), reload the device from them.
 EMSCRIPTEN_KEEPALIVE void vex_store_load(){store.powered=true;store.cut=-1;}
 EMSCRIPTEN_KEEPALIVE void vex_powercut(long n){store.cut=n;}
-EMSCRIPTEN_KEEPALIVE int vex_pose(){return vex::choosePose(app->view());}
+EMSCRIPTEN_KEEPALIVE int vex_pose(){return vex::chooseAnim(vex::quantised(app->view())).anim;}
+EMSCRIPTEN_KEEPALIVE int vex_display_ms(){return int(DISPLAY_MS);}
 EMSCRIPTEN_KEEPALIVE const char* vex_notice(){return app->notice;}
 EMSCRIPTEN_KEEPALIVE double* vex_state_ptr(){return state;}
 EMSCRIPTEN_KEEPALIVE double* vex_state(){

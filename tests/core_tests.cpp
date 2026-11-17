@@ -77,8 +77,38 @@ static void analyzerTests(){
  app.observePitch(440,.95f,16);assert(!app.uncertain&&app.pitchNow.valid&&app.last_pitch_at==16);
  vex::View tv=app.view();assert(tv.last_pitch.midi==69&&!tv.uncertain);
 }
+#include "../firmware/VEX_Pocket_Rival/flush.h"
+#include "../simulator/canvas.h"
+// Display pipeline: animation frames follow the cadence exactly and the band diff sends only what changed.
+static void displayTests(){
+ using namespace vex;
+ View v;v.stage=4;v.progress.calibrated=true;v.now=101000;v.active_at=v.now;v.fragment_at=v.levelup_at=v.summary_at=v.now-100000;v.notice_at=v.now-100000;
+ // Every manifest period is a multiple of DISPLAY_MS, so one cadence step never repeats or skips a strum frame.
+ v.progress.running=true;v.progress.active=true;int last=-1,steps=0;
+ for(uint32_t t=0;t<4000;t+=DISPLAY_MS){View w=v;w.now=v.now+t;AnimFrame f=chooseAnim(quantised(w));assert(f.anim==ANIM_STRUM);if(last>=0){assert(f.frame==(last+1)%VEX_ANIMS[ANIM_STRUM].frames);steps++;}last=f.frame;}
+ assert(steps==4000/int(DISPLAY_MS)-1);
+ // Idle breathes on a one-second loop and blinks as a one-shot inside each four-second window.
+ v.progress.active=false;v.progress.running=false;
+ assert(chooseAnim(v).anim==ANIM_IDLE);View b=v;b.now=v.now+(UI_BLINK_EVERY_MS-v.now%UI_BLINK_EVERY_MS)%UI_BLINK_EVERY_MS;
+ assert(chooseAnim(b).anim==ANIM_BLINK&&chooseAnim(b).frame==0);b.now+=VEX_ANIMS[ANIM_BLINK].frame_ms*VEX_ANIMS[ANIM_BLINK].frames;assert(chooseAnim(b).anim==ANIM_IDLE);
+ // Time inside the current cadence window is pulled back to its start; "long ago" sentinels stay long ago.
+ View q=v;q.now=101150;q.fragment_at=101140;q=quantised(q);assert(q.now==101100&&q.fragment_at==101100&&q.now-q.levelup_at>=UI_CELEBRATE_MS);
+ // Band diff: first frame is sent whole by the adapter; an unchanged screen produces no bands; the
+ // second blink frame touches only the eye rows; a new caption adds a band near the bottom only.
+ static DesktopCanvas a,c;drawScreen(a,v);drawScreen(c,v);Band out[FLUSH_MAX_BANDS];
+ assert(bands(a.pixels.data(),c.pixels.data(),out)==0);
+ b.now-=VEX_ANIMS[ANIM_BLINK].frame_ms*VEX_ANIMS[ANIM_BLINK].frames;assert(chooseAnim(b).anim==ANIM_BLINK);
+ drawScreen(a,b);b.now+=DISPLAY_MS;drawScreen(c,b);int n=bands(a.pixels.data(),c.pixels.data(),out);assert(n>=1);uint32_t rows=bandBytes(out,n)/(FRAME_W*2);assert(rows>0&&rows<FRAME_H*15/100);
+ drawScreen(a,v);
+ View tick=v;tick.notice="Saved - safe to unplug";tick.notice_at=v.now;drawScreen(c,tick);n=bands(a.pixels.data(),c.pixels.data(),out);assert(n>=1&&out[0].y>=180);
+ // Cap: many scattered rows collapse into FLUSH_MAX_BANDS bands that still cover every change.
+ static uint16_t p0[FRAME_W*FRAME_H],p1[FRAME_W*FRAME_H];memset(p0,0,sizeof p0);memset(p1,0,sizeof p1);
+ for(int y=0;y<FRAME_H;y+=20){p1[y*FRAME_W]=1;}
+ n=bands(p0,p1,out);assert(n==FLUSH_MAX_BANDS);
+ assert(out[n-1].y+out[n-1].h==FRAME_H-19);for(int i=1;i<n;i++)assert(out[i].y>=out[i-1].y+out[i-1].h);
+}
 int main(){
- appTests();analyzerTests();
+ appTests();analyzerTests();displayTests();
  vex::Progress p;p.tick(100,.1,.2,true);assert(p.active_ms==0);p.calibrated=true;p.running=true;
  p.tick(100,.1,.2,true);assert(p.active_ms==100);p.tick(100,0,0,true);assert(!p.active&&p.active_ms==100);
  p.tick(100,.2,.99,true);p.tick(101,.2,.2,true);p.tick(100,.2,.2,false);p.tick(100,NAN,.2,true);assert(p.active_ms==100);
@@ -91,5 +121,5 @@ int main(){
  vex::Progress restored;vex::restore(restored,r);assert(restored.active_ms==p.active_ms&&restored.fragments==p.fragments&&!restored.running&&!restored.calibrated);
  vex::Button b;assert(b.update(true,10)==0);assert(b.update(false,20)==0);assert(b.update(false,50)==0);assert(b.update(true,100)==0);assert(b.update(true,130)==0);assert(b.update(false,200)==0);assert(b.update(false,230)==1);
  assert(b.update(true,300)==0);assert(b.update(true,330)==0);assert(b.update(true,1530)==2);assert(b.update(false,1600)==0);assert(b.update(false,1630)==0);
- puts("PASS: gating, clipping, stale input, quest exactly-once, goals, pitch math, CRC corruption, record restore, sequence rollover, button debounce and hold, app calibration/notice/save, YIN analyzer on tones/harmonics/noise, level accumulation, tuner smoothing.");
+ puts("PASS: gating, clipping, stale input, quest exactly-once, goals, pitch math, CRC corruption, record restore, sequence rollover, button debounce and hold, app calibration/notice/save, YIN analyzer on tones/harmonics/noise, level accumulation, tuner smoothing, cadence-locked animation, dirty-band flush.");
 }
