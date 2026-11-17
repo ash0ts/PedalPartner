@@ -1,6 +1,7 @@
 """Check cross-file delivery consistency without CAD or Arduino dependencies."""
 import ast
 import csv
+import hashlib
 import json
 import re
 import sys
@@ -32,6 +33,15 @@ def main():
     require(set(names).issubset(set(actual_names)), 'Assembly references absent components')
     report = json.loads((ROOT/'hardware/generated/checks/step_roundtrip.json').read_text())
     require(report['passed'] and report['components'] == len(names), 'STEP report and assembly disagree')
+    provenance = json.loads((ROOT/'assets/marketing/provenance.json').read_text())
+    require(provenance['components'] == len(names), 'Hero component count disagrees with assembly')
+    hashes = {provenance['assembly']: provenance['assembly_sha256'],
+              provenance['screen']: provenance['screen_sha256'],
+              **provenance['source_files'],
+              **{row['path']: row['sha256'] for row in provenance['outputs']}}
+    for name, expected_hash in hashes.items():
+        require(hashlib.sha256((ROOT/name).read_bytes()).hexdigest() == expected_hash,
+                f'{name}: hero provenance is stale; see docs/MARKETING.md')
     for path in [ROOT/'README.md', ROOT/'AGENTS.md', *(ROOT/'docs').glob('*.md')]:
         for target in re.findall(r'\]\(([^\s)]+)\)',path.read_text()):
             if ':' in target or target.startswith('#'):
@@ -47,7 +57,7 @@ def main():
         require('ui.h' in path.read_text() and 'vex::drawScreen' in path.read_text(), f'{path}: shared renderer disconnected')
     if errors:
         raise SystemExit('\n'.join(errors))
-    print('PASS: source syntax, BOM/wiring exports, assembly ownership, STEP report, document links and skills')
+    print('PASS: source syntax, BOM/wiring exports, assembly ownership, STEP report, hero provenance, document links and skills')
 
 if __name__ == '__main__':
     main()

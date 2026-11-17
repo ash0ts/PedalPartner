@@ -1,0 +1,37 @@
+{
+  "renderer": "Blender 4.3.2 / Cycles CPU",
+  "samples": 160,
+  "resolution": 1600,
+  "seed": 11,
+  "assembly": "hardware/generated/VEX_Pocket_Rival_Assembly.step",
+  "assembly_sha256": "1e4e04014fbe370a06ab540fafefe5f2ef731d1b9af4438acaaf1f82773231c5",
+  "components": 72,
+  "mesh_manifest_sha256": "a435de845c11c90965d11fea17102874682251b7ab10308e53fdb88d00f62bce",
+  "screen": "assets/screen.png",
+  "screen_sha256": "fdaed1c060729f92367a85e07566295f7f05394cbd6e251b7cdd04c8e8bf0de3",
+  "scope": "Existing STEP geometry; studio materials/lighting, existing decal labels and shared UI texture. Proposed finish, not a photograph or physical validation.",
+  "generative_imagery": false,
+  "outputs": [
+    {
+      "path": "assets/marketing/vex-hero.jpg",
+      "width": 1920,
+      "height": 1080,
+      "bytes": 136789,
+      "sha256": "d55ef11194bc35c20573e5789e259be1a349d57a9126b0b4ca8c73d591de94ce"
+    },
+    {
+      "path": "assets/marketing/vex-social.jpg",
+      "width": 1200,
+      "height": 630,
+      "bytes": 69626,
+      "sha256": "f6748345ea6c94e7bbddcd5d512b172f274a437354c72021910e4dea0cbb5f56"
+    }
+  ],
+  "reproduce": "make hero",
+  "source_files": {
+    "hardware/cad/export_render_meshes.py": "5c6f3678e9958c0a683ddd71bdd4e115bbb11440257500b4727f75281502ab5f",
+    "hardware/cad/render_cad.py": "9bb452318f4e235d54f4f855c3c21f16ce4a584cb5b7c3006fd8ee8079479ea5",
+    "hardware/cad/render_hero.py": "b41894eb62ff14709804718e2800ce13ec55255cbc4200f3710f60e7d3fe71df",
+    "tools/compose_hero.py": "6e35be7c253273de1162d553e09a37223019893dab776161e532faef3d5cf97f"
+  }
+}

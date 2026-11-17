@@ -1,3 +1,4 @@
 interface:
-  display_name: "Vex Firmware Change"
-  short_description: "Help with Vex Firmware Change tasks"
+  display_name: "VEX firmware and simulator"
+  short_description: "Change practice logic, UI and firmware with focused checks."
+  default_prompt: "Use $vex-firmware-change for this PedalPartner software task; preserve practice invariants and distinguish host, target and bench evidence."

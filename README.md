@@ -2,7 +2,9 @@
 
 **VEX / Pocket Rival** is a first-build guitar practice companion: a pixel bat that earns participation XP while you play, with short practice quests and an experimental tuner. It listens to a buffered dry branch of your rig. Your existing guitar audio path stays independent.
 
-![Actual R1.1 CAD, with the real display size](hardware/generated/renders/01_closed.png)
+![VEX / Pocket Rival — studio render of the actual R1.1 CAD assembly](assets/marketing/vex-hero.jpg)
+
+[Share image](assets/marketing/vex-social.jpg) · [Render provenance and reproduction](docs/MARKETING.md). Real CAD geometry with proposed finishes; no generative imagery.
 
 The R1.1 design keeps the crimson, charcoal and muted-gold rival-device feel through a clipped bezel, a thin gold insert, a small crimson cheek and original pixel art. The enclosure is **86 × 146 × 45 mm**, with a real **32.4 mm active display** behind a flat protective window. The concept images are inspiration; the CAD is the physical proposal.
 
@@ -10,6 +12,7 @@ The R1.1 design keeps the crimson, charcoal and muted-gold rival-device feel thr
 
 | Goal | Open |
 |---|---|
+| Prepare a lean mentor ZIP | [Pack contents and navigation](docs/MENTOR_PACK.md) — `make pack-mentor` |
 | Buy the parts | [Final shopping list](docs/SHOPPING.md), [BOM CSV](hardware/data/BOM.csv) |
 | Build with a mentor | [Illustrated guide](docs/VEX_Pocket_Rival_Mentor_Guide.pdf), [editable guide](docs/BUILD_GUIDE.md) |
 | Review or modify the design | [CAD review map](docs/CAD_REVIEW.md), [grouped STEP](hardware/generated/VEX_Pocket_Rival_Assembly.step) |

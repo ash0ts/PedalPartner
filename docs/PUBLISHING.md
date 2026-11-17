@@ -1,24 +1,53 @@
-# Publishing without overflowing an agent conversation
+# Publish a focused PR without exhausting the conversation
 
-Use ordinary Git from a checkout when authenticated network access is available. Git transfers STEP, PDF, image and audio bytes directly; no base64 text belongs in a prompt, tool transcript shown to the model, or handoff.
+Use ordinary authenticated Git whenever available. Start from current `main`,
+preserve other changes, work on a review branch, stage only intended files and
+open a PR. Do not push directly to `main` or force-push a recovery snapshot.
 
 ```sh
+git switch -c docs/cad-hero-and-handoff
 git status --short
-git add .
-git commit -m "Publish the reviewed PedalPartner checkpoint"
-git push origin main
+# Stage the exact reviewed paths, commit, then:
+git push -u origin HEAD
 ```
 
-Inspect the status first and stage only intended files. Preserve any newer remote work; never force-push a recovery checkpoint over it.
+## Keep publication independent of builds
 
-## When only the GitHub connector is available
+- Run only checks needed by the change, once. Reuse evidence for unchanged CAD
+  and firmware. Automatic CI remains one Linux `make test` job; firmware/CAD
+  workflows stay manual. Packaging or publishing does not require target builds.
+- Keep logs under ignored `build/` and inspect short error excerpts. A target
+  download failure, a compiler failure and a conversation-length limit are
+  different outcomes; record the observed one precisely.
+- Publish the changed scripts/docs and small finished images. Reuse unchanged
+  STEP/PDF blobs from the existing Git tree; never re-upload the whole repository
+  to update a README or render. Do not commit ZIPs, meshes or Blender intermediates.
 
-The connector accepts blob contents rather than local file paths. Bridge local reads to blob creation programmatically inside one execution runtime. Do not return those bytes to the language model, copy them into subsequent tool arguments by hand, or print the full API result. Bounded internal reads must be checked for truncation before upload.
+## If only a connector is available
 
-- Return only file path, byte count, expected Git blob SHA and completion state.
-- Persist each successfully verified blob SHA to a small local journal; checkpoint the manifest too. Reuse completed uploads after interruption.
-- Create the tree only after all manifest entries have verified remote blob hashes. Preserve the existing remote tree and commit parent.
-- Advance the branch using its expected previous SHA and verify the resulting tree against the local manifest. Stop and inspect if another writer changed the branch.
-- Keep logs short. Do not rerun firmware/CAD builds for publication alone. Automatic CI remains the single Linux desktop job; firmware and CAD workflows are manual.
+Use one bounded, complete-file transfer inside the execution runtime. The model
+must see only path, size, expected blob hash and status. For this workflow, cap
+each file at **256 KiB**; normal Git handles larger files. This is an operational
+limit for safe transfers, not a GitHub file-size limit.
 
-If the runtime cannot transfer a file without routing its contents through the model, stop that transfer method. Use an authenticated local Git push instead of restarting the chunk-encoding conversation loop.
+1. Read the current branch commit/tree. Compare local Git blob hashes and form a
+   changed-file manifest. Do not discard newer remote work.
+2. Read each small file completely inside one runtime call. Check completion,
+   expected byte/base64 length and absence of truncation before passing the
+   content directly to blob creation. Never print the payload or full result.
+3. Verify the returned Git blob SHA against the local SHA and persist the receipt
+   after each successful upload. Reuse a matching receipt if interrupted.
+4. Build a tree on the captured base tree using only changed entries; create a
+   commit with the captured base commit as parent, then a new review branch.
+   If updating an existing branch, use its expected previous SHA as a lease.
+5. Verify the remote tree against the intended file hashes, open the PR and check
+   its diff. Report actual CI status; do not start optional workflows to finish.
+
+**Stop that method immediately** if complete-file reads are unavailable or
+truncated. Do not replace it with base64 chunks, shared-memory segments, bridge
+reads, repeated range extraction or manually copied payloads. The earlier failed
+conversations ended at the chat-length limit during such transfers. A retry loop
+does not fix this. Preserve the finished patch/archive for local Git upload.
+
+The lean mentor ZIP is produced by `make pack-mentor`; see [MENTOR_PACK.md](MENTOR_PACK.md).
+It is a shareable review packet, not a repository replacement or publication channel.

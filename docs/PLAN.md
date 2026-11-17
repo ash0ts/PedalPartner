@@ -3,6 +3,7 @@
 | Milestone | State | Done when |
 |---|---|---|
 | 0. Practical R1.1 package | Complete as a digital proposal | Grouped STEP, source, selected STLs/DXFs, BOM, illustrated guide and explicit limitations are present |
+| 0a. Presentation and mentor handoff | Prepared for PR review | Real-CAD hero/share images with provenance, reproducible lean ZIP, and bounded task/publication guidance |
 | 1. Desktop behavior | Host tests passed | Fresh checkout passes tests; simulator demonstrates practice, tuner, save/reboot and corruption fallback |
 | 2. Target builds | Unverified; local command / manual workflow available | All four stages compile with pinned dependencies; build report and binaries retained |
 | 3. Pet on desk | Next physical work | Stage 1/2 work; all controls and screen readable; actual supply measured |

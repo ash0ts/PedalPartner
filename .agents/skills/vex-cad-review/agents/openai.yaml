@@ -1,3 +1,4 @@
 interface:
-  display_name: "Vex Cad Review"
-  short_description: "Help with Vex Cad Review tasks"
+  display_name: "VEX CAD and mentor review"
+  short_description: "Review CAD, actual-geometry renders and lean mentor packs."
+  default_prompt: "Use $vex-cad-review for this PedalPartner CAD, rendering or mentor-pack task; select only checks relevant to the change."
