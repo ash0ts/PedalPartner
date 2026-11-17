@@ -4,7 +4,7 @@
 |---|---|---|
 | 0. Practical R1.1 package | Complete as a digital proposal | Grouped STEP, source, selected STLs/DXFs, BOM, illustrated guide and explicit limitations are present |
 | 0a. Presentation and mentor handoff | Prepared for PR review | Real-CAD hero/share images with provenance, reproducible lean ZIP, and bounded task/publication guidance |
-| 1. Desktop behavior | Host tests passed; simulator runs the shared `App` and analyzer | Fresh checkout passes tests; scenario scripts and golden frames cover practice, tuner, calibration, holds, save/reboot, power-cut fallback and the reference recording through the shared detector |
+| 1. Desktop behavior | Host tests passed; native simulator and the in-browser WebAssembly workbench run the shared `App`, analyzer and renderer | Fresh checkout passes tests; scenario scripts and golden frames cover practice, tuner states, calibration, holds, save/reboot, power-cut fallback and the reference recording through the shared detector; the WASM module renders native goldens |
 | 2. Target builds | Passed locally on 17 Nov 2026 (arduino-cli 1.6.0, Teensy 1.62.0; both analyzer paths) | All four stages compile with pinned dependencies; build report and binaries retained in `build/` |
 | 3. Pet on desk | Next physical work | Stage 1/2 work; all controls and screen readable; actual supply measured |
 | 4. Audio listener | Pending | Mentor-reviewed attenuator; stage 3 clean input; silence/playing/clipping distinctions verified for intended guitars |

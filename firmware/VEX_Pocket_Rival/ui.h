@@ -10,13 +10,14 @@
 // fillScreen, drawFastHLine, drawFastVLine and fillCircle are required from the canvas. Everything
 // here is deterministic in View fields so simulator golden frames stay stable.
 namespace vex {
-constexpr uint16_t UI_BG=0x1925,UI_INK=0xEF37,UI_GOLD=0xCD46,UI_RED=0x99C7,UI_DIM=0x2949,UI_PLUM=0x4A2A;
-constexpr uint32_t UI_CELEBRATE_MS=3000,UI_SUMMARY_MS=4000,UI_SLEEP_MS=30000;
+constexpr uint16_t UI_BG=0x1925,UI_INK=0xEF37,UI_GOLD=0xCD46,UI_RED=0x99C7,UI_DIM=0x2949,UI_PLUM=0x4A2A,UI_FADE=0x940B;
+constexpr uint32_t UI_CELEBRATE_MS=3000,UI_SUMMARY_MS=4000,UI_SLEEP_MS=30000,UI_TUNER_FADE_MS=1500;
 struct View {
  Progress progress;
  Pitch pitch;
  int stage=4;
- bool tuning=false,codec_ok=true,calibrating=false,pitch_fresh=false;
+ bool tuning=false,codec_ok=true,calibrating=false,pitch_fresh=false,uncertain=false;
+ Pitch last_pitch;uint32_t last_pitch_at=0;
  bool mode_pressed=false,quest_pressed=false,foot_pressed=false;
  float rms=0,peak=0;
  uint32_t now=0,active_at=0,notice_at=0;
@@ -58,31 +59,54 @@ inline const char* stringName(int midi){
  // Nearest standard-tuning open string for a quick visual anchor; other notes show a dash.
  switch(midi){case 40:return "E2 string";case 45:return "A2 string";case 50:return "D3 string";case 55:return "G3 string";case 59:return "B3 string";case 64:return "E4 string";default:return "-";}
 }
+// Note name, octave digit, cents and the needle. `live` draws the confident reading; otherwise the same
+// layout is drawn in dim ink so a decaying string fades instead of vanishing.
+template<class Canvas> void tunerReading(Canvas& c,const Pitch& pitch,bool live){
+ static const char* names[]={"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"};char s[32];
+ float cents=pitch.cents;bool inTune=cents>-5&&cents<5;
+ uint16_t ink=live?UI_INK:UI_FADE,accent=live?(inTune?UI_GOLD:UI_INK):UI_FADE,warn=live?UI_RED:UI_FADE;
+ const char* name=names[pitch.midi%12];int wide=name[1]?2:1;
+ centered(c,name,56,8,accent);
+ snprintf(s,sizeof(s),"%d",pitch.midi/12-1);
+ for(int i=0;s[i];i++){int x=120+(wide*6-1)*4+6,y=98;for(int col=0;col<5;col++)for(int row=0;row<7;row++)if(VEX_FONT[(unsigned char)s[i]-32][col]&(1<<row))c.fillRect(x+col*2,y+row*2,2,2,UI_DIM);}
+ snprintf(s,sizeof(s),"%+.0f cents",double(cents));centered(c,s,128,2,live&&inTune?UI_GOLD:ink);
+ // Needle: centre mark, +-50 cent scale, red needle outside the green zone, gold when in tune.
+ c.drawFastHLine(40,166,160,ink);c.fillRect(112,160,16,13,live?UI_PLUM:UI_DIM);c.drawFastVLine(120,158,17,live?UI_GOLD:UI_DIM);
+ for(int i=-50;i<=50;i+=25)c.drawFastVLine(120+int(i*1.6f),163,7,UI_DIM);
+ if(cents>50){cents=50;}
+ if(cents<-50){cents=-50;}
+ c.fillCircle(120+int(cents*1.6f),166,4,live?(inTune?UI_GOLD:UI_RED):UI_FADE);
+ if(!live)centered(c,"fading - play again",184,1,UI_FADE);
+ else if(cents<=-5)centered(c,"FLAT  < tune up",184,1,warn);else if(cents>=5)centered(c,"SHARP  tune down >",184,1,warn);else centered(c,"IN TUNE",184,1,UI_GOLD);
+ centered(c,stringName(pitch.midi),198,1,live?UI_FADE:UI_DIM);
+}
+// Tuner states, each with a label so colour never carries the meaning alone:
+// clipping, sounding (note shown), uncertain (periodic candidate below confidence), stale (last note
+// fading for UI_TUNER_FADE_MS), listening (signal above the gate, no note yet) and waiting (no signal).
 template<class Canvas> void drawTuner(Canvas& c,const View& v){
- const auto& p=v.progress;char s[32];
+ const auto& p=v.progress;
  centered(c,"TUNE / A440",22,2);
- bool sounding=v.pitch.valid&&v.pitch_fresh&&v.rms>p.gate&&v.peak<.98f;
- if(sounding){
-  static const char* names[]={"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"};
-  float cents=v.pitch.cents;bool inTune=cents>-5&&cents<5;
-  uint16_t accent=inTune?UI_GOLD:UI_INK;
-  const char* name=names[v.pitch.midi%12];int wide=name[1]?2:1;
-  centered(c,name,56,8,accent);
-  snprintf(s,sizeof(s),"%d",v.pitch.midi/12-1);
-  for(int i=0;s[i];i++){int x=120+(wide*6-1)*4+6,y=98;for(int col=0;col<5;col++)for(int row=0;row<7;row++)if(VEX_FONT[(unsigned char)s[i]-32][col]&(1<<row))c.fillRect(x+col*2,y+row*2,2,2,UI_DIM);}
-  snprintf(s,sizeof(s),"%+.0f cents",double(cents));centered(c,s,128,2,inTune?UI_GOLD:UI_INK);
-  // Needle: centre mark, +-50 cent scale, red needle outside the green zone, gold when in tune.
-  c.drawFastHLine(40,166,160,UI_INK);c.fillRect(112,160,16,13,UI_PLUM);c.drawFastVLine(120,158,17,UI_GOLD);
-  for(int i=-50;i<=50;i+=25)c.drawFastVLine(120+int(i*1.6f),163,7,UI_DIM);
-  if(cents>50){cents=50;}
-  if(cents<-50){cents=-50;}
-  c.fillCircle(120+int(cents*1.6f),166,4,inTune?UI_GOLD:UI_RED);
-  if(cents<=-5)centered(c,"FLAT  < tune up",184,1,UI_RED);else if(cents>=5)centered(c,"SHARP  tune down >",184,1,UI_RED);else centered(c,"IN TUNE",184,1,UI_GOLD);
-  centered(c,stringName(v.pitch.midi),198,1,UI_DIM);
+ bool fresh=v.pitch_fresh,clipping=fresh&&v.peak>=.98f,signal=fresh&&v.rms>p.gate;
+ bool sounding=v.pitch.valid&&signal&&!clipping;
+ bool stale=!sounding&&!clipping&&v.last_pitch.valid&&v.now-v.last_pitch_at<UI_TUNER_FADE_MS;
+ // Signal meter under the title: level relative to eight times the gate, gate mark at one eighth.
+ float level=p.gate>0?v.rms/(p.gate*8):0;if(level>1){level=1;}if(level<0||!fresh){level=0;}
+ c.fillRect(70,42,100,4,UI_DIM);c.fillRect(70,42,int(level*100),4,clipping?UI_RED:signal?UI_GOLD:UI_PLUM);c.fillRect(82,40,1,8,UI_INK);
+ if(clipping){
+  pet(c,POSE_LISTEN,88,58,2);
+  centered(c,"CLIP - TURN DOWN",132,2,UI_RED);
+  c.drawFastHLine(40,166,160,UI_DIM);c.drawFastVLine(120,158,17,UI_DIM);
+  centered(c,"lower the guitar volume",184,1,UI_RED);
+ }else if(sounding){
+  tunerReading(c,v.pitch,true);
+ }else if(stale){
+  tunerReading(c,v.last_pitch,false);
  }else{
   pet(c,POSE_LISTEN,88,58,2);
-  centered(c,v.peak>=.98f?"CLIP - TURN DOWN":"Play one note",132,2,v.peak>=.98f?UI_RED:UI_INK);
+  bool uncertain=v.uncertain&&signal;
+  centered(c,uncertain?"Hmm...":signal?"Listening":"Play one note",132,2,UI_INK);
   c.drawFastHLine(40,166,160,UI_DIM);c.drawFastVLine(120,158,17,UI_DIM);
+  centered(c,uncertain?"one string, let it ring":signal?"waiting for a steady note":"pluck a single open string",184,1,UI_FADE);
  }
  centered(c,"DISPLAY ONLY",214);
 }

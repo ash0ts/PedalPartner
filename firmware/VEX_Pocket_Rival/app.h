@@ -10,6 +10,9 @@ struct App {
  Store& store;int stage;
  Progress progress;Button mode,quest,foot;Pitch pitchNow;
  bool codec_ok=false,tuning=false,calibrating=false,raw_mode=false,raw_quest=false,raw_foot=false;
+ // Tuner presentation facts: a periodic candidate below the confidence threshold (uncertain), and the last
+ // confident reading so the display can fade it instead of blanking the moment a string decays.
+ bool uncertain=false;Pitch last_pitch;uint32_t last_pitch_at=0;
  float rms=0,peak=0,noise[300],hz_hist[3]={0,0,0};uint16_t noise_count=0;uint8_t hz_count=0;
  uint32_t now=0,rms_at=0,peak_at=0,pitch_at=0,tick_at=0,save_at=0,active_at=0,cal_at=0,sample_at=0,notice_at=0,sequence=0,saved_hash=0;
  // Presentation-only session facts (never saved): when the fragment/level-up happened, what the last
@@ -65,12 +68,13 @@ struct App {
  // displayed note only changes once the estimate is more than 60 cents from the current note's centre.
  void observePitch(float hz,float probability,uint32_t t){
   now=t;pitch_at=t;Pitch raw=pitch(hz,probability);
-  if(!raw.valid){hz_count=0;pitchNow=Pitch{};return;}
+  if(!raw.valid){hz_count=0;pitchNow=Pitch{};uncertain=isfinite(hz)&&isfinite(probability)&&hz>=55&&hz<=1400&&probability>=PITCH_UNCERTAIN;return;}
+  uncertain=false;
   hz_hist[0]=hz_hist[1];hz_hist[1]=hz_hist[2];hz_hist[2]=hz;if(hz_count<3)hz_count++;
   float m=hz;if(hz_count>=3){float a=hz_hist[0],b=hz_hist[1],c=hz_hist[2];m=fmaxf(fminf(a,b),fminf(fmaxf(a,b),c));}
   Pitch p=pitch(m,probability);
   if(pitchNow.valid&&p.valid&&p.midi!=pitchNow.midi){float from=(69+12*log2f(m/440.f)-pitchNow.midi)*100;if(fabsf(from)<=60){p.midi=pitchNow.midi;p.cents=from;}}
-  pitchNow=p;
+  pitchNow=p;if(p.valid){last_pitch=p;last_pitch_at=t;}
  }
  bool fresh()const{return codec_ok&&now-rms_at<100&&now-peak_at<100;}
  void tick(uint32_t t){
@@ -90,6 +94,7 @@ struct App {
   View v;v.progress=progress;v.pitch=pitchNow;v.stage=stage;v.tuning=tuning;v.codec_ok=codec_ok;v.calibrating=calibrating;
   v.rms=rms;v.peak=peak;v.now=now;v.active_at=active_at;v.notice_at=notice_at;v.notice=notice;
   v.pitch_fresh=now-pitch_at<350&&now-rms_at<100&&now-peak_at<100;
+  v.uncertain=uncertain&&v.pitch_fresh;v.last_pitch=last_pitch;v.last_pitch_at=last_pitch_at;
   v.mode_pressed=raw_mode;v.quest_pressed=raw_quest;v.foot_pressed=raw_foot;
   v.fragment_at=fragment_at;v.levelup_at=levelup_at;v.summary_at=summary_at;v.summary_ms=summary_ms;v.summary_xp=summary_xp;return v;
  }

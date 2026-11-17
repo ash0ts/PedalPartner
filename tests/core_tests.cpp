@@ -68,6 +68,14 @@ static void analyzerTests(){
  for(int i=0;i<3;i++){app.observePitch(458.f,1,9+i);}
  assert(app.pitchNow.midi==70&&app.pitchNow.cents<0);
  app.observePitch(0,0,12);assert(!app.pitchNow.valid&&app.hz_count==0);
+ // Uncertain band: a candidate between the thresholds is flagged, silence and confident notes clear it,
+ // and the last confident reading is kept with its time so the display can fade it.
+ assert(app.last_pitch.valid&&app.last_pitch.midi==70&&app.last_pitch_at==11&&!app.uncertain);
+ app.observePitch(440,.75f,13);assert(app.uncertain&&!app.pitchNow.valid&&app.last_pitch.midi==70);
+ app.observePitch(440,.5f,14);assert(!app.uncertain);
+ app.observePitch(30,.95f,15);assert(!app.uncertain&&!app.pitchNow.valid);
+ app.observePitch(440,.95f,16);assert(!app.uncertain&&app.pitchNow.valid&&app.last_pitch_at==16);
+ vex::View tv=app.view();assert(tv.last_pitch.midi==69&&!tv.uncertain);
 }
 int main(){
  appTests();analyzerTests();

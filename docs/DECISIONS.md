@@ -18,6 +18,8 @@
 | Lean AGENTS.md plus two task skills | Always-load context stays small; detailed procedures and evidence are read when relevant. No session-history importer is required. |
 | Actual-CAD marketing images | Reuse checked-in STEP geometry and shared UI pixels with studio lighting/proposed finishes. Record hashes; no generative product imagery or invented hardware. |
 | Build-free mentor packing and bounded publication | Package reviewed outputs with a deterministic manifest. Send only changed small files; never repeat chunk/bridge loops or target builds for presentation work. |
+| Browser workbench runs the firmware as WebAssembly | The earlier page proxied each action over HTTP to a native process and polled PNGs, so presses were dropped and timing was the poll's, not the device's. The shared headers now compile to WASM through a thin adapter (`simulator/web/vex_web.cpp`); the page owns a millisecond clock, real-time or faster, and blits the shared renderer's RGB565 frame directly. The native `build/vex-sim` remains the test oracle and `tools/web.py check` proves both render identical frames. No server logic to keep in sync. |
+| Tuner states are labelled, and the last note fades | Waiting, listening, uncertain (`PITCH_UNCERTAIN` ≤ probability < `PITCH_VALID`), sounding, stale (1.5 s fade) and clipping each carry text, so colour never carries meaning alone and a decaying string does not blank the display. A strobe view was rejected: the pedal redraws every 200 ms over SPI. |
 
 Rejected for R1.1: large fictional screen, external ears/armor, custom dome, RGB spectacle, audio bypass, mains/battery/9 V conversion, broad game systems and speculative automatic technique scores. These are scope decisions, not permanent bans.
 

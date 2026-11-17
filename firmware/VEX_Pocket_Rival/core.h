@@ -23,8 +23,11 @@ struct Progress {
  uint32_t level() const{return 1+uint32_t(active_ms/600000);}
 };
 struct Pitch {int midi=0;float cents=0;bool valid=false;};
+// Confidence bands for the estimator's probability: at or above PITCH_VALID the note is shown; between
+// PITCH_UNCERTAIN and PITCH_VALID there is a periodic candidate the tuner reports as uncertain.
+constexpr float PITCH_VALID=.90f,PITCH_UNCERTAIN=.60f;
 inline Pitch pitch(float hz,float probability){
- if(!isfinite(hz)||!isfinite(probability)||hz<55||hz>1400||probability<.90f)return {};
+ if(!isfinite(hz)||!isfinite(probability)||hz<55||hz>1400||probability<PITCH_VALID)return {};
  float n=69+12*log2f(hz/440.f);int note=int(lroundf(n));return {note,(n-note)*100,true};
 }
 // 48 bytes; two 64-byte EEPROM slots. CRC-32/ISO-HDLC protects payload.

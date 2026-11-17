@@ -21,8 +21,19 @@ golden tuner_e2
 audio 500 .1 .3 446 .99
 expect pitch_midi=69
 golden tuner_sharp
-audio 500 .1 .3 440 .5
-expect pitch_valid=false
-golden tuner_waiting
+# Tuner states each carry a label. Once the signal stops the last confident note fades for 1.5 s,
+# then the tuner waits; signal without a periodic candidate is "listening"; a candidate below the
+# confidence threshold is "uncertain"; clipping is called out instead of a note.
 wait 400
 golden tuner_stale
+wait 1200
+golden tuner_waiting
+audio 500 .1 .3 440 .5
+expect pitch_valid=false uncertain=false
+golden tuner_listening
+audio 500 .1 .3 440 .8
+expect pitch_valid=false uncertain=true
+golden tuner_uncertain
+audio 300 .1 1 440 .99
+expect active_ms=0
+golden tuner_clipping

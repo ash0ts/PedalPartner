@@ -5,7 +5,7 @@ STAGE ?= 4
 PORT ?= 8765
 HEADERS := $(wildcard firmware/VEX_Pocket_Rival/*.h)
 
-.PHONY: test sim sim-build firmware firmware-all setup-firmware cad cad-check render render-meshes hero pack-mentor docs check clean
+.PHONY: test sim sim-build web web-check firmware firmware-all setup-firmware cad cad-check render render-meshes hero pack-mentor docs check clean
 build:
 	mkdir -p build
 build/core-tests: tests/core_tests.cpp $(HEADERS) | build
@@ -17,9 +17,15 @@ test: build/core-tests build/vex-sim
 	$(PYTHON) tests/simulator_test.py
 	$(PYTHON) tests/pack_test.py
 	$(PYTHON) tools/check_project.py
+	$(PYTHON) tools/web.py check
 sim-build: build/vex-sim
-sim: build/vex-sim
-	$(PYTHON) simulator/server.py --port $(PORT)
+# In-browser workbench: shared firmware headers compiled to WebAssembly (needs emcc; see docs/LOCAL_DEVELOPMENT.md).
+web:
+	$(PYTHON) tools/web.py build
+web-check:
+	$(PYTHON) tools/web.py check
+sim:
+	$(PYTHON) tools/web.py serve --port $(PORT)
 setup-firmware:
 	$(PYTHON) tools/firmware.py setup
 firmware:

@@ -32,7 +32,7 @@ make test
 make sim
 ```
 
-Open **http://127.0.0.1:8765**. Calibrate, press the footswitch, choose Playing and advance five active minutes. Try silence, clipping, stale samples, tuner mode, saving and rebooting. The simulator uses the same C++ practice logic and screen renderer as the firmware. It injects audio measurements; it does not emulate the ADC, pitch detector or physical electronics.
+`make sim` also needs Emscripten (`brew install emscripten`). Open **http://127.0.0.1:8765**: the firmware's shared state machine, analyzer and renderer run in the browser as WebAssembly. Hold QUEST to calibrate, tap the footswitch, advance five active minutes, then try silence, clipping, stale samples, the tuner with a synth note or your Mac input, saving, a power cut and rebooting. It does not emulate the Teensy's codec, timing or electronics.
 
 With Arduino CLI installed, `make setup-firmware` installs pinned dependencies and `make firmware-all` compiles all four bring-up stages **without uploading**. See the [full instructions](docs/LOCAL_DEVELOPMENT.md).
 
