@@ -47,18 +47,27 @@ def build(quiet=False):
     if not quiet:print(f'Built build/web/vex.wasm ({(OUT/"vex.wasm").stat().st_size} bytes) with emscripten {version}')
 
 def stamp():
-    return max(p.stat().st_mtime for p in SOURCES)
+    # Files can vanish for a moment during a git checkout; ignore them until they return.
+    times=[]
+    for p in SOURCES:
+        try:times.append(p.stat().st_mtime)
+        except OSError:pass
+    return max(times) if times else 0
 
 def serve(port):
     build();state={'generation':0,'stamp':stamp(),'error':''}
     def watch():
         while True:
-            time.sleep(0.5);s=stamp()
-            if s!=state['stamp']:
-                state['stamp']=s
+            time.sleep(0.5)
+            try:
+                s=stamp()
+                if s==state['stamp']:continue
+                time.sleep(0.3);state['stamp']=stamp()   # let an editor or checkout finish writing
                 try:build(quiet=True);state['error']='';print('rebuilt',flush=True)
                 except SystemExit as e:state['error']=str(e);print(state['error'],flush=True)
                 state['generation']+=1
+            except Exception as e:   # never let the watcher die; the page would silently stop reloading
+                print(f'watch error: {e}',flush=True)
     threading.Thread(target=watch,daemon=True).start()
     class Handler(SimpleHTTPRequestHandler):
         def __init__(self,*a,**k):super().__init__(*a,directory=str(OUT),**k)
