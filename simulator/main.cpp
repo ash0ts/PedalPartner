@@ -71,7 +71,7 @@ struct Sim{
    <<",\"active\":"<<(p.active?"true":"false")<<",\"tuning\":"<<(app->tuning?"true":"false")<<",\"calibrating\":"<<(app->calibrating?"true":"false")
    <<",\"gate\":"<<p.gate<<",\"rms\":"<<app->rms<<",\"peak\":"<<app->peak<<",\"stage\":"<<app->stage<<",\"notice\":\""<<app->notice<<"\""
    <<",\"saved_slot\":"<<app->saved_slot<<",\"sequence\":"<<app->sequence<<",\"power\":"<<(store.powered?"true":"false")
-   <<",\"pitch_midi\":"<<app->pitchNow.midi<<",\"pitch_cents\":"<<app->pitchNow.cents<<",\"pitch_valid\":"<<(app->pitchNow.valid?"true":"false")
+   <<",\"pitch_midi\":"<<app->pitchNow.midi<<",\"pitch_cents\":"<<app->pitchNow.cents<<",\"pitch_valid\":"<<(app->pitchNow.valid?"true":"false")<<",\"uncertain\":"<<(app->uncertain?"true":"false")
    <<",\"hz\":"<<analyzer->hz<<",\"probability\":"<<analyzer->probability<<",\"analyses\":"<<analyses<<",\"now_ms\":"<<app->now<<"}";
   return o.str();
  }
