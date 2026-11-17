@@ -1,0 +1,33 @@
+# The reference recording (3 s silence, then E2 A2 D3 G3 B3 E4 A4 at -20 dBFS) through the shared analyzer.
+calibrate
+press foot 100
+press mode 100
+expect tuning=true
+wav test_audio/guitar_notes_left_only.wav 0 2800
+expect pitch_valid=false hz=0 active_ms=0
+golden tuner_silence
+wav test_audio/guitar_notes_left_only.wav 3300 1500
+expect pitch_valid=true pitch_midi=40
+golden tuner_wav_e2
+wav test_audio/guitar_notes_left_only.wav 6300 1500
+expect pitch_midi=45
+wav test_audio/guitar_notes_left_only.wav 9300 1500
+expect pitch_midi=50
+wav test_audio/guitar_notes_left_only.wav 12300 1500
+expect pitch_midi=55
+wav test_audio/guitar_notes_left_only.wav 15300 1500
+expect pitch_midi=59
+wav test_audio/guitar_notes_left_only.wav 18300 1500
+expect pitch_midi=64
+wav test_audio/guitar_notes_left_only.wav 21300 1500
+expect pitch_midi=69 active_ms=0
+golden tuner_wav_a4
+# Back to practice: silence earns nothing, the sounding note earns time, and the tone never clips.
+press mode 100
+press foot 100
+expect running=true
+wav test_audio/guitar_notes_left_only.wav 0 3000
+expect active_ms=0
+wav test_audio/guitar_notes_left_only.wav 3000 3000
+expect active_ms~=3000 active=true
+golden pet_listening_wav

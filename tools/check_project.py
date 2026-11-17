@@ -54,7 +54,9 @@ def main():
         require(bool(re.search(r'^description: .+',text,re.M)), f'{path}: missing description')
         require('TODO' not in text and len(text.splitlines()) < 500, f'{path}: unfinished or excessive skill')
     for path in [ROOT/'firmware/VEX_Pocket_Rival/VEX_Pocket_Rival.ino',ROOT/'simulator/main.cpp']:
-        require('ui.h' in path.read_text() and 'vex::drawScreen' in path.read_text(), f'{path}: shared renderer disconnected')
+        text = path.read_text()
+        require(('ui.h' in text or 'app.h' in text) and 'vex::drawScreen' in text, f'{path}: shared renderer disconnected')
+        require('app.h' in text and 'vex::App' in text, f'{path}: shared device state machine disconnected')
     if errors:
         raise SystemExit('\n'.join(errors))
     print('PASS: source syntax, BOM/wiring exports, assembly ownership, STEP report, hero provenance, document links and skills')

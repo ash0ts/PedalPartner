@@ -6,8 +6,12 @@
 #include "sprites.h"
 #include "tinyfont.h"
 
+// Shared 240 x 240 renderer for the Teensy framebuffer and the desktop simulator. Only fillRect,
+// fillScreen, drawFastHLine, drawFastVLine and fillCircle are required from the canvas. Everything
+// here is deterministic in View fields so simulator golden frames stay stable.
 namespace vex {
-constexpr uint16_t UI_BG=0x1925,UI_INK=0xEF37,UI_GOLD=0xCD46,UI_RED=0x99C7;
+constexpr uint16_t UI_BG=0x1925,UI_INK=0xEF37,UI_GOLD=0xCD46,UI_RED=0x99C7,UI_DIM=0x2949,UI_PLUM=0x4A2A;
+constexpr uint32_t UI_CELEBRATE_MS=3000,UI_SUMMARY_MS=4000,UI_SLEEP_MS=30000;
 struct View {
  Progress progress;
  Pitch pitch;
@@ -16,6 +20,7 @@ struct View {
  bool mode_pressed=false,quest_pressed=false,foot_pressed=false;
  float rms=0,peak=0;
  uint32_t now=0,active_at=0,notice_at=0;
+ uint32_t fragment_at=0,levelup_at=0,summary_at=0,summary_ms=0,summary_xp=0;
  const char* notice="Hold QUEST: calibrate";
 };
 template<class Canvas> void centered(Canvas& c,const char* s,int y,int scale=1,uint16_t color=UI_INK){
@@ -27,9 +32,82 @@ template<class Canvas> void centered(Canvas& c,const char* s,int y,int scale=1,u
  }
 }
 template<class Canvas> void pet(Canvas& c,int pose,int x=40,int y=35,int scale=5){
+ if(pose<0||pose>=VEX_POSE_COUNT)pose=0;
  for(int row=0;row<32;row++)for(int col=0;col<32;col++){
   uint8_t v=VEX_SPRITES[pose][row*32+col];
   if(v)c.fillRect(x+col*scale,y+row*scale,scale,scale,VEX_PALETTE[v]);
+ }
+}
+// Ring segments around the display edge: 60 ticks, clockwise from the top, each tick a small square.
+// Uses an integer octant walk, no trigonometry, so it is cheap on the target and identical on the host.
+template<class Canvas> void ring(Canvas& c,int filled,uint16_t on,uint16_t off=UI_DIM){
+ // 112 * sin(2*pi*i/60); cos is the same table shifted by a quarter turn.
+ static const int8_t ks[60]={0,12,23,35,46,56,66,75,83,91,97,102,107,110,111,112,111,110,107,102,97,91,83,75,66,56,46,35,23,12,0,-12,-23,-35,-46,-56,-66,-75,-83,-91,-97,-102,-107,-110,-111,-112,-111,-110,-107,-102,-97,-91,-83,-75,-66,-56,-46,-35,-23,-12};
+ for(int i=0;i<60;i++){int x=120+ks[i],y=120-ks[(i+15)%60];uint16_t col=i<filled?on:off;if(i%5==0||i<filled)c.fillRect(x-1,y-1,3,3,col);}
+}
+inline int choosePose(const View& v){
+ const auto& p=v.progress;
+ if(v.now-v.levelup_at<UI_CELEBRATE_MS)return POSE_LEVELUP;
+ if(v.now-v.fragment_at<UI_CELEBRATE_MS)return POSE_CHEER;
+ if(v.tuning)return POSE_LISTEN;
+ if(p.active)return (v.now/250)%2?POSE_RIFF2:POSE_RIFF;
+ if(v.now-v.active_at>UI_SLEEP_MS&&!p.running)return POSE_SLEEP;
+ return (v.now%4000)<150?POSE_BLINK:POSE_IDLE;
+}
+inline const char* stringName(int midi){
+ // Nearest standard-tuning open string for a quick visual anchor; other notes show a dash.
+ switch(midi){case 40:return "E2 string";case 45:return "A2 string";case 50:return "D3 string";case 55:return "G3 string";case 59:return "B3 string";case 64:return "E4 string";default:return "-";}
+}
+template<class Canvas> void drawTuner(Canvas& c,const View& v){
+ const auto& p=v.progress;char s[32];
+ centered(c,"TUNE / A440",22,2);
+ bool sounding=v.pitch.valid&&v.pitch_fresh&&v.rms>p.gate&&v.peak<.98f;
+ if(sounding){
+  static const char* names[]={"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"};
+  float cents=v.pitch.cents;bool inTune=cents>-5&&cents<5;
+  uint16_t accent=inTune?UI_GOLD:UI_INK;
+  const char* name=names[v.pitch.midi%12];int wide=name[1]?2:1;
+  centered(c,name,56,8,accent);
+  snprintf(s,sizeof(s),"%d",v.pitch.midi/12-1);
+  for(int i=0;s[i];i++){int x=120+(wide*6-1)*4+6,y=98;for(int col=0;col<5;col++)for(int row=0;row<7;row++)if(VEX_FONT[(unsigned char)s[i]-32][col]&(1<<row))c.fillRect(x+col*2,y+row*2,2,2,UI_DIM);}
+  snprintf(s,sizeof(s),"%+.0f cents",double(cents));centered(c,s,128,2,inTune?UI_GOLD:UI_INK);
+  // Needle: centre mark, +-50 cent scale, red needle outside the green zone, gold when in tune.
+  c.drawFastHLine(40,166,160,UI_INK);c.fillRect(112,160,16,13,UI_PLUM);c.drawFastVLine(120,158,17,UI_GOLD);
+  for(int i=-50;i<=50;i+=25)c.drawFastVLine(120+int(i*1.6f),163,7,UI_DIM);
+  if(cents>50){cents=50;}
+  if(cents<-50){cents=-50;}
+  c.fillCircle(120+int(cents*1.6f),166,4,inTune?UI_GOLD:UI_RED);
+  if(cents<=-5)centered(c,"FLAT  < tune up",184,1,UI_RED);else if(cents>=5)centered(c,"SHARP  tune down >",184,1,UI_RED);else centered(c,"IN TUNE",184,1,UI_GOLD);
+  centered(c,stringName(v.pitch.midi),198,1,UI_DIM);
+ }else{
+  pet(c,POSE_LISTEN,88,58,2);
+  centered(c,v.peak>=.98f?"CLIP - TURN DOWN":"Play one note",132,2,v.peak>=.98f?UI_RED:UI_INK);
+  c.drawFastHLine(40,166,160,UI_DIM);c.drawFastVLine(120,158,17,UI_DIM);
+ }
+ centered(c,"DISPLAY ONLY",214);
+}
+template<class Canvas> void drawPet(Canvas& c,const View& v){
+ const auto& p=v.progress;char s[64];
+ // Quest ring: filled ticks follow session progress toward the goal; gold while running, dim when paused.
+ uint32_t goal=p.goalMs();int filled=int((p.session_ms>=goal?goal:p.session_ms)*60/goal);
+ ring(c,filled,p.claimed?UI_GOLD:p.running?UI_GOLD:UI_PLUM);
+ centered(c,"VEX",18,2,UI_GOLD);
+ pet(c,choosePose(v));
+ bool celebrate=v.now-v.fragment_at<UI_CELEBRATE_MS,levelup=v.now-v.levelup_at<UI_CELEBRATE_MS,summary=v.now-v.summary_at<UI_SUMMARY_MS&&!p.running;
+ if(levelup){
+  c.fillRect(36,166,168,22,UI_GOLD);snprintf(s,sizeof(s),"LEVEL %lu!",(unsigned long)p.level());centered(c,s,170,2,UI_BG);
+ }else if(celebrate){
+  c.fillRect(36,166,168,22,UI_RED);centered(c,"FRAGMENT!",170,2,UI_INK);
+ }
+ if(summary){
+  c.fillRect(24,194,192,1,UI_PLUM);
+  snprintf(s,sizeof(s),"SESSION %lu:%02lu  +%lu XP",(unsigned long)(v.summary_ms/60000),(unsigned long)(v.summary_ms/1000%60),(unsigned long)v.summary_xp);centered(c,s,199,1,UI_GOLD);
+  snprintf(s,sizeof(s),"LV%lu  %lu XP total",(unsigned long)p.level(),(unsigned long)p.xp());centered(c,s,211);
+  centered(c,p.claimed?"Fragment earned":"Tap foot to resume",222,1,UI_INK);
+ }else{
+  snprintf(s,sizeof(s),"LV%lu  %lu XP",(unsigned long)p.level(),(unsigned long)p.xp());centered(c,s,196);
+  snprintf(s,sizeof(s),"%lu:%02lu / %lum",(unsigned long)(p.session_ms/60000),(unsigned long)(p.session_ms/1000%60),(unsigned long)(goal/60000));centered(c,s,209);
+  centered(c,p.claimed?"FRAGMENT!":p.running?"LISTENING":"PAUSED",222,1,UI_GOLD);
  }
 }
 template<class Canvas> void drawScreen(Canvas& c,const View& v){
@@ -43,26 +121,12 @@ template<class Canvas> void drawScreen(Canvas& c,const View& v){
   snprintf(s,sizeof(s),"RMS %.4f",double(v.rms));centered(c,s,84,2);
   snprintf(s,sizeof(s),"PEAK %.3f",double(v.peak));centered(c,s,116,2);
   int width=int(v.peak*160);if(width<0)width=0;if(width>160)width=160;
-  c.fillRect(40,151,160,9,0x2949);c.fillRect(40,151,width,9,v.peak>=.98?UI_RED:UI_GOLD);
+  c.fillRect(40,151,160,9,UI_DIM);c.fillRect(40,151,width,9,v.peak>=.98?UI_RED:UI_GOLD);
   centered(c,v.peak>=.98?"CLIP - TURN DOWN":"Watch serial monitor",180,1,v.peak>=.98?UI_RED:UI_INK);
- }else if(v.tuning){
-  centered(c,"TUNE / A440",28,2);
-  if(v.pitch.valid&&v.pitch_fresh&&v.rms>p.gate&&v.peak<.98){
-   const char* names[]={"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"};
-   centered(c,names[v.pitch.midi%12],62,8,UI_GOLD);
-   snprintf(s,sizeof(s),"%+.0f cents",double(v.pitch.cents));centered(c,s,139,2);
-   c.drawFastHLine(40,173,160,UI_INK);c.drawFastVLine(120,166,15,UI_GOLD);
-   float cents=v.pitch.cents;if(cents>50)cents=50;if(cents< -50)cents=-50;
-   c.fillCircle(120+int(cents*1.6f),173,4,UI_RED);
-  }else centered(c,"Play one note",99,2);
-  centered(c,"DISPLAY ONLY",204);
- }else{
-  centered(c,"VEX",18,2,UI_GOLD);pet(c,p.active?1:(v.now-v.active_at>30000?2:0));
-  snprintf(s,sizeof(s),"LV%lu  %lu XP",(unsigned long)p.level(),(unsigned long)p.xp());centered(c,s,196);
-  snprintf(s,sizeof(s),"%lu:%02lu / %lum",(unsigned long)(p.session_ms/60000),(unsigned long)(p.session_ms/1000%60),(unsigned long)(p.goalMs()/60000));centered(c,s,209);
-  centered(c,p.claimed?"FRAGMENT!":p.running?"LISTENING":"PAUSED",222,1,UI_GOLD);
- }
- if(v.stage==4&&(v.now-v.notice_at<3000||!p.calibrated)){
+ }else if(v.tuning)drawTuner(c,v);
+ else drawPet(c,v);
+ bool summary=v.now-v.summary_at<UI_SUMMARY_MS&&!p.running&&p.calibrated;
+ if(v.stage==4&&!v.tuning&&!summary&&(v.now-v.notice_at<3000||!p.calibrated)){
   c.fillRect(20,193,200,11,UI_BG);
   centered(c,v.calibrating?"MUTE STRINGS...":v.notice,195,1,UI_GOLD);
  }

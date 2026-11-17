@@ -1,0 +1,27 @@
+# Goals cycle 5 -> 10 -> 20 -> 5 only while paused; a goal change or footswitch hold resets the session.
+calibrate
+press quest 100
+expect goal_minutes=10 notice=Goal_set;_session_reset
+press foot 100
+audio 30000 .1 .3
+press quest 100
+expect goal_minutes=10 notice=Pause_to_change_goal session_ms~=30000
+press foot 100
+expect running=false
+press quest 100
+expect goal_minutes=20 session_ms=0 active_ms~=30000
+press quest 100
+expect goal_minutes=5
+press foot 100
+audio 300000 .1 .3
+expect fragments=1 session_ms~=300000
+press foot 1500
+expect session_ms=0 running=false fragments=1 notice=New_session_/_paused
+# A new session can earn a second fragment.
+press foot 100
+audio 300000 .1 .3
+expect fragments=2
+serial p
+expect running=false
+serial r
+expect session_ms=0

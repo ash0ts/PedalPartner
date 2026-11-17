@@ -10,3 +10,6 @@ constexpr unsigned long TFT_HZ=16000000;
 constexpr unsigned char INPUT_LEVEL=0; // 0 = 3.12V peak-to-peak full scale. Lowest gain first.
 constexpr unsigned short GOALS[]={5,10,20};
 constexpr unsigned long HOLD_MS=1200;
+// Pitch/level path. Default: shared analyzer.h (YIN in loop(), same code the simulator runs).
+// Define VEX_PITCH_PJRC to compare against the PJRC AudioAnalyzeNoteFrequency/RMS/Peak nodes on the bench.
+// #define VEX_PITCH_PJRC

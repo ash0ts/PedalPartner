@@ -1,0 +1,27 @@
+# Two alternating CRC slots, hold-MODE save, reboot restore, corrupt fallback and the idle auto-save.
+calibrate
+press foot 100
+audio 60000 .1 .3
+press mode 1500
+expect saved_slot=0 sequence=1 notice=Saved_-_safe_to_unplug running=true
+press mode 1500
+expect notice=Already_saved sequence=1
+audio 60000 .1 .3
+save
+expect saved_slot=1 sequence=2 active_ms~=120000
+reboot
+expect active_ms~=120000 running=false calibrated=false fragments=0 saved_slot=1 sequence=2
+corrupt
+reboot
+expect active_ms~=60000 saved_slot=0 sequence=1
+# Auto-save: at least sixty seconds since the last save and three idle seconds.
+calibrate
+press foot 100
+audio 30000 .1 .3
+expect active_ms~=90000
+wait 2000
+expect sequence=1
+wait 59000
+expect sequence=2 saved_slot=1 notice=Saved_-_safe_to_unplug
+reboot
+expect active_ms~=90000
