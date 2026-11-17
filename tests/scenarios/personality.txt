@@ -2,17 +2,22 @@
 calibrate
 press foot 100
 audio 3000 .1 .3
-# Four-frame strum at DISPLAY_MS steps (wind-up, down, follow-through, rest), one frame per cadence.
+# Four-frame strum loop keyed to the clock, one frame per display cadence (frame 2 at this instant).
+# anim indices follow art/vex/manifest.json: 0 idle, 1 blink, 2 strum, 3 cheer, 4 levelup, 5 listen, 6 sleep.
+expect anim=2 frame=2
 golden strum_frame_a
 audio 100 .1 .3
+expect anim=2 frame=3
 golden strum_frame_b
 audio 100 .1 .3
+expect anim=2 frame=0
 golden strum_frame_c
 audio 100 .1 .3
+expect anim=2 frame=1
 golden strum_frame_d
 # Fragment banner appears for three seconds after the claim, then the pet keeps riffing.
 audio 297000 .1 .3
-expect fragments=1
+expect fragments=1 anim=3
 golden fragment_banner
 audio 3500 .1 .3
 golden fragment_after_banner
@@ -25,11 +30,12 @@ golden paused_after_summary
 # Level 2 arrives at ten active minutes and shows its own banner.
 press foot 100
 audio 297000 .1 .3
-expect level=2
+expect level=2 anim=4
 golden levelup_banner
 # A new session resets the ring and summary; the pet sleeps after thirty idle seconds.
 press foot 1500
 expect session_ms=0 running=false
 golden new_session
 wait 31000
+expect anim=6
 golden sleep_after_idle

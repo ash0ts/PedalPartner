@@ -32,6 +32,7 @@ make art-check                           # verify committed headers match art/ w
 make sim                                 # workbench; saving a PNG re-imports, rebuilds and reloads
 python3 tests/simulator_test.py --update-golden   # after an intentional look change; review frames
 python3 tools/render_gallery.py          # every screen state into assets/screens/
+make motion                              # verify motion segment by segment and re-encode assets/motion/
 ```
 
 `make test` runs `tests/art_test.py`, which fails when a committed header is stale and checks that
@@ -46,6 +47,19 @@ device renderer.
 
 If the pet card frame used for the CAD texture changes (`tools/render_screen.py`), the hero
 render's provenance goes stale and `make hero` must run (see [MARKETING.md](MARKETING.md)).
+
+## See it move
+
+![VEX breathing, blinking, strumming, cheering, levelling up, sleeping and listening, rendered by the shared renderer at the 100 ms display cadence](../assets/motion/vex-motion.gif)
+
+`make motion` (needs ffmpeg) drives the native simulator through the storyboard in
+`tools/render_motion.py`, captures one frame per `DISPLAY_MS`, checks that each segment shows only
+its animation and that every loop advances exactly one frame per cadence, then writes
+[`assets/motion/vex-motion.mp4`](../assets/motion/vex-motion.mp4) (480 × 540, 10 fps), the GIF
+above, [`storyboard.png`](../assets/motion/storyboard.png) (one frame per segment) and
+`storyboard.json` (segment times and the animations seen). Captions are drawn with the firmware's
+own display font. Re-run it after any art or motion change so the video matches the headers. The
+pixels are the device's; the timing is the simulator's clock, not a measured panel.
 
 ## How motion works
 
