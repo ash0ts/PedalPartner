@@ -1,0 +1,9 @@
+location,quantity,screw,mating_hardware
+Case corners,4,M3 x10 pan head,M3 nuts x4; pockets 5.9mm across flats
+Tray to base,4,M3 x6 pan head,M3 nuts x4; pockets 5.9mm across flats
+Charcoal bezel to lid,4,M3 x12 pan head,"M3 nuts x4, below lid"
+Display to lid,2,"M2 x10, 90-degree countersunk",M2 nuts x2; printed 2.0mm spacers x2; heads flush with faceplate
+Audio board to tray,3,M2 x25 pan head,M2 nuts x3; 15mm nylon spacers x3
+Perfboard to tray,2,M2 x12 pan head,M2 nuts x2; 6mm nylon spacers x2
+Footswitch,1,Included M12 hardware,"Lower nut, metal plate, lid, top washer, top nut"
+Buttons / input jack,3,Included retaining hardware,Confirm panel thickness and remaining thread

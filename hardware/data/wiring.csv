@@ -1,0 +1,21 @@
+wire,from,to,suggested_color,note
+W01,Teensy 3.3V,Display V+ / VIN,red,Do not connect display 3Vo output to Teensy 3.3V.
+W02,Teensy GND,Display GND,black,Common logic ground.
+W03,Teensy 11 (MOSI),Display MOSI,green,Hardware SPI data.
+W04,Teensy 13 (SCK),Display SCK,blue,Hardware SPI clock; onboard LED activity is normal.
+W05,Teensy 5,Display TFTCS,yellow,Display select; audio SD uses pin10.
+W06,Teensy 4,Display DC,white,Data / command.
+W07,Teensy 3,Display RST,purple,Reset.
+W08,Display SDCS,R4 10k -> 3.3V,orange,Keep unused display SD card deselected; no SD card in R1.
+W09,Display BL / Lite,Leave unconnected,-,Onboard pullup enables backlight.
+W10,Display MISO and 3Vo,Leave unconnected,-,Insulate unused pins; EYESPI unused.
+W11,MODE lug A,Teensy 0,white,"Other lug to GND; INPUT_PULLUP, pressed=LOW."
+W12,QUEST lug A,Teensy 1,white,"Other lug to GND; INPUT_PULLUP, pressed=LOW."
+W13,FOOT lug A,Teensy 2,white,Other lug to GND; normally open momentary.
+W14,Teensy 9,R3 1k -> LED anode,orange,LED cathode (flat/short lead) to GND.
+W15,Input jack TIP,R1 10k -> RV1 terminal 3,shielded core,RV1 terminal3 is upper divider arm; see Bourns drawing.
+W16,RV1 terminal 1,Input ground,black,Identify outer terminals by resistance before soldering.
+W17,RV1 terminal 2 (wiper),R2 1k -> Audio Adapter LINE IN L,shielded core,Never connect to Teensy analog pin or MIC pad.
+W18,Input jack SLEEVE,Audio Adapter LINE IN GND,shield / black,Ground shield at defined input ground; same logic ground via stack.
+W19,Audio Adapter LINE IN R,Leave unconnected,-,Not used by firmware. Do not join line outputs.
+W20,Teensy / audio stack,Aligned 14-pin headers,stack,"Audio: 7,8,20,21,23; control18/19; power/ground. Match printed pin labels."

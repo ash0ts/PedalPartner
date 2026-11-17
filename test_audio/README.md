@@ -1,0 +1,1 @@
+24 seconds: silence then E2, A2, D3, G3, B3, E4, A4, three seconds each. Stereo WAV: signal LEFT only, RIGHT silent, -20 dBFS peak. Use an interface left LINE output at low level into the buffered-input test circuit. Digital amplitude is not an analog voltage specification. Never use a power-amplifier speaker output.

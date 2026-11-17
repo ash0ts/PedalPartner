@@ -1,0 +1,33 @@
+name: Firmware build (manual)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: firmware-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  teensy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: arduino/setup-arduino-cli@v2
+        with:
+          version: '1.6.0'
+      - name: Install pinned Teensy and display dependencies
+        run: make setup-firmware
+      - name: Compile all four stages without hardware
+        run: make firmware-all
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: teensy-builds
+          retention-days: 7
+          if-no-files-found: ignore
+          path: |
+            build/stage-*/output/
+            build/target_build_report.json

@@ -1,0 +1,14 @@
+{
+  "width": 86.0,
+  "length": 146.0,
+  "base_h": 42.0,
+  "lid_t": 3.0,
+  "wall": 3.0,
+  "floor": 3.0,
+  "corner": 12.0,
+  "display_y": 32.0,
+  "display_plane": 40.0,
+  "stack_x": -12.0,
+  "button_y": -12.0,
+  "foot_y": -46.0
+}

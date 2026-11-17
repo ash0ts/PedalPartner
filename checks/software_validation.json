@@ -1,0 +1,14 @@
+{
+  "revision": "R1.1",
+  "host_core_tests": "PASS",
+  "native_simulator_integration": "PASS",
+  "forced_clean_rebuild": "PASS",
+  "http_control_and_png": "PASS",
+  "repo_consistency": "PASS",
+  "skill_schema_validation": "PASS",
+  "fresh_agent_skill_forward_test": "PASS",
+  "target_compile_local": "NOT_RUN: Arduino CLI absent and downloads returned HTTP 403",
+  "target_compile_ci": "NOT_RUN: manual workflow; intentionally not part of automatic CI",
+  "physical_device": "NOT_TESTED",
+  "automatic_ci": "Single Linux make test job; no target toolchain or CAD installs"
+}
