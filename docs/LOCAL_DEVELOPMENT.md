@@ -73,6 +73,9 @@ The [left-only test WAV](../test_audio/README.md) can exercise reference notes t
 - Rules/persistence: edit `core.h`, add a relevant regression, `make test` and `make firmware-all`.
 - Layout: edit shared `ui.h`, inspect practice/tuner/clipping/calibration views with `make sim`, then compile the target.
 - Character: edit `tools/make_sprites.py`, run `python3 tools/make_sprites.py`, then `make sim-build` and `python3 tools/render_screen.py`. Pillow is needed for sprite generation. The last command creates the CAD texture from the actual shared renderer.
-- CAD/docs: create a Python virtualenv, install `requirements-cad.txt`, then `make cad cad-check`, `make render` (Blender) and `make docs`.
+- Plain Markdown or agent-guidance edits: edit the relevant files and run `make test`; no CAD or Arduino dependencies are needed.
+- CAD geometry or generated hardware guides: create a Python virtualenv, install `requirements-cad.txt`, then regenerate only affected outputs with `make cad cad-check`, `make render` (Blender) and `make docs`.
+- Presentation only: `make hero` renders the existing STEP using Blender and the CAD/Pillow environment; [details](MARKETING.md). It does not compile firmware or rebuild geometry.
+- Mentor handoff: `make pack-mentor` creates the lean review ZIP using standard-library Python and existing files; [contents](MENTOR_PACK.md). It performs no builds.
 
 Record target build results and actual bench measurements separately. A green host test does not prove firmware compilation, and successful compilation does not prove the electrical build.

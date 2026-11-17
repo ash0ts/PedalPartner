@@ -1,17 +1,23 @@
 ---
 name: vex-cad-review
-description: Review or modify PedalPartner VEX CAD, STEP grouping, printed parts and mechanical fit. Use for enclosure, bezel, board mounts, connectors, fabrication exports or mentor CAD review.
+description: Review or modify PedalPartner VEX CAD, STEP grouping, mechanical fit, CAD-based hero imagery or mentor review packaging. Use for enclosure, mounts, fabrication exports, render provenance or mentor handoff.
 ---
 
 # VEX CAD review
 
-Work from the repository root. Read `AGENTS.md`, `docs/HANDOFF.md` and `docs/CAD_REVIEW.md`. Read `docs/PRINTING.md` for fabrication work; read the relevant rows of `hardware/data/project_data.py` and `hardware/data/measurements.csv` for purchased interfaces.
+Work from the repository root. Read `AGENTS.md`, `docs/HANDOFF.md` and `docs/CAD_REVIEW.md`. Classify the requested work before running builds.
 
-1. Identify the intended change and which mating parts it affects. Preserve the actual display size and USB/buffered-input architecture unless the user requests a new revision.
-2. Edit `hardware/cad/build_cad.py`. Update `assembly_tree.py` if ownership changes. Keep each physical part in exactly one service group and keep wiring reserves separate.
-3. Run `make cad cad-check` with the pinned CAD requirements. Inspect both reports under `hardware/generated/checks/` and the exported hierarchy, not only the render.
-4. Inspect sections, screw engagement, component insertion/removal and cable/service-loop space. Distinguish simplified envelopes from manufacturer data. Record assumptions; never fabricate measured values.
-5. Update BOM/wiring if affected. Run `make render` with Blender and `make docs`; visually inspect the current assembly and relevant PDF pages. Run `make test` for cross-file consistency.
-6. Report exact files changed, geometry results, what still needs measurement and the next physical fit check. Update the handoff.
+## Presentation or packaging only
 
-For appearance-only work, prefer practical finish/insert changes. Render materials live separately in `hardware/cad/render_cad.py`; keep them consistent with CAD colors and the finish specification. STEP is a neutral solid assembly, not a native Fusion feature timeline. Do not rescale purchased parts to fix an interference. An overlap-free assembly is not proof of tolerance, strength or safe foot loading.
+- Read `docs/MARKETING.md` for hero work. Run `make hero` to tessellate the existing grouped STEP and render the real assembly. Preserve hardware geometry, proportions and the 32.4 mm display. Use existing shared UI pixels. Change lighting, materials, camera or layout only; never generate imaginary product imagery.
+- Inspect both JPEGs and `assets/marketing/provenance.json`. Confirm the assembly hash and all 72 components. Keep large render intermediates under ignored `build/hero/`; leave assembly-guide renders unchanged.
+- Read `docs/MENTOR_PACK.md` for the lean ZIP. Run `make pack-mentor` and verify its manifest/index. Do not regenerate CAD, firmware or guide PDFs merely to package existing outputs.
+- Run `make test` once after source/doc edits. Reuse recorded mechanical checks when geometry is unchanged. Publish only the changed files using `docs/PUBLISHING.md`; stop any method that needs repeated payload chunks.
+
+## Geometry or purchased-interface changes
+
+1. Read `docs/PRINTING.md` and the relevant `hardware/data/project_data.py` / `measurements.csv` rows. Identify affected mating parts and measurements; never fill unknowns with inferred values.
+2. Edit `hardware/cad/build_cad.py`; update `assembly_tree.py` if ownership changes. Keep each physical part in one service group, with wiring reserves separate. Do not rescale purchased parts to fix interference.
+3. Run `make cad cad-check` with pinned CAD dependencies; inspect both reports and exported hierarchy. Check screw engagement, insertion/removal and cable/service-loop space. Distinguish simplified envelopes from manufacturer geometry.
+4. Update affected BOM/wiring, guide illustrations and documents. Run `make render`, `make docs` and `make hero` only for the assets affected by the change. Inspect relevant images/PDF pages and run `make test`.
+5. Report exact files, commands/results, assumptions and the next physical fit check; update the handoff. An overlap-free STEP does not certify tolerance, strength or safe foot loading. STEP has no native Fusion feature timeline.

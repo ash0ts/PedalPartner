@@ -16,6 +16,8 @@ This is a **complete starter design package for review**, not a physically commi
 | Native simulator integration | Passed: calibration, gating, quest, CRC fallback, reboot and rendered frames |
 | CAD validity / collisions | Passed: 72 parts, 2,556 pairs, no modeled overlaps; `hardware/generated/checks/cad_validation.json` |
 | Grouped STEP round trip | Passed: five groups and all 72 component names/bounds/volumes/solid counts; `step_roundtrip.json` |
+| CAD hero and share image | Rendered with Blender/Cycles from the checked-in STEP; all 72 tessellated component bounds match the recorded CAD. Both layouts visually checked; hashes in `assets/marketing/provenance.json`. |
+| Lean mentor pack | `make pack-mentor` passed; 37 ZIP members, 36 hashed payloads, 10,831,292 bytes. Independent index/link/hash/CRC review passed; ten print-candidate STLs and printing instructions included. |
 | Target Teensy compilation | Not yet verified. Pinned local commands and an optional manual workflow are provided. Local toolchain downloads were blocked by HTTP 403 in the preparation environment. |
 | Physical build / uploaded firmware | Not performed |
 | Electrical, optical, thermal, foot strength | Not performed; blank acceptance rows intentionally remain blank |
@@ -26,11 +28,13 @@ This is a **complete starter design package for review**, not a physically commi
 
 This is a documentation-only proposal. Firmware, physical parts and the R1.1 fabrication packet are unchanged. Review covered `core.h`, `ui.h`'s existing role, `.ino`, `config.h`, existing decisions/development guidance and PJRC specifications. Source-to-manifest checks and local Markdown-link checks were used for the proposal; existing software/CAD evidence is reused, with no new firmware or CAD test claim. The next action remains target compilation and measured bench bring-up.
 
-## Recovery and lightweight CI
+## Presentation, packaging and publication
 
-The interrupted publication checkpoint was recovered intact. The publication-only changes simplify automation: one Linux desktop job, no OS matrix, manual firmware/CAD workflows, bounded runtimes, and short log excerpts for agents. Firmware build failures still retain their report, and the local build command still attempts all four stages. Existing CAD and simulator evidence is retained; no physical or target-build success is inferred from it.
+The initial starter and extension proposal are merged. The presentation update starts from `main` commit `816bd2653e25b703aa466740ec4dd8b8bc9ceee4`; all 141 source files were verified against that tree before edits. The README now uses a studio render of the actual grouped STEP, with a share crop and reproducible scripts. Geometry, firmware, BOM, guide PDFs and assembly-guide illustrations are unchanged. No generative imagery is used.
 
-Publication recovery now has an explicit no-payload-in-context rule in `AGENTS.md` and [publishing instructions](PUBLISHING.md). The interrupted encoder must not be resumed by printing or manually relaying file chunks. Reuse recorded validation for unchanged hardware/software.
+`make hero` tessellates/renders existing geometry; `make pack-mentor` packages existing outputs into the lean ZIP. [MARKETING.md](MARKETING.md) records reproduction/provenance; [MENTOR_PACK.md](MENTOR_PACK.md) explains navigation. Host core/simulator tests and project checks pass. Four packer regression tests cover deterministic archive integrity, missing-input preservation, stale-image rejection and external-symlink rejection. Both repository skills pass frontmatter validation and an independent task review.
+
+The previous visible failure was a conversation-length limit during repeated file-transfer segments, not evidence of a target compiler crash. [Publishing instructions](PUBLISHING.md) now require changed-file-only uploads and forbid chunk/bridge retry loops. A complete-file transfer of each finished JPEG succeeded with its Git blob SHA verified, without payloads entering model context. Automatic CI remains one Linux desktop job; CAD/firmware workflows stay manual. Target compilation and all physical acceptance remain unverified; no Arduino setup/build was run for this presentation change.
 
 ## Exact next actions
 

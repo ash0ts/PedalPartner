@@ -56,6 +56,7 @@ for loc,energy,size in [((80,-120,250),300000,190),((-180,-20,150),220000,190),(
  bpy.ops.object.light_add(type='AREA',location=loc);l=bpy.context.object;l.data.energy=energy;l.data.size=size;l.rotation_euler=(Vector((0,0,30))-l.location).to_track_quat('-Z','Y').to_euler()
 bpy.ops.object.camera_add();cam=bpy.context.object;cam.data.type='ORTHO';sc.camera=cam
 def render(name,visible=None,offsets=None,highlight=None,view='iso',scale=190,target=(0,0,25),labels=False,translations=None):
+ if os.environ.get('VEX_SCENE_ONLY') == '1':return
  if os.environ.get('RENDER_ONLY') and name not in os.environ['RENDER_ONLY'].split(','):return
  offsets=offsets or {};translations=translations or {}
  for n,o in parts.items():
@@ -95,4 +96,5 @@ parts['B_faceplate'].modifiers.remove(mod);bpy.data.objects.remove(cutter,do_unl
 for n,o in parts.items():o.hide_render=False;o.location=(0,0,0);o.data.materials[0]=defaults[n]
 for o in decor.values():o.hide_render=False
 cam.location=(190,-240,270);cam.rotation_euler=(Vector((0,0,25))-cam.location).to_track_quat('-Z','Y').to_euler();cam.data.ortho_scale=190
-bpy.ops.wm.save_as_mainfile(filepath=str(R/'VEX_Pocket_Rival_Render.blend'))
+if os.environ.get('VEX_SCENE_ONLY') != '1':
+ bpy.ops.wm.save_as_mainfile(filepath=str(R/'VEX_Pocket_Rival_Render.blend'))

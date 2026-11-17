@@ -13,6 +13,8 @@
 | Shared C++ logic and renderer | Host simulation exercises the actual rules/pixels. It injects signal measurements rather than pretending to emulate SGTL5000/DSP. |
 | Two CRC-protected save records | Recovers the last valid slot after a damaged write. Hardware power interruption and EEPROM wear still need validation; changing format requires migration. |
 | Lean AGENTS.md plus two task skills | Always-load context stays small; detailed procedures and evidence are read when relevant. No session-history importer is required. |
+| Actual-CAD marketing images | Reuse checked-in STEP geometry and shared UI pixels with studio lighting/proposed finishes. Record hashes; no generative product imagery or invented hardware. |
+| Build-free mentor packing and bounded publication | Package reviewed outputs with a deterministic manifest. Send only changed small files; never repeat chunk/bridge loops or target builds for presentation work. |
 
 Rejected for R1.1: large fictional screen, external ears/armor, custom dome, RGB spectacle, audio bypass, mains/battery/9 V conversion, broad game systems and speculative automatic technique scores. These are scope decisions, not permanent bans.
 
