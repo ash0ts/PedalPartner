@@ -23,5 +23,10 @@ wait 2000
 expect sequence=1
 wait 59000
 expect sequence=2 saved_slot=1 notice=Saved_-_safe_to_unplug
+# A later idle auto-save with nothing new stays silent; only a manual save reports "Already saved".
+wait 61000
+expect sequence=2 notice=Saved_-_safe_to_unplug
+press mode 1500
+expect notice=Already_saved sequence=2
 reboot
 expect active_ms~=90000

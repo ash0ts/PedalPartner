@@ -32,9 +32,10 @@ struct App {
   if(av||bv){saved_slot=(bv&&(!av||newer(b.sequence,a.sequence)))?1:0;const Record& r=saved_slot?b:a;restore(progress,r);sequence=r.sequence;saved_hash=record(progress,0).checksum;}
  }
  // Ordered write: clear magic, body, magic last, then read back. A torn write leaves the other slot valid.
- bool save(){
+ // `manual` saves (hold MODE, serial s) always report; the idle auto-save stays silent when nothing changed.
+ bool save(bool manual=true){
   uint32_t fingerprint=record(progress,0).checksum;
-  if(fingerprint==saved_hash){message("Already saved");return false;}
+  if(fingerprint==saved_hash){if(manual)message("Already saved");return false;}
   int target=saved_slot==0?1:0,address=64*target;Record r=record(progress,sequence+1);const uint8_t* p=(const uint8_t*)&r;
   for(int i=0;i<4;i++)store.update(address+i,0);
   for(size_t i=4;i<sizeof r;i++)store.update(address+i,p[i]);
@@ -87,7 +88,7 @@ struct App {
    if(progress.claimed&&!was_claimed)fragment_at=now;
    if(progress.level()>last_level){last_level=progress.level();levelup_at=now;}
   }
-  if(now-save_at>=60000&&now-active_at>=3000&&!calibrating){save();save_at=now;}
+  if(now-save_at>=60000&&now-active_at>=3000&&!calibrating){save(false);save_at=now;}
  }
  bool led()const{return stage==2?raw_foot:progress.active;}
  View view()const{
