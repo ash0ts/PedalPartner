@@ -118,15 +118,20 @@ VexModule().then(M=>{
   // tests/scenarios/stages_and_tuner.txt from `stage 4` up to `golden tuner_sharp`
   M._vex_boot(4,0);now=0;
   press('mode',100);audio(500,.1,.3,440,.99);audio(500,.1,.3,82.4069,.99);audio(500,.1,.3,446,.99);frames.push(frame());
+  // tests/scenarios/personality.txt: two consecutive strum frames one display cadence apart.
+  M._vex_boot(4,0);now=0;
+  M._vex_serial(99,now);audio(3100,.001,.002,0,0);press('foot',100);audio(3000,.1,.3);frames.push(frame());audio(100,.1,.3);frames.push(frame());
   process.stdout.write(frames.join('\n'));
 });'''
     r=subprocess.run([node,'-e',script,str(OUT/'vex.js')],capture_output=True,text=True,cwd=ROOT)
     if r.returncode:sys.exit('node failed:\n'+r.stderr[-2000:])
     import base64
-    for name,frame in zip(['pet_listening','tuner_sharp'],r.stdout.strip().split('\n')):
+    names=['pet_listening','tuner_sharp','strum_frame_a','strum_frame_b'];got=r.stdout.strip().split('\n')
+    if len(got)!=len(names):sys.exit(f'WASM check produced {len(got)} frames, expected {len(names)}')
+    for name,frame in zip(names,got):
         golden=png_rgb((ROOT/f'tests/golden/{name}.png').read_bytes());d=diff_count(golden,base64.b64decode(frame))
         if d:sys.exit(f'WASM frame differs from native golden {name} in {d} pixels')
-    print('PASS: WASM build renders native goldens pet_listening and tuner_sharp pixel for pixel')
+    print('PASS: WASM build renders native goldens '+', '.join(names)+' pixel for pixel (strum advances one frame per display cadence)')
 
 def main():
     p=argparse.ArgumentParser(description=__doc__,formatter_class=argparse.RawDescriptionHelpFormatter)

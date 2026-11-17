@@ -6,7 +6,7 @@ PORT ?= 8765
 HEADERS := $(wildcard firmware/VEX_Pocket_Rival/*.h)
 ART := $(wildcard art/*.json art/*/*.json art/*/*.png)
 
-.PHONY: test sim sim-build art art-check web web-check firmware firmware-all setup-firmware cad cad-check render render-meshes hero pack-mentor docs check clean
+.PHONY: test sim sim-build art art-check motion web web-check firmware firmware-all setup-firmware cad cad-check render render-meshes hero pack-mentor docs check clean
 build:
 	mkdir -p build
 build/core-tests: tests/core_tests.cpp $(HEADERS) | build
@@ -26,6 +26,9 @@ art:
 	$(PYTHON) tools/make_sprites.py
 art-check:
 	$(PYTHON) tools/make_sprites.py --check
+# Motion video through the shared renderer at DISPLAY_MS (needs ffmpeg); verifies each segment's animation.
+motion: build/vex-sim
+	$(PYTHON) tools/render_motion.py
 # In-browser workbench: shared firmware headers compiled to WebAssembly (needs emcc; see docs/LOCAL_DEVELOPMENT.md).
 web:
 	$(PYTHON) tools/web.py build

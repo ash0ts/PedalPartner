@@ -24,6 +24,7 @@ The product is VEX / Pocket Rival, a buildable first guitar companion with origi
 | Lean mentor review ZIP from existing files | `make pack-mentor` |
 | Regenerate BOM, guide and templates | `make docs` |
 | Import `art/` into the generated firmware headers / verify they match | `make art` / `make art-check` |
+| Verify motion segment by segment and re-encode `assets/motion/` (needs ffmpeg) | `make motion` |
 
 Python 3.10+ and C++17 suffice for host tests. CAD uses build123d 0.10.0. Target pins/versions are in `config.h` and `tools/firmware.py`. Do not silently upgrade them.
 
