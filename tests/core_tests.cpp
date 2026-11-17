@@ -33,7 +33,8 @@ template<class F> static void feed(vex::Analyzer& a,int samples,F signal,float& 
   for(int j=0;j<vex::Analyzer::BLOCK;j++){float v=signal(i+j);if(v>1)v=1;if(v<-1)v=-1;block[j]=int16_t(v*32767);}
   a.push(block,vex::Analyzer::BLOCK);float br,bp;if(a.takeLevel(br,bp)){r=br;p=bp;}if(a.analyze()){hz=a.hz;probability=a.probability;}
  }
- if(rms)*rms=r;if(peak)*peak=p;
+ if(rms){*rms=r;}
+ if(peak){*peak=p;}
 }
 static void analyzerTests(){
  const float SR=44100;auto a=std::make_unique<vex::Analyzer>();float hz=0,p=0,rms=0,peak=0;
@@ -62,8 +63,10 @@ static void analyzerTests(){
  MemStore store;vex::App app(store,4);app.begin(0,true);
  app.observePitch(440,1,1);app.observePitch(440,1,2);app.observePitch(880,1,3);assert(app.pitchNow.midi==69);
  app.observePitch(440,1,4);app.observePitch(440,1,5);
- for(int i=0;i<3;i++)app.observePitch(454.f,1,6+i);assert(app.pitchNow.midi==69&&app.pitchNow.cents>50);
- for(int i=0;i<3;i++)app.observePitch(458.f,1,9+i);assert(app.pitchNow.midi==70&&app.pitchNow.cents<0);
+ for(int i=0;i<3;i++){app.observePitch(454.f,1,6+i);}
+ assert(app.pitchNow.midi==69&&app.pitchNow.cents>50);
+ for(int i=0;i<3;i++){app.observePitch(458.f,1,9+i);}
+ assert(app.pitchNow.midi==70&&app.pitchNow.cents<0);
  app.observePitch(0,0,12);assert(!app.pitchNow.valid&&app.hz_count==0);
 }
 int main(){

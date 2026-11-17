@@ -74,7 +74,8 @@ template<class Canvas> void drawTuner(Canvas& c,const View& v){
   // Needle: centre mark, +-50 cent scale, red needle outside the green zone, gold when in tune.
   c.drawFastHLine(40,166,160,UI_INK);c.fillRect(112,160,16,13,UI_PLUM);c.drawFastVLine(120,158,17,UI_GOLD);
   for(int i=-50;i<=50;i+=25)c.drawFastVLine(120+int(i*1.6f),163,7,UI_DIM);
-  if(cents>50)cents=50;if(cents<-50)cents=-50;
+  if(cents>50){cents=50;}
+  if(cents<-50){cents=-50;}
   c.fillCircle(120+int(cents*1.6f),166,4,inTune?UI_GOLD:UI_RED);
   if(cents<=-5)centered(c,"FLAT  < tune up",184,1,UI_RED);else if(cents>=5)centered(c,"SHARP  tune down >",184,1,UI_RED);else centered(c,"IN TUNE",184,1,UI_GOLD);
   centered(c,stringName(v.pitch.midi),198,1,UI_DIM);
