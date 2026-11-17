@@ -1,14 +1,14 @@
 {
-  "renderer": "Blender 4.3.2 / Cycles CPU",
+  "renderer": "Blender 5.2.3 LTS / Cycles CPU",
   "samples": 160,
   "resolution": 1600,
   "seed": 11,
   "assembly": "hardware/generated/VEX_Pocket_Rival_Assembly.step",
   "assembly_sha256": "1e4e04014fbe370a06ab540fafefe5f2ef731d1b9af4438acaaf1f82773231c5",
   "components": 72,
-  "mesh_manifest_sha256": "a435de845c11c90965d11fea17102874682251b7ab10308e53fdb88d00f62bce",
+  "mesh_manifest_sha256": "9892e92027f5ad46266fef025fb287250116e17ded1fcb549ff4092b77a6c13d",
   "screen": "assets/screen.png",
-  "screen_sha256": "fdaed1c060729f92367a85e07566295f7f05394cbd6e251b7cdd04c8e8bf0de3",
+  "screen_sha256": "099df3e64d4585161e9340dbd6e64165705d3cb719458dee97c4ee382312a3d2",
   "scope": "Existing STEP geometry; studio materials/lighting, existing decal labels and shared UI texture. Proposed finish, not a photograph or physical validation.",
   "generative_imagery": false,
   "outputs": [
@@ -16,15 +16,15 @@
       "path": "assets/marketing/vex-hero.jpg",
       "width": 1920,
       "height": 1080,
-      "bytes": 136789,
-      "sha256": "d55ef11194bc35c20573e5789e259be1a349d57a9126b0b4ca8c73d591de94ce"
+      "bytes": 136934,
+      "sha256": "4e12b274b32d694e9f535b43745b922eec573e4ceeab29eb65044baa1a2fa498"
     },
     {
       "path": "assets/marketing/vex-social.jpg",
       "width": 1200,
       "height": 630,
-      "bytes": 69626,
-      "sha256": "f6748345ea6c94e7bbddcd5d512b172f274a437354c72021910e4dea0cbb5f56"
+      "bytes": 69696,
+      "sha256": "042e0eb46208d2ca73960ea5876aad372cef2d96f7c43542669d0a030cc60375"
     }
   ],
   "reproduce": "make hero",

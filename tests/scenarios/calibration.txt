@@ -1,0 +1,23 @@
+# Calibration requires fresh samples, a quiet floor and derives gate = max(0.001, 4 x median).
+serial c
+expect calibrating=true notice=Mute_strings_3_seconds
+golden calibrating
+wait 3100
+expect calibrating=false calibrated=false notice=No_audio_samples
+calibrate .1
+expect calibrated=false notice=Too_loud:_try_again
+calibrate .002
+expect calibrated=true gate=.008
+calibrate .0001
+expect calibrated=true gate=.001
+# Holding QUEST starts the same calibration path through the debounced control.
+press quest 1500
+expect calibrating=true running=false calibrated=false
+audio 3100 .003 .006
+expect calibrating=false calibrated=true gate=.012 notice=Ready:_tap_footswitch
+# The footswitch is ignored while calibrating.
+serial c
+press foot 100
+expect running=false calibrating=true
+audio 3100 .001 .002
+expect calibrated=true running=false

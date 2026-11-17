@@ -1,0 +1,30 @@
+# Presentation state: strum animation, fragment and level-up banners, session summary, blink and sleep.
+calibrate
+press foot 100
+audio 3000 .1 .3
+golden riff_frame_a
+audio 250 .1 .3
+golden riff_frame_b
+# Fragment banner appears for three seconds after the claim, then the pet keeps riffing.
+audio 297000 .1 .3
+expect fragments=1
+golden fragment_banner
+audio 3500 .1 .3
+golden fragment_after_banner
+# Pausing shows the session summary (session time and XP earned this session) for four seconds.
+press foot 100
+expect running=false
+golden session_summary
+wait 4500
+golden paused_after_summary
+# Level 2 arrives at ten active minutes and shows its own banner.
+press foot 100
+audio 297000 .1 .3
+expect level=2
+golden levelup_banner
+# A new session resets the ring and summary; the pet sleeps after thirty idle seconds.
+press foot 1500
+expect session_ms=0 running=false
+golden new_session
+wait 31000
+golden sleep_after_idle

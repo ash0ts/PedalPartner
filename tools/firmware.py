@@ -12,7 +12,7 @@ def main():
     if not cli:sys.exit('arduino-cli is missing. On macOS: brew install arduino-cli; then make setup-firmware. No upload was attempted.')
     config=ROOT/'.arduino/arduino-cli.yaml';config.parent.mkdir(exist_ok=True)
     # JSON is valid YAML and quotes paths safely, including spaces in a checkout path.
-    settings={'boards_manager':{'additional_urls':[URL]},'directories':{'data':str(config.parent/'data'),'downloads':str(config.parent/'downloads'),'user':str(config.parent/'user')}}
+    settings={'board_manager':{'additional_urls':[URL]},'directories':{'data':str(config.parent/'data'),'downloads':str(config.parent/'downloads'),'user':str(config.parent/'user')}}
     config.write_text(json.dumps(settings,indent=2))
     def run(*parts):
         command=[cli,'--config-file',str(config),*parts];print('+',' '.join(command),flush=True);subprocess.run(command,cwd=ROOT,check=True)

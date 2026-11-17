@@ -1,0 +1,39 @@
+# Power loss at several byte offsets during the ordered write never loses the previous valid record.
+calibrate
+press foot 100
+audio 60000 .1 .3
+save
+expect saved_slot=0 sequence=1
+audio 60000 .1 .3
+# Cut before anything reaches the other slot.
+powercut 0
+save
+expect power=false
+reboot
+expect active_ms~=60000 saved_slot=0 sequence=1
+calibrate
+press foot 100
+audio 60000 .1 .3
+# Cut after the magic is cleared and part of the body is written.
+powercut 10
+save
+expect power=false
+reboot
+expect active_ms~=60000 saved_slot=0 sequence=1
+calibrate
+press foot 100
+audio 60000 .1 .3
+# Cut with the body complete but only two of four magic bytes restored (52 byte writes per save).
+powercut 50
+save
+expect power=false
+reboot
+expect active_ms~=60000 saved_slot=0 sequence=1
+calibrate
+press foot 100
+audio 60000 .1 .3
+# Cut after the final magic byte: the new record is complete and wins.
+powercut 52
+save
+reboot
+expect active_ms~=120000 saved_slot=1 sequence=2
