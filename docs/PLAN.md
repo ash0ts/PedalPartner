@@ -19,3 +19,9 @@
 - 100–120 min: readability and measured fit; assign the next bench session.
 
 Later candidates, after milestone 7: richer original pet animations, better exercise feedback with reference datasets, larger display revision, optional lens experiment, protected 9 V input or MIDI. Each needs its own requirements and tests. The first prototype remains intentionally small in software scope.
+
+## Extension path after a working buddy
+
+See [EXTENSIBILITY.md](EXTENSIBILITY.md) for the reviewed architecture proposal: portable practice logic, explicit observations/exercise definitions, versioned history and USB sync, local adaptive suggestions, then an optional computer-hosted agent. These interfaces and features are not yet implemented.
+
+Keep the immediate build as the existing listening companion. Future processor/display revisions should preserve progress and software contracts while accepting that drivers, carrier and enclosure may change. Complete target builds and bench measurements before selecting extensions from measured needs.

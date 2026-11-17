@@ -15,3 +15,13 @@
 | Lean AGENTS.md plus two task skills | Always-load context stays small; detailed procedures and evidence are read when relevant. No session-history importer is required. |
 
 Rejected for R1.1: large fictional screen, external ears/armor, custom dome, RGB spectacle, audio bypass, mains/battery/9 V conversion, broad game systems and speculative automatic technique scores. These are scope decisions, not permanent bans.
+
+## Extension direction
+
+- Retain the offline practice companion as the core product; richer coaching is optional.
+- Preserve platform-independent practice rules and presentation data. Extract hardware adapters incrementally as features need them.
+- Introduce versioned session summaries and a bounded USB application protocol before host-agent integration; existing debug serial is not that protocol.
+- A coaching policy proposes supported exercises; the device owns measurement, session state and reward accounting. A general language-model planner belongs on an optional host initially.
+- Port data/content contracts to V2 rather than promising processor pin or enclosure compatibility. No processor upgrade substitutes for measured recognition accuracy, readability or noise/strength testing.
+
+The concrete boundaries, current gaps and acceptance sequence are in [EXTENSIBILITY.md](EXTENSIBILITY.md). These are architecture decisions for future implementation, not claims that those capabilities are present.
