@@ -20,6 +20,12 @@ This is a **complete starter design package for review**, not a physically commi
 | Physical build / uploaded firmware | Not performed |
 | Electrical, optical, thermal, foot strength | Not performed; blank acceptance rows intentionally remain blank |
 
+## Extensibility review checkpoint
+
+[EXTENSIBILITY.md](EXTENSIBILITY.md) records a source-reviewed proposal for portable practice rules, typed observations, session history/save migration, USB sync and bounded local/host coaching policies. Core rules and rendering are already shared with the simulator; versioned host commands, session history, adaptive policies, migration tooling and a companion app are not implemented.
+
+This is a documentation-only proposal. Firmware, physical parts and the R1.1 fabrication packet are unchanged. Review covered `core.h`, `ui.h`'s existing role, `.ino`, `config.h`, existing decisions/development guidance and PJRC specifications. Source-to-manifest checks and local Markdown-link checks were used for the proposal; existing software/CAD evidence is reused, with no new firmware or CAD test claim. The next action remains target compilation and measured bench bring-up.
+
 ## Recovery and lightweight CI
 
 The interrupted publication checkpoint was recovered intact. The publication-only changes simplify automation: one Linux desktop job, no OS matrix, manual firmware/CAD workflows, bounded runtimes, and short log excerpts for agents. Firmware build failures still retain their report, and the local build command still attempts all four stages. Existing CAD and simulator evidence is retained; no physical or target-build success is inferred from it.
