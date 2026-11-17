@@ -1,0 +1,74 @@
+{
+ "schema_version": 1,
+ "id": "vex-art-pipeline",
+ "kind": "sequence",
+ "title": "VEX art pipeline",
+ "eyebrow": "PedalPartner / technical guide",
+ "question": "How does a PNG drawn by an artist become pixels on the pedal without touching C++?",
+ "summary": "Artists edit PNG strips, a manifest and a theme in art/. tools/make_sprites.py validates them and generates sprites.h, anim.h, theme.h and two font headers. ui.h renders on a 100 ms cadence; flush.h finds the changed rows and the Teensy sends only those bands.",
+ "provenance": "actual",
+ "steps": [
+  {
+   "id": "draw",
+   "title": "Draw in art/",
+   "body": "PNG strips of 32 x 32 frames, manifest.json timing and theme.json colours."
+  },
+  {
+   "id": "import",
+   "title": "Import and validate",
+   "body": "tools/make_sprites.py rejects off-palette pixels, partial alpha, wrong strip sizes and frame periods that are not multiples of DISPLAY_MS, then writes the committed headers."
+  },
+  {
+   "id": "render",
+   "title": "Render and flush",
+   "body": "ui.h quantises time to DISPLAY_MS; flush.h compares rows with the shadow buffer and the .ino writes only the dirty bands over SPI."
+  }
+ ],
+ "states": [
+  {
+   "id": "draw",
+   "label": "1 / 3 Draw",
+   "visible": [
+    "draw"
+   ],
+   "focus": [
+    "draw"
+   ],
+   "artwork": "draw.svg",
+   "caption": "Actual strum strip and manifest entry from art/."
+  },
+  {
+   "id": "import",
+   "label": "2 / 3 Import",
+   "visible": [
+    "draw",
+    "import"
+   ],
+   "focus": [
+    "import"
+   ],
+   "artwork": "import.svg",
+   "caption": "Generated headers are committed; make test checks they match art/."
+  },
+  {
+   "id": "render",
+   "label": "3 / 3 Render",
+   "visible": [
+    "draw",
+    "import",
+    "render"
+   ],
+   "focus": [
+    "render"
+   ],
+   "artwork": "render.svg",
+   "caption": "Band sizes measured on the host simulator; bench SPI timing still to be recorded."
+  }
+ ],
+ "source_links": [
+  {
+   "label": "docs/ART.md",
+   "url": "../ART.md"
+  }
+ ]
+}

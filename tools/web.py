@@ -16,8 +16,14 @@ WEB=ROOT/'simulator/web';OUT=ROOT/'build/web';FIRMWARE=ROOT/'firmware/VEX_Pocket
 EMSCRIPTEN_MIN='7.0'   # Homebrew bottle used for development; record the actual version in the handoff
 EXPORTS=['_vex_boot','_vex_controls','_vex_tick','_vex_observe','_vex_pitch','_vex_serial','_vex_audio_ptr','_vex_audio_capacity','_vex_audio_push',
          '_vex_render','_vex_frame_ptr','_vex_store_ptr','_vex_store_load','_vex_powercut','_vex_state_ptr','_vex_state','_vex_notice',
-         '_vex_last_analysis_us','_vex_pose']
-SOURCES=[WEB/'vex_web.cpp',*FIRMWARE.glob('*.h'),WEB/'index.html',WEB/'app.js',WEB/'worklet.js']
+         '_vex_last_analysis_us','_vex_pose','_vex_display_ms']
+ART=ROOT/'art'
+SOURCES=[WEB/'vex_web.cpp',*FIRMWARE.glob('*.h'),WEB/'index.html',WEB/'app.js',WEB/'worklet.js',*ART.glob('*.json'),*ART.glob('*/*.json'),*ART.glob('*/*.png')]
+
+def import_art():
+    """Regenerate the sprite/theme/font headers from art/ so a saved PNG shows up on the next reload."""
+    r=subprocess.run([sys.executable,str(ROOT/'tools/make_sprites.py')],capture_output=True,text=True,cwd=ROOT)
+    if r.returncode:sys.exit((r.stderr or r.stdout).strip()[-600:])
 
 def emcc():
     cli=shutil.which('em++')
@@ -29,7 +35,7 @@ def emcc():
     return cli,m[0]
 
 def build(quiet=False):
-    cli,version=emcc();OUT.mkdir(parents=True,exist_ok=True)
+    cli,version=emcc();OUT.mkdir(parents=True,exist_ok=True);import_art()
     cmd=[cli,'-std=c++17','-O2','-Wall','-Wextra','-Werror','-fno-exceptions','-fno-rtti',
          '-sMODULARIZE=1','-sEXPORT_NAME=VexModule','-sENVIRONMENT=web,node','-sALLOW_MEMORY_GROWTH=0','-sINITIAL_MEMORY=4194304',
          '-sSTACK_SIZE=262144','-sFILESYSTEM=0','-sEXPORTED_FUNCTIONS='+','.join(EXPORTS),

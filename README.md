@@ -18,6 +18,7 @@ The R1.1 design keeps the crimson, charcoal and muted-gold rival-device feel thr
 | Review or modify the design | [CAD review map](docs/CAD_REVIEW.md), [grouped STEP](hardware/generated/VEX_Pocket_Rival_Assembly.step) |
 | Print or cut parts | [Fabrication instructions](docs/PRINTING.md), [STLs](hardware/generated/stl), [DXFs](hardware/generated/drawings), [1:1 templates](docs/VEX_Pocket_Rival_1to1_Templates.pdf) |
 | Try the software without hardware | [Local development](docs/LOCAL_DEVELOPMENT.md) |
+| Draw VEX: sprites, colours, fonts, motion | [Art pipeline](docs/ART.md) — PNG + JSON in `art/`, no C++ |
 | Plan future coaching / hardware revisions | [Extensibility proposal](docs/EXTENSIBILITY.md) |
 | Continue with another agent | [AGENTS.md](AGENTS.md), [current handoff](docs/HANDOFF.md), [next milestones](docs/PLAN.md) |
 

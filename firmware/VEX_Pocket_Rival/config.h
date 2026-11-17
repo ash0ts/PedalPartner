@@ -10,6 +10,11 @@ constexpr unsigned long TFT_HZ=16000000;
 constexpr unsigned char INPUT_LEVEL=0; // 0 = 3.12V peak-to-peak full scale. Lowest gain first.
 constexpr unsigned short GOALS[]={5,10,20};
 constexpr unsigned long HOLD_MS=1200;
+// Display cadence. The renderer quantises time to this period and every animation frame_ms in
+// art/vex/manifest.json must be a multiple of it, so the host simulator and the device pick the same
+// frame. 100 ms with the dirty-band flush in the .ino; 200 ms remains valid if the bench shows the
+// SPI bus cannot keep up (see docs/ART.md).
+constexpr unsigned long DISPLAY_MS=100;
 // Pitch/level path. Default: shared analyzer.h (YIN in loop(), same code the simulator runs).
 // Define VEX_PITCH_PJRC to compare against the PJRC AudioAnalyzeNoteFrequency/RMS/Peak nodes on the bench.
 // #define VEX_PITCH_PJRC

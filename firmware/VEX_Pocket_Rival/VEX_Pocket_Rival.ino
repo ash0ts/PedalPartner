@@ -14,6 +14,7 @@
 #include "core.h"
 #include "app.h"
 #include "ui.h"
+#include "flush.h"
 #include "analyzer.h"
 static_assert(VEX_STAGE>=1&&VEX_STAGE<=4,"VEX_STAGE must be 1..4");
 AudioInputI2S input;
@@ -39,6 +40,10 @@ uint32_t analysisMicros=0,analysisMaxMicros=0;
 AudioControlSGTL5000 codec;
 Adafruit_GC9A01A lcd(TFT_CS,TFT_DC,TFT_RST);
 GFXcanvas16 frame(240,240);
+// What the panel currently shows, kept in RAM2 so the 115 KB does not compete with audio in RAM1.
+// Each cadence only the rows that differ from it are sent (flush.h); the first frame is sent whole.
+DMAMEM uint16_t shadow[vex::FRAME_W*vex::FRAME_H];
+bool shadowValid=false;uint32_t txBytes=0,txMaxBytes=0;
 struct EepromStore:vex::Store{uint8_t read(int a)override{return EEPROM.read(a);}void update(int a,uint8_t v)override{EEPROM.update(a,v);}} eeprom;
 vex::App app(eeprom,VEX_STAGE);
 float rms=0,peak=0;
@@ -75,10 +80,20 @@ void loop(){
  if(VEX_STAGE==4&&Serial.available())app.command(Serial.read(),now);
  app.tick(now);
  digitalWrite(PIN_LED,app.led());
- if(now-drawAt>=200){drawAt=now;vex::drawScreen(frame,app.view());lcd.drawRGBBitmap(0,0,frame.getBuffer(),240,240);}
+ if(now-drawAt>=DISPLAY_MS){
+  drawAt=now;vex::drawScreen(frame,app.view());const uint16_t* px=frame.getBuffer();
+  vex::Band bands[vex::FLUSH_MAX_BANDS];int n;
+  if(shadowValid)n=vex::bands(shadow,px,bands);else{bands[0].y=0;bands[0].h=vex::FRAME_H;n=1;shadowValid=true;}
+  if(n){
+   lcd.startWrite();
+   for(int i=0;i<n;i++){size_t at=size_t(bands[i].y)*vex::FRAME_W,count=size_t(bands[i].h)*vex::FRAME_W;lcd.setAddrWindow(0,bands[i].y,vex::FRAME_W,bands[i].h);lcd.writePixels(const_cast<uint16_t*>(px+at),count);memcpy(shadow+at,px+at,count*2);}
+   lcd.endWrite();
+   txBytes=vex::bandBytes(bands,n);if(txBytes>txMaxBytes)txMaxBytes=txBytes;
+  }else txBytes=0;
+ }
  if(VEX_STAGE>=3&&now-printAt>=1000){
   printAt=now;const auto& p=app.progress;
-  Serial.printf("stage=%d codec=%d rms=%.5f peak=%.3f gate=%.5f active=%d running=%d session_s=%lu total_s=%lu fragments=%lu cpu=%.1f memory=%u",VEX_STAGE,app.codec_ok,app.rms,app.peak,p.gate,p.active,p.running,(unsigned long)(p.session_ms/1000),(unsigned long)(p.active_ms/1000),(unsigned long)p.fragments,AudioProcessorUsageMax(),AudioMemoryUsageMax());
+  Serial.printf("stage=%d codec=%d rms=%.5f peak=%.3f gate=%.5f active=%d running=%d session_s=%lu total_s=%lu fragments=%lu cpu=%.1f memory=%u tx_bytes=%lu tx_max_bytes=%lu",VEX_STAGE,app.codec_ok,app.rms,app.peak,p.gate,p.active,p.running,(unsigned long)(p.session_ms/1000),(unsigned long)(p.active_ms/1000),(unsigned long)p.fragments,AudioProcessorUsageMax(),AudioMemoryUsageMax(),(unsigned long)txBytes,(unsigned long)txMaxBytes);
 #ifdef VEX_PITCH_PJRC
   Serial.printf(" pitch=pjrc midi=%d cents=%.1f valid=%d\n",app.pitchNow.midi,app.pitchNow.cents,app.pitchNow.valid);
 #else

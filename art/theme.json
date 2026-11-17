@@ -1,0 +1,27 @@
+{
+ "_comment": "Named colours. ui roles draw the screen chrome; sprite PNGs may only use colours listed here (exact RGB, alpha 0 or 255). Edit, then python3 tools/make_sprites.py.",
+ "colors": {
+  "night": "#182428",
+  "ink": "#E8E4B8",
+  "gold": "#C8A830",
+  "crimson": "#983838",
+  "dim": "#282848",
+  "plum": "#484450",
+  "fade": "#908058",
+  "bat_body": "#231E27",
+  "bat_wing": "#84618C",
+  "bat_gold": "#CDA654",
+  "bat_red": "#9B303E",
+  "bat_cream": "#ECE2BF",
+  "bat_shadow": "#4D3951"
+ },
+ "ui": {
+  "bg": "night",
+  "ink": "ink",
+  "gold": "gold",
+  "red": "crimson",
+  "dim": "dim",
+  "plum": "plum",
+  "fade": "fade"
+ }
+}

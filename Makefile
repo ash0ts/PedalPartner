@@ -4,8 +4,9 @@ CXXFLAGS ?= -std=c++17 -O2 -Wall -Wextra -Werror
 STAGE ?= 4
 PORT ?= 8765
 HEADERS := $(wildcard firmware/VEX_Pocket_Rival/*.h)
+ART := $(wildcard art/*.json art/*/*.json art/*/*.png)
 
-.PHONY: test sim sim-build web web-check firmware firmware-all setup-firmware cad cad-check render render-meshes hero pack-mentor docs check clean
+.PHONY: test sim sim-build art art-check web web-check firmware firmware-all setup-firmware cad cad-check render render-meshes hero pack-mentor docs check clean
 build:
 	mkdir -p build
 build/core-tests: tests/core_tests.cpp $(HEADERS) | build
@@ -16,9 +17,15 @@ test: build/core-tests build/vex-sim
 	./build/core-tests
 	$(PYTHON) tests/simulator_test.py
 	$(PYTHON) tests/pack_test.py
+	$(PYTHON) tests/art_test.py
 	$(PYTHON) tools/check_project.py
 	$(PYTHON) tools/web.py check
 sim-build: build/vex-sim
+# Import art/ (PNG sprite strips, theme, fonts) into the generated firmware headers; see docs/ART.md.
+art:
+	$(PYTHON) tools/make_sprites.py
+art-check:
+	$(PYTHON) tools/make_sprites.py --check
 # In-browser workbench: shared firmware headers compiled to WebAssembly (needs emcc; see docs/LOCAL_DEVELOPMENT.md).
 web:
 	$(PYTHON) tools/web.py build
