@@ -1,0 +1,591 @@
+{
+  "passed": true,
+  "components": 72,
+  "top_level_groups": [
+    "01_Chassis",
+    "02_Front_Panel",
+    "03_Electronics_Carrier",
+    "04_Rear_IO",
+    "05_Footswitch"
+  ],
+  "component_sum_volume_mm3": 208343.5094666306,
+  "parts": [
+    {
+      "part": "A_base",
+      "valid": true,
+      "volume_difference_mm3": 0.0002932659845100716,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "T_case_nut_1",
+      "valid": true,
+      "volume_difference_mm3": 0.00015601455383773555,
+      "bounds_difference_mm": 8.768097359279636e-12,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "T_case_nut_2",
+      "valid": true,
+      "volume_difference_mm3": 0.0001560146396926143,
+      "bounds_difference_mm": 2.7000623958883807e-13,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "T_case_nut_3",
+      "valid": true,
+      "volume_difference_mm3": 0.00015601455383063012,
+      "bounds_difference_mm": 8.768097359279636e-12,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "T_case_nut_4",
+      "valid": true,
+      "volume_difference_mm3": 0.00015601463970682516,
+      "bounds_difference_mm": 2.7000623958883807e-13,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "U_tray_nut_1",
+      "valid": true,
+      "volume_difference_mm3": 0.00015601463978498487,
+      "bounds_difference_mm": 2.646771690706373e-13,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "U_tray_nut_2",
+      "valid": true,
+      "volume_difference_mm3": 0.00015601463975656316,
+      "bounds_difference_mm": 2.7000623958883807e-13,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "U_tray_nut_3",
+      "valid": true,
+      "volume_difference_mm3": 0.00015601463978498487,
+      "bounds_difference_mm": 2.646771690706373e-13,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "U_tray_nut_4",
+      "valid": true,
+      "volume_difference_mm3": 0.00015601463975656316,
+      "bounds_difference_mm": 2.7000623958883807e-13,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "B_faceplate",
+      "valid": true,
+      "volume_difference_mm3": 0.00026428860292071477,
+      "bounds_difference_mm": 5.471179065352771e-13,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "C_gold_bezel",
+      "valid": true,
+      "volume_difference_mm3": 0.00046151464630384,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "D_clear_window",
+      "valid": true,
+      "volume_difference_mm3": 6.143591758700495e-05,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "T_case_screw_1",
+      "valid": true,
+      "volume_difference_mm3": 0.0003643060760367689,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "T_case_screw_2",
+      "valid": true,
+      "volume_difference_mm3": 0.0003643060760651906,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "T_case_screw_3",
+      "valid": true,
+      "volume_difference_mm3": 0.0003643060760367689,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "T_case_screw_4",
+      "valid": true,
+      "volume_difference_mm3": 0.0003643060760651906,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "V_bezel_screw_1",
+      "valid": true,
+      "volume_difference_mm3": 0.00019736492231459124,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "V_bezel_nut_1",
+      "valid": true,
+      "volume_difference_mm3": 0.00015601463983472286,
+      "bounds_difference_mm": 2.646771690706373e-13,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "V_bezel_screw_2",
+      "valid": true,
+      "volume_difference_mm3": 0.00019736492231459124,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "V_bezel_nut_2",
+      "valid": true,
+      "volume_difference_mm3": 0.0001560146397920903,
+      "bounds_difference_mm": 2.7000623958883807e-13,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "V_bezel_screw_3",
+      "valid": true,
+      "volume_difference_mm3": 0.00019736492231459124,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "V_bezel_nut_3",
+      "valid": true,
+      "volume_difference_mm3": 0.00015601463983472286,
+      "bounds_difference_mm": 2.646771690706373e-13,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "V_bezel_screw_4",
+      "valid": true,
+      "volume_difference_mm3": 0.00019736492231459124,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "V_bezel_nut_4",
+      "valid": true,
+      "volume_difference_mm3": 0.0001560146397920903,
+      "bounds_difference_mm": 2.7000623958883807e-13,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "W_gold_insert",
+      "valid": true,
+      "volume_difference_mm3": 0.00016308557300703796,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "W_crimson_cheek",
+      "valid": true,
+      "volume_difference_mm3": 2.7711166694643907e-12,
+      "bounds_difference_mm": 8.597567102697212e-13,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "H_round_display_6178",
+      "valid": true,
+      "volume_difference_mm3": 1.645204520173138e-06,
+      "bounds_difference_mm": 1.4210854715202004e-14,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "K_display_spacer_1",
+      "valid": true,
+      "volume_difference_mm3": 0.00039605329327585537,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "K_display_screw_1",
+      "valid": true,
+      "volume_difference_mm3": 0.000283259311153472,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "K_display_nut_1",
+      "valid": true,
+      "volume_difference_mm3": 0.000297908860900975,
+      "bounds_difference_mm": 4.973799150320701e-13,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "K_display_spacer_2",
+      "valid": true,
+      "volume_difference_mm3": 0.00039605329327585537,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "K_display_screw_2",
+      "valid": true,
+      "volume_difference_mm3": 0.000283259311153472,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "K_display_nut_2",
+      "valid": true,
+      "volume_difference_mm3": 0.00029790886090452773,
+      "bounds_difference_mm": 4.973799150320701e-13,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "L_MODE_button",
+      "valid": true,
+      "volume_difference_mm3": 0.000321096474863225,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "L_MODE_nut",
+      "valid": true,
+      "volume_difference_mm3": 0.00027396113748068274,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "L_QUEST_button",
+      "valid": true,
+      "volume_difference_mm3": 0.000321096474863225,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "L_QUEST_nut",
+      "valid": true,
+      "volume_difference_mm3": 0.00027396113745226103,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "P_status_LED",
+      "valid": true,
+      "volume_difference_mm3": 8.264711482297571e-05,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "E_electronics_tray",
+      "valid": true,
+      "volume_difference_mm3": 0.00047494471618847456,
+      "bounds_difference_mm": 1.4210854715202004e-14,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "U_tray_screw_1",
+      "valid": true,
+      "volume_difference_mm3": 0.00030181161648101806,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "U_tray_screw_2",
+      "valid": true,
+      "volume_difference_mm3": 0.0003018116165094398,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "U_tray_screw_3",
+      "valid": true,
+      "volume_difference_mm3": 0.00030181161648101806,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "U_tray_screw_4",
+      "valid": true,
+      "volume_difference_mm3": 0.0003018116165094398,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "F_teensy41",
+      "valid": true,
+      "volume_difference_mm3": 0.00041838474908217904,
+      "bounds_difference_mm": 1.4210854715202004e-14,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "J_header_-19_62",
+      "valid": true,
+      "volume_difference_mm3": 0.00044000000002597517,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "J_header_-4_38",
+      "valid": true,
+      "volume_difference_mm3": 0.00043999999991228833,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "G_audio_adapter",
+      "valid": true,
+      "volume_difference_mm3": 0.0002709424384192971,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "I_audio_spacer_1",
+      "valid": true,
+      "volume_difference_mm3": 0.0004046113934634832,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "I_audio_screw_1",
+      "valid": true,
+      "volume_difference_mm3": 0.0003444931219149794,
+      "bounds_difference_mm": 3.552713678800501e-15,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "I_audio_nut_1",
+      "valid": true,
+      "volume_difference_mm3": 0.000297908860925844,
+      "bounds_difference_mm": 4.973799150320701e-13,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "I_audio_spacer_2",
+      "valid": true,
+      "volume_difference_mm3": 0.00040461139357717,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "I_audio_screw_2",
+      "valid": true,
+      "volume_difference_mm3": 0.00034449312192919024,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "I_audio_nut_2",
+      "valid": true,
+      "volume_difference_mm3": 0.0002979088609293967,
+      "bounds_difference_mm": 4.973799150320701e-13,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "I_audio_spacer_3",
+      "valid": true,
+      "volume_difference_mm3": 0.00040461139357717,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "I_audio_screw_3",
+      "valid": true,
+      "volume_difference_mm3": 0.00034449312190076853,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "I_audio_nut_3",
+      "valid": true,
+      "volume_difference_mm3": 0.000297908860925844,
+      "bounds_difference_mm": 4.973799150320701e-13,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "R_input_perfboard",
+      "valid": true,
+      "volume_difference_mm3": 0.0002467547000151171,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "R_perf_spacer_1",
+      "valid": true,
+      "volume_difference_mm3": 0.00023815544258809496,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "R_perf_screw_1",
+      "valid": true,
+      "volume_difference_mm3": 0.0004210510765574327,
+      "bounds_difference_mm": 4.440892098500626e-16,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "R_perf_nut_1",
+      "valid": true,
+      "volume_difference_mm3": 0.00029790886091518587,
+      "bounds_difference_mm": 4.973799150320701e-13,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "R_perf_spacer_2",
+      "valid": true,
+      "volume_difference_mm3": 0.00023815544258809496,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "R_perf_screw_2",
+      "valid": true,
+      "volume_difference_mm3": 0.00042105107657164353,
+      "bounds_difference_mm": 4.440892098500626e-16,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "R_perf_nut_2",
+      "valid": true,
+      "volume_difference_mm3": 0.00029790886091518587,
+      "bounds_difference_mm": 4.938272013532696e-13,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "S_trim_10k",
+      "valid": true,
+      "volume_difference_mm3": 1.1368683772161603e-13,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "Q_input_jack_111X",
+      "valid": true,
+      "volume_difference_mm3": 0.0004751216220029164,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "Q_jack_nut",
+      "valid": true,
+      "volume_difference_mm3": 0.0003209418815117715,
+      "bounds_difference_mm": 1.3091749906379846e-12,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "M_foot_reinforcement",
+      "valid": true,
+      "volume_difference_mm3": 2.4556645257689524e-05,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "N_momentary_footswitch",
+      "valid": true,
+      "volume_difference_mm3": 0.00048388412778876955,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "N_switch_lower_nut",
+      "valid": true,
+      "volume_difference_mm3": 6.916255642863689e-05,
+      "bounds_difference_mm": 5.243805389909539e-12,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "N_switch_washer",
+      "valid": true,
+      "volume_difference_mm3": 0.0002476178732280232,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "N_switch_nut",
+      "valid": true,
+      "volume_difference_mm3": 6.916255642863689e-05,
+      "bounds_difference_mm": 5.243805389909539e-12,
+      "solid_count_matches": true,
+      "passed": true
+    },
+    {
+      "part": "O_crimson_cap",
+      "valid": true,
+      "volume_difference_mm3": 0.0002843029658379237,
+      "bounds_difference_mm": 0.0,
+      "solid_count_matches": true,
+      "passed": true
+    }
+  ],
+  "scope": "Per-component STEP re-import validity, volume, bounds and solid count. Compound aggregate mass is not used because nested vendor shapes can contain shared topology. Physical fit is not tested."
+}

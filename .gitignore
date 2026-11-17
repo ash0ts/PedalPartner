@@ -221,3 +221,12 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# PedalPartner generated intermediates
+.arduino/
+.tools/
+*.blend
+*.blend1
+hardware/generated/meshes/
+.DS_Store
+

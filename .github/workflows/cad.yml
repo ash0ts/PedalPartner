@@ -1,0 +1,21 @@
+name: CAD rebuild (manual)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  geometry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: sudo apt-get update && sudo apt-get install -y libgl1 libglu1-mesa
+      - run: python -m pip install -r requirements-cad.txt
+      - run: make cad cad-check
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cad-checks
+          path: hardware/generated/checks/

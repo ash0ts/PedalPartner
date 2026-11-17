@@ -1,0 +1,794 @@
+{
+  "A_base": {
+    "kind": "printed",
+    "note": "PETG geometric prototype. Four columns support the reinforcement plate; strength not validated.",
+    "group": "base",
+    "color": [
+      0.12,
+      0.13,
+      0.15
+    ],
+    "assembly_path": "01_Chassis/Base_and_captive_nuts/A_base"
+  },
+  "B_faceplate": {
+    "kind": "printed",
+    "note": "3mm flat faceplate. Hand control only until the mentor verifies mechanical load path.",
+    "group": "lid",
+    "color": [
+      0.12,
+      0.13,
+      0.15
+    ],
+    "assembly_path": "02_Front_Panel/Lid_bezel_window_and_hardware/B_faceplate"
+  },
+  "C_gold_bezel": {
+    "kind": "printed",
+    "note": "Charcoal clipped bezel, 62x62; aperture34.6. Bottom captures flat window; top pocket accepts thin gold insert.",
+    "group": "lid",
+    "color": [
+      0.12,
+      0.13,
+      0.15
+    ],
+    "assembly_path": "02_Front_Panel/Lid_bezel_window_and_hardware/C_gold_bezel"
+  },
+  "D_clear_window": {
+    "kind": "cut_sheet",
+    "note": "40mm diameter, 1mm clear polycarbonate disc. Floating capture; no clamp load on LCD.",
+    "group": "lid",
+    "color": [
+      0.55,
+      0.57,
+      0.59
+    ],
+    "assembly_path": "02_Front_Panel/Lid_bezel_window_and_hardware/D_clear_window"
+  },
+  "W_gold_insert": {
+    "kind": "printed",
+    "note": "Gold PETG,0.8mm. Thin adhesive at pocket bottom; keep optical aperture clear.",
+    "group": "cosmetics",
+    "color": [
+      0.65,
+      0.4,
+      0.12
+    ],
+    "assembly_path": "02_Front_Panel/Cosmetic_inserts/W_gold_insert"
+  },
+  "W_crimson_cheek": {
+    "kind": "printed",
+    "note": "Flat crimson accent;0.1mm adhesive gap. Cosmetic only.",
+    "group": "cosmetics",
+    "color": [
+      0.36,
+      0.035,
+      0.06
+    ],
+    "assembly_path": "02_Front_Panel/Cosmetic_inserts/W_crimson_cheek"
+  },
+  "E_electronics_tray": {
+    "kind": "printed",
+    "note": "72x78x3. Four M3 fixings. Slots for two narrow nylon ties around the Teensy, without crushing components.",
+    "group": "stack",
+    "color": [
+      0.12,
+      0.13,
+      0.15
+    ],
+    "assembly_path": "03_Electronics_Carrier/Tray_and_fixings/E_electronics_tray"
+  },
+  "F_teensy41": {
+    "kind": "community",
+    "note": "Prior community model. Verify actual board revision, headers, USB plug and solder tails.",
+    "group": "stack",
+    "color": [
+      0.12,
+      0.27,
+      0.25
+    ],
+    "assembly_path": "03_Electronics_Carrier/Controller_and_headers/F_teensy41"
+  },
+  "G_audio_adapter": {
+    "kind": "community",
+    "note": "Prior community Rev D envelope. D2 is electrically compatible but mounting/component geometry needs measurement.",
+    "group": "stack",
+    "color": [
+      0.12,
+      0.27,
+      0.25
+    ],
+    "assembly_path": "03_Electronics_Carrier/Audio_adapter_and_mounts/G_audio_adapter"
+  },
+  "H_round_display_6178": {
+    "kind": "manufacturer",
+    "note": "Adafruit STEP SHA 66f39106daee442a08a0b5f994fe7cbfb830bd64; PCB mounting holes confirmed in Eagle at +/-11.43,-17.78.",
+    "group": "display",
+    "color": [
+      0.13,
+      0.27,
+      0.25
+    ],
+    "assembly_path": "02_Front_Panel/Display_and_mounts/H_round_display_6178"
+  },
+  "I_audio_spacer_1": {
+    "kind": "hardware",
+    "note": "M2 spacer, 15mm; check actual stack.",
+    "group": "stack",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "03_Electronics_Carrier/Audio_adapter_and_mounts/I_audio_spacer_1"
+  },
+  "I_audio_screw_1": {
+    "kind": "hardware",
+    "note": "Smooth nominal fastener envelope; thread not modeled.",
+    "group": "fasteners",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "03_Electronics_Carrier/Audio_adapter_and_mounts/I_audio_screw_1"
+  },
+  "I_audio_nut_1": {
+    "kind": "hardware",
+    "note": "Nominal metric nut envelope.",
+    "group": "fasteners",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "03_Electronics_Carrier/Audio_adapter_and_mounts/I_audio_nut_1"
+  },
+  "I_audio_spacer_2": {
+    "kind": "hardware",
+    "note": "M2 spacer, 15mm; check actual stack.",
+    "group": "stack",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "03_Electronics_Carrier/Audio_adapter_and_mounts/I_audio_spacer_2"
+  },
+  "I_audio_screw_2": {
+    "kind": "hardware",
+    "note": "Smooth nominal fastener envelope; thread not modeled.",
+    "group": "fasteners",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "03_Electronics_Carrier/Audio_adapter_and_mounts/I_audio_screw_2"
+  },
+  "I_audio_nut_2": {
+    "kind": "hardware",
+    "note": "Nominal metric nut envelope.",
+    "group": "fasteners",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "03_Electronics_Carrier/Audio_adapter_and_mounts/I_audio_nut_2"
+  },
+  "I_audio_spacer_3": {
+    "kind": "hardware",
+    "note": "M2 spacer, 15mm; check actual stack.",
+    "group": "stack",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "03_Electronics_Carrier/Audio_adapter_and_mounts/I_audio_spacer_3"
+  },
+  "I_audio_screw_3": {
+    "kind": "hardware",
+    "note": "Smooth nominal fastener envelope; thread not modeled.",
+    "group": "fasteners",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "03_Electronics_Carrier/Audio_adapter_and_mounts/I_audio_screw_3"
+  },
+  "I_audio_nut_3": {
+    "kind": "hardware",
+    "note": "Nominal metric nut envelope.",
+    "group": "fasteners",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "03_Electronics_Carrier/Audio_adapter_and_mounts/I_audio_nut_3"
+  },
+  "J_header_-19.62": {
+    "kind": "envelope",
+    "note": "14-pin header stack reserve; select sockets by measured seated height.",
+    "group": "stack",
+    "color": [
+      0.27,
+      0.28,
+      0.3
+    ],
+    "assembly_path": "03_Electronics_Carrier/Controller_and_headers/J_header_-19.62"
+  },
+  "J_header_-4.38": {
+    "kind": "envelope",
+    "note": "14-pin header stack reserve; select sockets by measured seated height.",
+    "group": "stack",
+    "color": [
+      0.27,
+      0.28,
+      0.3
+    ],
+    "assembly_path": "03_Electronics_Carrier/Controller_and_headers/J_header_-4.38"
+  },
+  "K_display_spacer_1": {
+    "kind": "printed",
+    "note": "2.0mm spacer; front PCB surface to faceplate underside.",
+    "group": "display",
+    "color": [
+      0.12,
+      0.13,
+      0.15
+    ],
+    "assembly_path": "02_Front_Panel/Display_and_mounts/K_display_spacer_1"
+  },
+  "K_display_screw_1": {
+    "kind": "hardware",
+    "note": "M2x10 90-degree countersunk screw, flush at z45. Verify actual head diameter and seating.",
+    "group": "display",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "02_Front_Panel/Display_and_mounts/K_display_screw_1"
+  },
+  "K_display_nut_1": {
+    "kind": "hardware",
+    "note": "Nominal metric nut envelope.",
+    "group": "fasteners",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "02_Front_Panel/Display_and_mounts/K_display_nut_1"
+  },
+  "K_display_spacer_2": {
+    "kind": "printed",
+    "note": "2.0mm spacer; front PCB surface to faceplate underside.",
+    "group": "display",
+    "color": [
+      0.12,
+      0.13,
+      0.15
+    ],
+    "assembly_path": "02_Front_Panel/Display_and_mounts/K_display_spacer_2"
+  },
+  "K_display_screw_2": {
+    "kind": "hardware",
+    "note": "M2x10 90-degree countersunk screw, flush at z45. Verify actual head diameter and seating.",
+    "group": "display",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "02_Front_Panel/Display_and_mounts/K_display_screw_2"
+  },
+  "K_display_nut_2": {
+    "kind": "hardware",
+    "note": "Nominal metric nut envelope.",
+    "group": "fasteners",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "02_Front_Panel/Display_and_mounts/K_display_nut_2"
+  },
+  "L_MODE_button": {
+    "kind": "envelope",
+    "note": "SparkFun COM-11992: 6.75mm thread, 26.9mm overall. Conservative simplified body; measure nut and cap.",
+    "group": "controls",
+    "color": [
+      0.36,
+      0.035,
+      0.06
+    ],
+    "assembly_path": "02_Front_Panel/Finger_controls_and_LED/L_MODE_button"
+  },
+  "L_MODE_nut": {
+    "kind": "hardware",
+    "note": "Use included button hardware; envelope only.",
+    "group": "controls",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "02_Front_Panel/Finger_controls_and_LED/L_MODE_nut"
+  },
+  "L_QUEST_button": {
+    "kind": "envelope",
+    "note": "SparkFun COM-11992: 6.75mm thread, 26.9mm overall. Conservative simplified body; measure nut and cap.",
+    "group": "controls",
+    "color": [
+      0.36,
+      0.035,
+      0.06
+    ],
+    "assembly_path": "02_Front_Panel/Finger_controls_and_LED/L_QUEST_button"
+  },
+  "L_QUEST_nut": {
+    "kind": "hardware",
+    "note": "Use included button hardware; envelope only.",
+    "group": "controls",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "02_Front_Panel/Finger_controls_and_LED/L_QUEST_nut"
+  },
+  "M_foot_reinforcement": {
+    "kind": "cut_sheet",
+    "note": "55x32x2 aluminum; sits on four base columns. Hole12.4. Not a strength certification.",
+    "group": "controls",
+    "color": [
+      0.55,
+      0.57,
+      0.59
+    ],
+    "assembly_path": "05_Footswitch/Switch_load_plate_and_hardware/M_foot_reinforcement"
+  },
+  "N_momentary_footswitch": {
+    "kind": "envelope",
+    "note": "Amplified Parts P-H605-BLK, M12x1, 25.5x13x14 body. Shaft travel and solder tails require physical clearance check.",
+    "group": "controls",
+    "color": [
+      0.27,
+      0.28,
+      0.3
+    ],
+    "assembly_path": "05_Footswitch/Switch_load_plate_and_hardware/N_momentary_footswitch"
+  },
+  "N_switch_lower_nut": {
+    "kind": "hardware",
+    "note": "Lower retaining nut bears on reinforcement plate.",
+    "group": "controls",
+    "color": [
+      0.1,
+      0.11,
+      0.12
+    ],
+    "assembly_path": "05_Footswitch/Switch_load_plate_and_hardware/N_switch_lower_nut"
+  },
+  "N_switch_washer": {
+    "kind": "hardware",
+    "note": "Use included washer.",
+    "group": "controls",
+    "color": [
+      0.1,
+      0.11,
+      0.12
+    ],
+    "assembly_path": "05_Footswitch/Switch_load_plate_and_hardware/N_switch_washer"
+  },
+  "N_switch_nut": {
+    "kind": "hardware",
+    "note": "Use included retaining nut; nominal envelope.",
+    "group": "controls",
+    "color": [
+      0.1,
+      0.11,
+      0.12
+    ],
+    "assembly_path": "05_Footswitch/Switch_load_plate_and_hardware/N_switch_nut"
+  },
+  "O_crimson_cap": {
+    "kind": "printed",
+    "note": "Optional removable finger cap, 10.4mm bore. Print coupon first; omit if it binds travel.",
+    "group": "controls",
+    "color": [
+      0.36,
+      0.035,
+      0.06
+    ],
+    "assembly_path": "05_Footswitch/Switch_load_plate_and_hardware/O_crimson_cap"
+  },
+  "P_status_LED": {
+    "kind": "envelope",
+    "note": "3mm amber LED; leads and resistor insulated below lid.",
+    "group": "controls",
+    "color": [
+      0.27,
+      0.28,
+      0.3
+    ],
+    "assembly_path": "02_Front_Panel/Finger_controls_and_LED/P_status_LED"
+  },
+  "Q_input_jack_111X": {
+    "kind": "envelope",
+    "note": "Switchcraft111X selected. Body envelope17.5x31x17.5 is a design reserve, not verified manufacturer geometry. Verify before printing base.",
+    "group": "base",
+    "color": [
+      0.27,
+      0.28,
+      0.3
+    ],
+    "assembly_path": "04_Rear_IO/Input_jack_and_retainer/Q_input_jack_111X"
+  },
+  "Q_jack_nut": {
+    "kind": "hardware",
+    "note": "Nominal rear retaining hardware. Verify purchased jack stack.",
+    "group": "base",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "04_Rear_IO/Input_jack_and_retainer/Q_jack_nut"
+  },
+  "R_input_perfboard": {
+    "kind": "cut_sheet",
+    "note": "14x28x1.6 perfboard cut/drilled by mentor. M2 holes x0,y+/-10 from board centre.",
+    "group": "stack",
+    "color": [
+      0.55,
+      0.57,
+      0.59
+    ],
+    "assembly_path": "03_Electronics_Carrier/Input_attenuator/R_input_perfboard"
+  },
+  "R_perf_spacer_1": {
+    "kind": "hardware",
+    "note": "M2 6mm nylon spacer.",
+    "group": "stack",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "03_Electronics_Carrier/Input_attenuator/R_perf_spacer_1"
+  },
+  "R_perf_screw_1": {
+    "kind": "hardware",
+    "note": "Smooth nominal fastener envelope; thread not modeled.",
+    "group": "fasteners",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "03_Electronics_Carrier/Input_attenuator/R_perf_screw_1"
+  },
+  "R_perf_nut_1": {
+    "kind": "hardware",
+    "note": "Nominal metric nut envelope.",
+    "group": "fasteners",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "03_Electronics_Carrier/Input_attenuator/R_perf_nut_1"
+  },
+  "R_perf_spacer_2": {
+    "kind": "hardware",
+    "note": "M2 6mm nylon spacer.",
+    "group": "stack",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "03_Electronics_Carrier/Input_attenuator/R_perf_spacer_2"
+  },
+  "R_perf_screw_2": {
+    "kind": "hardware",
+    "note": "Smooth nominal fastener envelope; thread not modeled.",
+    "group": "fasteners",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "03_Electronics_Carrier/Input_attenuator/R_perf_screw_2"
+  },
+  "R_perf_nut_2": {
+    "kind": "hardware",
+    "note": "Nominal metric nut envelope.",
+    "group": "fasteners",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "03_Electronics_Carrier/Input_attenuator/R_perf_nut_2"
+  },
+  "S_trim_10k": {
+    "kind": "envelope",
+    "note": "Bourns3386P-1-103LF, conservative envelope. Board pad arrangement is documented separately.",
+    "group": "stack",
+    "color": [
+      0.27,
+      0.28,
+      0.3
+    ],
+    "assembly_path": "03_Electronics_Carrier/Input_attenuator/S_trim_10k"
+  },
+  "T_case_screw_1": {
+    "kind": "hardware",
+    "note": "Smooth nominal fastener envelope; thread not modeled.",
+    "group": "fasteners",
+    "color": [
+      0.1,
+      0.11,
+      0.12
+    ],
+    "assembly_path": "02_Front_Panel/Lid_bezel_window_and_hardware/T_case_screw_1"
+  },
+  "T_case_nut_1": {
+    "kind": "hardware",
+    "note": "Nominal metric nut envelope.",
+    "group": "fasteners",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "01_Chassis/Base_and_captive_nuts/T_case_nut_1"
+  },
+  "T_case_screw_2": {
+    "kind": "hardware",
+    "note": "Smooth nominal fastener envelope; thread not modeled.",
+    "group": "fasteners",
+    "color": [
+      0.1,
+      0.11,
+      0.12
+    ],
+    "assembly_path": "02_Front_Panel/Lid_bezel_window_and_hardware/T_case_screw_2"
+  },
+  "T_case_nut_2": {
+    "kind": "hardware",
+    "note": "Nominal metric nut envelope.",
+    "group": "fasteners",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "01_Chassis/Base_and_captive_nuts/T_case_nut_2"
+  },
+  "T_case_screw_3": {
+    "kind": "hardware",
+    "note": "Smooth nominal fastener envelope; thread not modeled.",
+    "group": "fasteners",
+    "color": [
+      0.1,
+      0.11,
+      0.12
+    ],
+    "assembly_path": "02_Front_Panel/Lid_bezel_window_and_hardware/T_case_screw_3"
+  },
+  "T_case_nut_3": {
+    "kind": "hardware",
+    "note": "Nominal metric nut envelope.",
+    "group": "fasteners",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "01_Chassis/Base_and_captive_nuts/T_case_nut_3"
+  },
+  "T_case_screw_4": {
+    "kind": "hardware",
+    "note": "Smooth nominal fastener envelope; thread not modeled.",
+    "group": "fasteners",
+    "color": [
+      0.1,
+      0.11,
+      0.12
+    ],
+    "assembly_path": "02_Front_Panel/Lid_bezel_window_and_hardware/T_case_screw_4"
+  },
+  "T_case_nut_4": {
+    "kind": "hardware",
+    "note": "Nominal metric nut envelope.",
+    "group": "fasteners",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "01_Chassis/Base_and_captive_nuts/T_case_nut_4"
+  },
+  "U_tray_screw_1": {
+    "kind": "hardware",
+    "note": "Smooth nominal fastener envelope; thread not modeled.",
+    "group": "fasteners",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "03_Electronics_Carrier/Tray_and_fixings/U_tray_screw_1"
+  },
+  "U_tray_nut_1": {
+    "kind": "hardware",
+    "note": "Nominal metric nut envelope.",
+    "group": "fasteners",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "01_Chassis/Base_and_captive_nuts/U_tray_nut_1"
+  },
+  "U_tray_screw_2": {
+    "kind": "hardware",
+    "note": "Smooth nominal fastener envelope; thread not modeled.",
+    "group": "fasteners",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "03_Electronics_Carrier/Tray_and_fixings/U_tray_screw_2"
+  },
+  "U_tray_nut_2": {
+    "kind": "hardware",
+    "note": "Nominal metric nut envelope.",
+    "group": "fasteners",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "01_Chassis/Base_and_captive_nuts/U_tray_nut_2"
+  },
+  "U_tray_screw_3": {
+    "kind": "hardware",
+    "note": "Smooth nominal fastener envelope; thread not modeled.",
+    "group": "fasteners",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "03_Electronics_Carrier/Tray_and_fixings/U_tray_screw_3"
+  },
+  "U_tray_nut_3": {
+    "kind": "hardware",
+    "note": "Nominal metric nut envelope.",
+    "group": "fasteners",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "01_Chassis/Base_and_captive_nuts/U_tray_nut_3"
+  },
+  "U_tray_screw_4": {
+    "kind": "hardware",
+    "note": "Smooth nominal fastener envelope; thread not modeled.",
+    "group": "fasteners",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "03_Electronics_Carrier/Tray_and_fixings/U_tray_screw_4"
+  },
+  "U_tray_nut_4": {
+    "kind": "hardware",
+    "note": "Nominal metric nut envelope.",
+    "group": "fasteners",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "01_Chassis/Base_and_captive_nuts/U_tray_nut_4"
+  },
+  "V_bezel_screw_1": {
+    "kind": "hardware",
+    "note": "Smooth nominal fastener envelope; thread not modeled.",
+    "group": "fasteners",
+    "color": [
+      0.1,
+      0.11,
+      0.12
+    ],
+    "assembly_path": "02_Front_Panel/Lid_bezel_window_and_hardware/V_bezel_screw_1"
+  },
+  "V_bezel_nut_1": {
+    "kind": "hardware",
+    "note": "Nominal metric nut envelope.",
+    "group": "fasteners",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "02_Front_Panel/Lid_bezel_window_and_hardware/V_bezel_nut_1"
+  },
+  "V_bezel_screw_2": {
+    "kind": "hardware",
+    "note": "Smooth nominal fastener envelope; thread not modeled.",
+    "group": "fasteners",
+    "color": [
+      0.1,
+      0.11,
+      0.12
+    ],
+    "assembly_path": "02_Front_Panel/Lid_bezel_window_and_hardware/V_bezel_screw_2"
+  },
+  "V_bezel_nut_2": {
+    "kind": "hardware",
+    "note": "Nominal metric nut envelope.",
+    "group": "fasteners",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "02_Front_Panel/Lid_bezel_window_and_hardware/V_bezel_nut_2"
+  },
+  "V_bezel_screw_3": {
+    "kind": "hardware",
+    "note": "Smooth nominal fastener envelope; thread not modeled.",
+    "group": "fasteners",
+    "color": [
+      0.1,
+      0.11,
+      0.12
+    ],
+    "assembly_path": "02_Front_Panel/Lid_bezel_window_and_hardware/V_bezel_screw_3"
+  },
+  "V_bezel_nut_3": {
+    "kind": "hardware",
+    "note": "Nominal metric nut envelope.",
+    "group": "fasteners",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "02_Front_Panel/Lid_bezel_window_and_hardware/V_bezel_nut_3"
+  },
+  "V_bezel_screw_4": {
+    "kind": "hardware",
+    "note": "Smooth nominal fastener envelope; thread not modeled.",
+    "group": "fasteners",
+    "color": [
+      0.1,
+      0.11,
+      0.12
+    ],
+    "assembly_path": "02_Front_Panel/Lid_bezel_window_and_hardware/V_bezel_screw_4"
+  },
+  "V_bezel_nut_4": {
+    "kind": "hardware",
+    "note": "Nominal metric nut envelope.",
+    "group": "fasteners",
+    "color": [
+      0.5,
+      0.51,
+      0.53
+    ],
+    "assembly_path": "02_Front_Panel/Lid_bezel_window_and_hardware/V_bezel_nut_4"
+  }
+}

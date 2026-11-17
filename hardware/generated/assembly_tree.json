@@ -1,0 +1,106 @@
+{
+  "01_Chassis": {
+    "Base_and_captive_nuts": [
+      "A_base",
+      "T_case_nut_1",
+      "T_case_nut_2",
+      "T_case_nut_3",
+      "T_case_nut_4",
+      "U_tray_nut_1",
+      "U_tray_nut_2",
+      "U_tray_nut_3",
+      "U_tray_nut_4"
+    ]
+  },
+  "02_Front_Panel": {
+    "Lid_bezel_window_and_hardware": [
+      "B_faceplate",
+      "C_gold_bezel",
+      "D_clear_window",
+      "T_case_screw_1",
+      "T_case_screw_2",
+      "T_case_screw_3",
+      "T_case_screw_4",
+      "V_bezel_screw_1",
+      "V_bezel_nut_1",
+      "V_bezel_screw_2",
+      "V_bezel_nut_2",
+      "V_bezel_screw_3",
+      "V_bezel_nut_3",
+      "V_bezel_screw_4",
+      "V_bezel_nut_4"
+    ],
+    "Cosmetic_inserts": [
+      "W_gold_insert",
+      "W_crimson_cheek"
+    ],
+    "Display_and_mounts": [
+      "H_round_display_6178",
+      "K_display_spacer_1",
+      "K_display_screw_1",
+      "K_display_nut_1",
+      "K_display_spacer_2",
+      "K_display_screw_2",
+      "K_display_nut_2"
+    ],
+    "Finger_controls_and_LED": [
+      "L_MODE_button",
+      "L_MODE_nut",
+      "L_QUEST_button",
+      "L_QUEST_nut",
+      "P_status_LED"
+    ]
+  },
+  "03_Electronics_Carrier": {
+    "Tray_and_fixings": [
+      "E_electronics_tray",
+      "U_tray_screw_1",
+      "U_tray_screw_2",
+      "U_tray_screw_3",
+      "U_tray_screw_4"
+    ],
+    "Controller_and_headers": [
+      "F_teensy41",
+      "J_header_-19.62",
+      "J_header_-4.38"
+    ],
+    "Audio_adapter_and_mounts": [
+      "G_audio_adapter",
+      "I_audio_spacer_1",
+      "I_audio_screw_1",
+      "I_audio_nut_1",
+      "I_audio_spacer_2",
+      "I_audio_screw_2",
+      "I_audio_nut_2",
+      "I_audio_spacer_3",
+      "I_audio_screw_3",
+      "I_audio_nut_3"
+    ],
+    "Input_attenuator": [
+      "R_input_perfboard",
+      "R_perf_spacer_1",
+      "R_perf_screw_1",
+      "R_perf_nut_1",
+      "R_perf_spacer_2",
+      "R_perf_screw_2",
+      "R_perf_nut_2",
+      "S_trim_10k"
+    ]
+  },
+  "04_Rear_IO": {
+    "Input_jack_and_retainer": [
+      "Q_input_jack_111X",
+      "Q_jack_nut"
+    ]
+  },
+  "05_Footswitch": {
+    "Switch_load_plate_and_hardware": [
+      "M_foot_reinforcement",
+      "N_momentary_footswitch",
+      "N_switch_lower_nut",
+      "N_switch_washer",
+      "N_switch_nut",
+      "O_crimson_cap"
+    ]
+  }
+}

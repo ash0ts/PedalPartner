@@ -1,0 +1,21 @@
+id,qty,part,specification,purpose,source_id,budget_low_usd,budget_high_usd,order_stage,source_url
+E01,1,Teensy 4.1,PJRC TEENSY41 / TEENSY41_NE; non-lockable,"Processor, USB, saved progress",S1,32,40,Bench,https://www.pjrc.com/store/teensy41.html
+E02,1,Audio Adapter,PJRC TEENSY4_AUDIO Rev D or D2; not Rev C,Line input and conversion,S2,20,28,Bench,https://www.pjrc.com/store/teensy3_audio.html
+E03,1,Round display,Adafruit 6178; GC9A01A; 240x240,Documented driver and mounting geometry,S4,17.5,17.5,Bench,https://www.adafruit.com/product/6178
+E04,2,Red finger button,"SparkFun COM-11992, SPST normally open",Mode / Quest; solder lugs,S9,2.5,2.5,Bench,https://www.sparkfun.com/momentary-button-panel-mount-red.html
+E05,1,Momentary footswitch,P-H605-BLK; SPST normally open; M12,Start/pause; not an audio bypass switch,S10,5,10,Bench,https://www.amplifiedparts.com/products/footswitch-spst-momentary-solder-lugs-soft-switch-black
+E06,1,Input jack,"Switchcraft 111X, mono solder lug, with nut/washer",Buffered dry input only,S11,3,7,Fit gate,https://www.switchcraft.com/open-circuit-solder-lug-termination/111x/
+E07,1,10k trimmer,Bourns 3386P-1-103LF,"Input level adjustment, tool operated",S12,2,4,Bench,https://www.bourns.com/docs/product-datasheets/3386.pdf
+E08,1,Resistor R1,"10k ohm, 1%, 0.25W, through-hole",Input attenuator series arm,Design,0.1,0.5,Bench,Original design
+E09,2,Resistors R2 / R3,"1k ohm, 1%, 0.25W, through-hole",Audio series resistor / LED limit,Design,0.2,1,Bench,Original design
+E10,1,Resistor R4,"10k ohm, 1%, 0.25W, through-hole",Hold display SDCS high,Design,0.1,0.5,Bench,Original design
+E11,1,Status LED,"3mm amber diffused, ordinary low-current LED",Playing indicator,Design,0.2,1,Bench,Original design
+E12,1,Perfboard stock,2.54mm pitch; cut 14x28mm for input board,Hand-wired attenuator; no custom PCB needed,Design,3,8,Bench,Original design
+E13,1,Header / socket set,"Two 14-pin male strips + two 14-pin female socket strips, 2.54mm; access to used pins","Socketed audio stack, nominal 9.4mm gap; measure",S2,4,10,Fit gate,https://www.pjrc.com/store/teensy3_audio.html
+E14,1,Wire and insulation,"26AWG stranded wire, shielded audio pair, heat shrink, 2 small cable ties",Harness and strain relief,Design,8,15,Bench,Original design
+E15,1,USB data cable,Micro-B to your Mac; USB5V only,Power and firmware upload; measure plug envelope,S1,5,10,Bench,https://www.pjrc.com/store/teensy41.html
+M01,1,Printed parts set,"A base, B lid, C charcoal bezel, E tray, K spacers, W gold rim + crimson cheek; O cap optional",PETG; coupon before full print,Design,20,60,After fit checks,Original design
+M02,1,Clear window,40mm diameter x1mm polycarbonate,Flat captured window; no dome in R1.1,Design,2,6,After fit checks,Original design
+M03,1,Foot reinforcement,"55x32x2mm aluminum, R3 corners, hole12.4mm",Distributes switch force to four columns,Design,3,10,After fit checks,Original design
+M04,1,Metric hardware set,See fastener schedule; buy spares,All removable threaded joints,Design,8,18,After fit checks,Original design
+M05,1,Mounting consumables,"Thin peripheral foam, 0.1mm cosmetic adhesive, insulating washers, feet / hook-loop","Rattle control, electrical clearance, mounting",Design,3,8,After fit checks,Original design
