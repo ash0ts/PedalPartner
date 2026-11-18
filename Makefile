@@ -6,6 +6,7 @@ PORT ?= 8765
 # Bench loop: DEVICE is a serial port (/dev/cu.usbmodem*) or `auto` (exactly one Teensy); empty = no device.
 DEVICE ?=
 SERIAL ?=
+SEND ?=
 HEADERS := $(wildcard firmware/VEX_Pocket_Rival/*.h)
 ART := $(wildcard art/*.json art/*/*.json art/*/*.png)
 
@@ -52,7 +53,7 @@ firmware-all:
 upload:
 	$(PYTHON) tools/firmware.py upload --stage $(STAGE) $(if $(SERIAL),--port $(SERIAL),)
 monitor:
-	$(PYTHON) tools/firmware.py monitor $(if $(SERIAL),--port $(SERIAL),)
+	$(PYTHON) tools/firmware.py monitor $(if $(SERIAL),--port $(SERIAL),) $(if $(SEND),--send '$(SEND)',)
 ports:
 	$(PYTHON) tools/firmware.py ports
 # One bench loop: compile the stage, program the board, open the workbench with the Device tab bridged.

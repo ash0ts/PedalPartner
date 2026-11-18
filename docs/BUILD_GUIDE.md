@@ -392,7 +392,7 @@ Record body envelopes, threaded shafts, nut thickness, plug size and solder tail
 
 ### 2 / PRINT
 
-Print Fit_Coupon.stl flat at 100% scale. Try the M3 clearance,7.2 mm button hole,12.4 mm switch hole,9.8 mm jack hole and M3 nut pocket.
+Print Fit_Coupon.stl flat at 100% scale. Try the M3 clearance,7.2 mm button hole,12.4 mm switch hole,9.8 mm jack hole and M3 nut pocket. Enter the results in measurements.csv; make measure-check lists which parts are ready to print.
 
 ### 3 / ADJUST
 
@@ -565,7 +565,7 @@ Use the earliest failing stage, then repeat later checks
 |Symptom|First checks|Do next|
 |---|---|---|
 |No USB port / upload|Known data cable; board selection; physical Program button|Return to Stage 1 with other wiring unplugged|
-|White / wrong screen|VIN/GND; CS/DC/RST; MOSI11 and SCK13; correct GC9A01A library|Stage 2; shorten wires; lower SPI clock if needed|
+|White / wrong screen|Send t for the test pattern: border, corner colours, TOP label; VIN/GND; CS/DC/RST; MOSI11 and SCK13|Stage 2; shorten wires; send - to lower the SPI clock; rotated means setRotation, not wiring|
 |Button always pressed|Wrong lug pair or solder bridge to ground|Meter with power off; retest one button|
 |codec=0 / no audio|Audio board revision;3.3 V;I2C18/19;header alignment|Stage 3; known low-level line source|
 |False XP in silence|Threshold too low; wrong/wet source; ground noise|Fix source/noise, then recalibrate|
@@ -573,7 +573,7 @@ Use the earliest failing stage, then repeat later checks
 |Lid will not close|Jack body, solder tails, service loop, stack height|Reopen and measure; never pull shut with screws|
 |Tuning unreadable / unstable|Screen size/angle, glare, pitch confidence, clipping, polyphonic input|Use one reference note; retain existing tuner|
 
-**Checkpoint:** Open issues and measured values belong in acceptance_log.csv and measurements.csv, not in assumptions.
+**Checkpoint:** Open issues and measured values belong in acceptance_log.csv and measurements.csv, not in assumptions. make bench-report summarises a session; make measure-check reads the measurements.
 
 ## 30. What has been checked
 

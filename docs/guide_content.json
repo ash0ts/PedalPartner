@@ -745,7 +745,7 @@
       ],
       [
         "2 / PRINT",
-        "Print Fit_Coupon.stl flat at100% scale. Try the M3 clearance,7.2mm button hole,12.4mm switch hole,9.8mm jack hole and M3 nut pocket."
+        "Print Fit_Coupon.stl flat at100% scale. Try the M3 clearance,7.2mm button hole,12.4mm switch hole,9.8mm jack hole and M3 nut pocket. Enter the results in measurements.csv; make measure-check lists which parts are ready to print."
       ],
       [
         "3 / ADJUST",
@@ -956,7 +956,7 @@
     "kicker": "Use the earliest failing stage, then repeat later checks",
     "items": null,
     "fig": null,
-    "check": "Open issues and measured values belong in acceptance_log.csv and measurements.csv, not in assumptions.",
+    "check": "Open issues and measured values belong in acceptance_log.csv and measurements.csv, not in assumptions. make bench-report summarises a session; make measure-check reads the measurements.",
     "diagram": null,
     "rows": [
       [
@@ -971,8 +971,8 @@
       ],
       [
         "White / wrong screen",
-        "VIN/GND; CS/DC/RST; MOSI11 and SCK13; correct GC9A01A library",
-        "Stage2; shorten wires; lower SPI clock if needed"
+        "Send t for the test pattern: border, corner colours, TOP label; VIN/GND; CS/DC/RST; MOSI11 and SCK13",
+        "Stage2; shorten wires; send - to lower the SPI clock; rotated means setRotation, not wiring"
       ],
       [
         "Button always pressed",

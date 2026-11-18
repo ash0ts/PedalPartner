@@ -21,7 +21,8 @@ The R1.1 design keeps the crimson, charcoal and muted-gold rival-device feel thr
 | Print or cut parts | [Fabrication instructions](docs/PRINTING.md), [STLs](hardware/generated/stl), [DXFs](hardware/generated/drawings), [1:1 templates](docs/VEX_Pocket_Rival_1to1_Templates.pdf) |
 | Try the software without hardware | [Local development](docs/LOCAL_DEVELOPMENT.md) |
 | Draw VEX: sprites, colours, fonts, motion | [Art pipeline](docs/ART.md) — PNG + JSON in `art/` with per-animation play sequences, no C++; [motion video](assets/motion/vex-motion.mp4) from the shared renderer |
-| Debug on a real Teensy | [Bench loop](docs/LOCAL_DEVELOPMENT.md#4-bench-loop-with-a-teensy-attached) — `make upload`, `make monitor`, `make sim DEVICE=auto` |
+| Debug on a real Teensy | [Bench loop](docs/LOCAL_DEVELOPMENT.md#4-bench-loop-with-a-teensy-attached) — `make bench STAGE=n`, `make monitor`, `make bench-report`, serial knobs and a display test pattern |
+| Parts arrived: bench and enclosure in parallel | [Bring-up runbook](docs/BRINGUP.md) — three sessions, two gates, `make measure-check` says what to print now |
 | Plan future coaching / hardware revisions | [Extensibility proposal](docs/EXTENSIBILITY.md) |
 | Continue with another agent | [AGENTS.md](AGENTS.md), [current handoff](docs/HANDOFF.md), [next milestones](docs/PLAN.md) |
 

@@ -121,7 +121,7 @@ The firmware is instrumented so the questions the desktop cannot answer (how lon
 From stage 2 up, the sketch prints **one JSON line per second**, for example:
 
 ```json
-{"stage":4,"codec":1,"rms":0.05012,"peak":0.201,"gate":0.00400,"active":1,"running":1,"session_s":42,"total_s":642,"fragments":2,"level":2,"cpu":11.3,"memory":12,"tx_bytes":28800,"tx_max_bytes":115200,"flush_us":4120,"flush_max_us":17890,"loop_max_us":18240,"cadence_ms":100,"diff":1,"full":0,"link":0,"anim":2,"frame":3,"pitch":"yin","hz":110.02,"prob":0.93,"yin_us":1480,"yin_max_us":2210}
+{"stage":4,"up_ms":42310,"codec":1,"rms":0.05012,"peak":0.201,"gate":0.00400,"active":1,"running":1,"session_s":42,"total_s":642,"fragments":2,"level":2,"cpu":11.3,"memory":12,"tx_bytes":28800,"tx_max_bytes":115200,"flush_us":4120,"flush_max_us":17890,"loop_max_us":18240,"cadence_ms":100,"diff":1,"full":0,"link":0,"test":0,"spi_hz":16000000,"in_level":0,"anim":2,"frame":3,"pitch":"yin","hz":110.02,"prob":0.93,"yin_us":1480,"yin_max_us":2210}
 ```
 
 | Field | Meaning |
@@ -129,7 +129,9 @@ From stage 2 up, the sketch prints **one JSON line per second**, for example:
 | `flush_us`, `flush_max_us` | `micros()` around draw + band transfer for the last cadence, and the maximum since boot. Must stay well under `cadence_ms × 1000`; if `flush_max_us` approaches it, motion will stutter. |
 | `loop_max_us` | Longest pass through `loop()` in the last second (includes YIN and the flush). |
 | `tx_bytes`, `tx_max_bytes` | Bytes sent to the panel this cadence (dirty bands) and the largest so far. 115200 is a full frame. |
-| `cadence_ms`, `diff`, `full`, `link` | Current switch settings (below). |
+| `up_ms` | Milliseconds since boot; `tools/bench_report.py` counts reboots when it goes backwards and reports run time for acceptance row 18. |
+| `cadence_ms`, `diff`, `full`, `link`, `test` | Current switch settings (below). |
+| `spi_hz`, `in_level` | The two live knobs: panel SPI clock and codec line-in level. Boot values are `TFT_HZ` and `INPUT_LEVEL` in `config.h`; serial steps are not remembered across a reset. |
 | `anim`, `frame` | The animation and step the renderer chose, in `art/vex/manifest.json` order — the same numbers the native simulator and scenarios use. |
 | `yin_us`, `yin_max_us`, `cpu`, `memory` | Pitch-analysis time and PJRC audio-library CPU/memory maxima (stage 3+). |
 
@@ -147,7 +149,10 @@ Single characters, stages 2–4 (stage 4 also keeps the older `c s p r`):
 | `l` | Toggle the **bench link** (binary band + state packets between the JSON lines) | Mirror the panel in the Device tab; off by default so plain serial stays readable |
 | `m` `q` `k` | Tap MODE / QUEST / FOOT for 100 ms | Drive the device from the workbench without reaching for the switches |
 | `M` `Q` `K` | Hold MODE / QUEST / FOOT for 1.3 s | Save, calibrate, new session |
-| `?` | Print switch settings | Confirm what the device is doing |
+| `-` / `+` | Panel **SPI clock** one step down / up: 8, 16, 24, 30, 40, 60 MHz (boots at `TFT_HZ`, 16) | Find the fastest clock the wiring carries cleanly before considering a DMA driver: a full frame at 16 MHz is about 58 ms of the 100 ms cadence; at 30 MHz about 31 ms. Noise or a frozen panel means step back down. A full frame is re-sent after each step so a bad clock shows at once |
+| `g` / `G` | Codec **line-in level** down / up, 0–15 (boots at `INPUT_LEVEL`, 0; stage 3–4 with a codec) | Sweep sensitivity during the trimmer check (acceptance row 06) without recompiling; the attenuator stays the documented path, this only moves the codec's full-scale |
+| `t` | Toggle the **display test pattern** (full flush while on) | Border, four differently coloured corner marks and a "TOP" label catch a mirrored or rotated panel; seven theme-colour bars show colour order and depth; a tick at every 16th row on both edges shows a dropped or shifted band; a frame counter and a marker that walks one cell per cadence show whether the flush keeps up |
+| `?` | Print switch settings and knob values | Confirm what the device is doing |
 
 Taps go through `App::controls` exactly like the GPIO lines, so debounce and hold timing are the device's.
 
@@ -164,15 +169,29 @@ In the browser, open **Device**:
 
 - Left canvas: the real panel, built from the rows the Teensy actually sent. Right canvas: this page's WebAssembly frame. Between them a count of differing pixels — zero means the device and the simulator are drawing the same thing for the same state.
 - Buttons send the switches and taps above; **also tap this page** mirrors taps into the browser device so the two stay in step. **Adopt device record** writes the Teensy's progress (fragments, active and session time, goal) into the page's EEPROM slot 0 and reboots it, so both start from the same record.
+- The **bench** row sends the knobs (`SPI −/+`, `level −/+`, `test pattern`) and shows the current `spi_hz`, `in_level`, `test`, cadence and diff state from the latest telemetry line.
 - Sparklines: `tx_bytes`, `flush_us`, `yin_us` and audio `cpu` over the last minute, with the maximum printed in the corner. Below them the raw telemetry lines.
+
+### Bench logs and the report
+
+Both `make monitor` and the bridge append everything the device says to `build/bench/<start>.jsonl` (`build/bench/latest.jsonl` points at the current one; the status line in the Device tab names it). Each line is `{"at": seconds, "telemetry": {...}}`, `{"at", "state": {...}}` or `{"at", "text": "..."}`. Nothing under `build/` is committed.
+
+```sh
+make bench-report                       # summarise build/bench/latest.jsonl
+make bench-report LOG=build/bench/20261118-091500.jsonl
+```
+
+The report prints run time and reboots, the knob and switch states seen, `flush_us` median / p95 / max against the cadence budget, `tx_max_bytes`, `loop_max_us`, audio CPU and memory, `yin_us`, the level range and seconds at or above the 0.98 clip threshold, gate, running and active seconds, and the fragment and total deltas. It ends with the `acceptance_log.csv` rows those numbers inform (03, 04, 05, 06, 07, 08, 09, 18) and the DMA-gate verdict below. It only reads; the measured fields in the CSV are yours to fill after looking at the panel and the meter.
+
+`make bench STAGE=n [SERIAL=...]` chains `make firmware`, `make upload` and `make sim DEVICE=auto` and stops at the first failure. It is still the only path besides `make upload`/`make monitor` that touches a port.
 
 A pseudo-terminal fed by a script that writes the same packet format exercised the whole path end to end (link, mirror, diff, taps, adopt, sparklines) in headless Chrome; the protocol itself is round-tripped by `tests/core_tests.cpp` and `tests/link_test.py` in `make test`. What has **not** been done without a board: the upload, the real serial throughput (band packets at 115200 bytes per full frame share the USB CDC link with the JSON lines; USB serial on Teensy 4.1 is high-speed, so a full frame should take a few milliseconds, but that is a prediction), and the measurements themselves.
 
 ### First bench session checklist
 
-1. `make firmware STAGE=2`, `make upload STAGE=2`, `make monitor`: confirm the screen picture and that each `M Q F` reading follows its own switch. Note `flush_us` and `flush_max_us` for the stage 2 screen.
+1. `make firmware STAGE=2`, `make upload STAGE=2`, `make monitor`: send `t` (`make monitor SEND=t`, or the Device tab's **test pattern** button) and check the test pattern's border, corner colours and "TOP" before anything else: a white or rotated panel is a wiring or `setRotation` question, not a renderer one. Toggle `t` off, confirm the stage 2 picture and that each `M Q F` reading follows its own switch. Step `+` until the pattern degrades, then back one step; note `spi_hz`, `flush_us` and `flush_max_us`.
 2. `make firmware STAGE=4`, `make upload STAGE=4`, `make sim DEVICE=auto`, open **Device**, press **Link**. The left canvas should fill with the boot screen within a second and match the right canvas after **Adopt device record**.
-3. Calibrate (`Q` hold), start a session (`k`), play: watch `flush_us` while the six-step strum runs. Record `flush_max_us`, `loop_max_us`, `tx_max_bytes` and `cpu` in the handoff. Press `f` and compare; press `2` and judge whether 200 ms reads as smoothly.
+3. Calibrate (`Q` hold), start a session (`k`), play: watch `flush_us` while the six-step strum runs. Press `f` and compare; press `2` and judge whether 200 ms reads as smoothly. During the trimmer sweep (row 06) use `g`/`G` only to understand headroom; the shipped value stays `INPUT_LEVEL` until a measurement argues otherwise. Afterwards run `make bench-report` and copy its numbers into the handoff table.
 4. Look for tearing at band seams during the strum and the breath (band edges fall on sprite row boundaries). If seams show, the fix is a DMA panel driver behind the `Panel` adapter in the sketch, not a renderer change.
 5. Leave the link on for a minute: the pixel-diff count should stay at zero whenever both devices are in the same state; any persistent difference is a renderer or timing bug worth a scenario.
 
@@ -188,9 +207,9 @@ The Adafruit GC9A01A library writes pixels blocking on SPI. The sketch isolates 
 - Layout: edit shared `ui.h`, watch it live with `make sim` (saves rebuild and reload the page) or render every state with `python3 tools/render_gallery.py`, update goldens, then compile the target.
 - Browser adapter only (`simulator/web/`): `make sim` while editing; `make test` confirms the module still matches native goldens. No target compile is needed when the shared headers are untouched.
 - Character, colours, fonts, motion timing: edit the PNG/JSON sources in `art/` (any pixel editor), run `python3 tools/make_sprites.py` (standard library only; it validates, regenerates the headers and prints what each animation step costs the panel), then `make sim` to watch it or `make sim-build` + `python3 tools/render_gallery.py`, and update goldens.
-- Bench instrumentation (`link.h`, the sketch's switches and telemetry, `tools/link.py`, the Device tab): keep `LinkState` and `tools/link.py` `STATE` in step (the `static_assert` and `assert` on its size catch drift), extend `linkTests()` and `tests/link_test.py`, `make test`, then `make firmware-all`. Details and drawing guidance in [ART.md](ART.md). `python3 tools/render_screen.py` creates the CAD texture from the actual shared renderer; a changed texture requires `make hero` so provenance stays valid.
+- Bench instrumentation (`link.h`, the sketch's switches, knobs and telemetry, `tools/link.py`, `tools/bench_report.py`, the Device tab): keep `LinkState` and `tools/link.py` `STATE` in step (the `static_assert` and `assert` on its size catch drift), extend `linkTests()`, `tests/link_test.py` and `tests/bench_report_test.py`, update the switch table above and the `.ino` header comment, `make test`, then `make firmware-all`. Details and drawing guidance in [ART.md](ART.md). `python3 tools/render_screen.py` creates the CAD texture from the actual shared renderer; a changed texture requires `make hero` so provenance stays valid.
 - Plain Markdown or agent-guidance edits: edit the relevant files and run `make test`; no CAD or Arduino dependencies are needed.
-- CAD geometry or generated hardware guides: create a Python virtualenv, install `requirements-cad.txt`, then regenerate only affected outputs with `make cad cad-check`, `make render` (Blender) and `make docs`.
+- CAD geometry or generated hardware guides: run `make measure-check` first so the edit answers a measured deviation (it names the `build_cad.py` constant and the parts each row gates), create a Python virtualenv, install `requirements-cad.txt`, then regenerate only affected outputs with `make cad cad-check`, `make render` (Blender) and `make docs`. The order of operations with a board and parts arriving together is in [BRINGUP.md](BRINGUP.md).
 - Presentation only: `make hero` renders the existing STEP using Blender and the CAD/Pillow environment; [details](MARKETING.md). It does not compile firmware or rebuild geometry.
 - Mentor handoff: `make pack-mentor` creates the lean review ZIP using standard-library Python and existing files; [contents](MENTOR_PACK.md). It performs no builds.
 
