@@ -10,13 +10,22 @@
 
 The R1.1 design keeps the crimson, charcoal and muted-gold rival-device feel through a clipped bezel, a thin gold insert, a small crimson cheek and original pixel art. The enclosure is **86 × 146 × 45 mm**, with a real **32.4 mm active display** behind a flat protective window. The concept images are inspiration; the CAD is the physical proposal.
 
+## Who this is for
+
+| You are | Start with | Then |
+|---|---|---|
+| A hobbyist building it alone | [Building without a mentor](docs/SOLO_BUILD.md) | The [illustrated guide](docs/VEX_Pocket_Rival_Mentor_Guide.pdf) and the [bring-up runbook](docs/BRINGUP.md) |
+| A hobbyist with a mentor or maker space | `make pack-mentor` → [review pack](docs/MENTOR_PACK.md) | The same guide; the mentor reviews the attenuator, the stack and the foot-load test |
+| A design studio or product team | [Product brief](docs/STUDIO_BRIEF.md) — what is fixed, what is open, what is asked | `make pack-studio` → [studio pack](docs/MENTOR_PACK.md) with renders, motion, STEP and decisions |
+
+Where the documents say "mentor", read: an experienced second person. Everything else below is shared.
+
 ## Start here
 
 | Goal | Open |
 |---|---|
-| Prepare a lean mentor ZIP | [Pack contents and navigation](docs/MENTOR_PACK.md) — `make pack-mentor` |
 | Buy the parts | [Final shopping list](docs/SHOPPING.md), [BOM CSV](hardware/data/BOM.csv) |
-| Build with a mentor | [Illustrated guide](docs/VEX_Pocket_Rival_Mentor_Guide.pdf), [editable guide](docs/BUILD_GUIDE.md) |
+| Build it | [Illustrated guide](docs/VEX_Pocket_Rival_Mentor_Guide.pdf), [editable guide](docs/BUILD_GUIDE.md) |
 | Review or modify the design | [CAD review map](docs/CAD_REVIEW.md), [grouped STEP](hardware/generated/VEX_Pocket_Rival_Assembly.step) |
 | Print or cut parts | [Fabrication instructions](docs/PRINTING.md), [STLs](hardware/generated/stl), [DXFs](hardware/generated/drawings), [1:1 templates](docs/VEX_Pocket_Rival_1to1_Templates.pdf) |
 | Try the software without hardware | [Local development](docs/LOCAL_DEVELOPMENT.md) |
@@ -58,7 +67,7 @@ The sketch prints what it measures (`flush_us`, `flush_max_us`, `loop_max_us`, `
 - Desktop core and simulator tests pass locally.
 - CAD: 72 named physical components, five service groups, 2,556 pairwise overlap checks with no modeled solid overlaps. STEP re-import preserves names, groups, per-part bounds, volumes and solid counts.
 - Automatic CI runs only a short Linux desktop test job. Firmware and CAD builds are manual under [Actions](https://github.com/ash0ts/PedalPartner/actions). All four stages compile locally with the pinned Teensy core; nothing has run on a board yet, so SPI timing, tearing and perceived motion are still bench questions the Device tab is built to answer.
-- This is a **mentor-review prototype**, not a physically validated pedal. Purchased parts, solder/header heights, cable fit, power/noise, display readability and foot-load behavior still need bench tests. [Evidence and limits](docs/HANDOFF.md).
+- This is a **review prototype**, not a physically validated pedal. Purchased parts, solder/header heights, cable fit, power/noise, display readability and foot-load behavior still need bench tests. [Evidence and limits](docs/HANDOFF.md).
 
 R1.1 uses Teensy 4.1, Audio Adapter D/D2, Adafruit 6178 and USB 5 V. It has no audio output, bypass, muting or 9 V pedal-power input. No technique scoring or calendar streaks are claimed.
 

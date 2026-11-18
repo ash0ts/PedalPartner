@@ -1,4 +1,4 @@
-"""Single-source build data for CSVs and the mentor manual."""
+"""Single-source build data for CSVs and the illustrated build guide."""
 SOURCES=[
 ('S1','Teensy 4.1 hardware / power / pinout','https://www.pjrc.com/store/teensy41.html'),
 ('S2','Audio Adapter Rev D / D2 and shared pins','https://www.pjrc.com/store/teensy3_audio.html'),
@@ -17,7 +17,7 @@ SOURCES=[
 ('S15','Display manufacturer STEP directory','https://github.com/adafruit/Adafruit_CAD_Parts/tree/main/6178%201.28in%20Round%20TFT'),
 ('S16','Display manufacturer PCB','https://github.com/adafruit/Adafruit-1.28-240x240-Round-Display-PCB'),
 ('S17','build123d documentation','https://build123d.readthedocs.io/en/latest/'),
-('S18','G3 2026 manual: verify tuner/AUX behavior on the actual rig','https://cdn.shopify.com/s/files/1/0756/7638/5564/files/G32026.pdf'),
+('S18','Example multi-effects manual (Zoom G3): check how your own rig treats its tuner/AUX dry feed','https://cdn.shopify.com/s/files/1/0756/7638/5564/files/G32026.pdf'),
 ]
 # Budget ranges are planning allowances, not live quotes. No order is placed.
 BOM=[
@@ -87,8 +87,8 @@ ACCEPTANCE=[
 ('09','Quest award','Five active minutes grant exactly one fragment; no extra from redraws'),
 ('10','Save / boot','Pause, holdMODE, Saved message, unplug/replug; total and fragment retained; paused'),
 ('11','Tuner reference','Known single notes E2-A4 checked; target median<=3cents, no stable octave errors'),
-('12','Source behavior','Dry feed remains available across normal G3S presets; log TUNER/AUX mute behavior'),
-('13','Guitars','Repeat level/noise checks for FGN Fluence Moderns and Fender Duo-Sonic'),
+('12','Source behavior','Buffered dry feed stays live in every preset used while playing; log what the rig tuner/mute does to it'),
+('13','Guitars','Repeat level/noise checks for each guitar used (at least one active-pickup and one passive-pickup instrument)'),
 ('14','Mechanical fit','Coupon fits stock parts; lid closes freely; no wire trapped; window does not press LCD'),
 ('15','Readability','Large note identifiable while standing at actual board angle / room light'),
 ('16','Foot operation','Mentor-approved load test without electronics; no flex/cracks/travel binding'),

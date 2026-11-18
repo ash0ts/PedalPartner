@@ -18,7 +18,7 @@ import csv,re,sys
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'hardware/data'))
 from project_data import MEASUREMENTS,CUT_PROFILES
 NUMBER=re.compile(r'-?\d+(?:\.\d+)?')
-COLUMNS=['item','CAD_assumption_mm','measured_mm','change_required','mentor_initials']
+COLUMNS=['item','CAD_assumption_mm','measured_mm','change_required','checked_by']
 
 def first_number(text):
     m=NUMBER.search(text or '');return float(m.group()) if m else None

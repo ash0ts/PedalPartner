@@ -8,7 +8,7 @@ import unittest
 from zipfile import ZipFile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools'))
-from pack_mentor import FIXED, build_pack
+from pack_mentor import FIXED, PROFILES, STUDIO_EXTRA, build_pack
 
 
 class PackTest(unittest.TestCase):
@@ -16,7 +16,7 @@ class PackTest(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name) / 'source'
-        for name in (*FIXED, 'hardware/data/measurements.csv', 'hardware/generated/drawings/window.dxf'):
+        for name in (*FIXED, *STUDIO_EXTRA, 'hardware/data/measurements.csv', 'hardware/generated/drawings/window.dxf'):
             path = self.root / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(('fixture:' + name).encode())
@@ -43,6 +43,26 @@ class PackTest(unittest.TestCase):
                 self.assertEqual(len(data), row['bytes'])
         build_pack(self.root, self.output)
         self.assertEqual(first, self.output.read_bytes())
+
+    def test_studio_profile_adds_brief_and_keeps_mentor_pack_unchanged(self):
+        build_pack(self.root, self.output)
+        with ZipFile(self.output) as archive:
+            mentor_names = set(archive.namelist())
+        self.assertNotIn('VEX_R1.1_Mentor_Review/docs/STUDIO_BRIEF.md', mentor_names)
+        studio = Path(self.temp.name) / 'studio.zip'
+        build_pack(self.root, studio, 'studio')
+        with ZipFile(studio) as archive:
+            prefix = PROFILES['studio']['folder'] + '/'
+            names = set(archive.namelist())
+            self.assertTrue(all(n.startswith(prefix) for n in names))
+            for extra in STUDIO_EXTRA:
+                self.assertIn(prefix + extra, names)
+            manifest = json.loads(archive.read(prefix + 'MANIFEST.json'))
+            self.assertEqual(manifest['profile'], 'studio')
+            start = archive.read(prefix + 'START_HERE.md').decode()
+            self.assertIn('STUDIO_BRIEF.md', start)
+            self.assertIn('no PCB', start)
+        self.assertEqual(len(names), len(mentor_names) + len(STUDIO_EXTRA))
 
     def test_missing_input_preserves_previous_archive(self):
         self.output.write_bytes(b'previous good archive')

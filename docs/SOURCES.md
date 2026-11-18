@@ -19,6 +19,6 @@ Checked16 November2026. External files and source provenance are distinguished f
 - **S15 Display manufacturer STEP directory:** https://github.com/adafruit/Adafruit_CAD_Parts/tree/main/6178%201.28in%20Round%20TFT
 - **S16 Display manufacturer PCB:** https://github.com/adafruit/Adafruit-1.28-240x240-Round-Display-PCB
 - **S17 build123d documentation:** https://build123d.readthedocs.io/en/latest/
-- **S18 G3 2026 manual: verify tuner/AUX behavior on the actual rig:** https://cdn.shopify.com/s/files/1/0756/7638/5564/files/G32026.pdf
+- **S18 Example multi-effects manual (Zoom G3): check how your own rig treats its tuner/AUX dry feed:** https://cdn.shopify.com/s/files/1/0756/7638/5564/files/G32026.pdf
 
 Adafruit display STEP SHA:66f39106daee442a08a0b5f994fe7cbfb830bd64. Mount coordinates extracted from manufacturer Eagle PCB. Designed by Limor Fried/Ladyada for Adafruit Industries. Manufacturer PCB license is retained in vendor/ADAFRUIT_LICENSE.txt. Prior community Teensy and audio models are carried over from the user's earlier pack, with unresolved physical revision differences.
