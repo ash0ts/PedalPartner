@@ -16,7 +16,7 @@
 // animation timing and fonts are generated from art/ (see docs/ART.md); drawScreen quantises
 // View::now to DISPLAY_MS so both targets pick the same animation frame for the same instant.
 namespace vex {
-constexpr uint32_t UI_CELEBRATE_MS=3000,UI_SUMMARY_MS=4000,UI_SLEEP_MS=30000,UI_TUNER_FADE_MS=1500,UI_BLINK_EVERY_MS=4000,UI_PULSE_MS=500;
+constexpr uint32_t UI_CELEBRATE_MS=3000,UI_SUMMARY_MS=4000,UI_SLEEP_MS=30000,UI_TUNER_FADE_MS=1500,UI_BLINK_EVERY_MS=4000,UI_PULSE_MS=250;
 struct View {
  Progress progress;
  Pitch pitch;
@@ -82,22 +82,26 @@ template<class Canvas> void ring(Canvas& c,int filled,uint16_t on,uint16_t off=U
 // blink (one-shot every UI_BLINK_EVERY_MS) > idle breathe. Frame timing comes from anim.h; `now`
 // has already been quantised to DISPLAY_MS by drawScreen, and every frame_ms is a multiple of it,
 // so loops advance exactly one step per cadence boundary and never repeat or skip a frame.
+// `frame` is a step into the animation's play order (manifest `sequence`); spriteIndex maps it to a drawn frame.
 struct AnimFrame{int anim,frame;};
-inline int loopFrame(int anim,uint32_t now){const auto& a=VEX_ANIMS[anim];return int((now/a.frame_ms)%a.frames);}
-// One-shot frame since `since`; -1 once the animation has finished.
-inline int shotFrame(int anim,uint32_t since){const auto& a=VEX_ANIMS[anim];uint32_t f=since/a.frame_ms;return f<a.frames?int(f):-1;}
+inline int loopFrame(int anim,uint32_t now){const auto& a=VEX_ANIMS[anim];return int((now/a.frame_ms)%a.steps);}
+// One-shot step since `since`; -1 once the animation has finished.
+inline int shotFrame(int anim,uint32_t since){const auto& a=VEX_ANIMS[anim];uint32_t f=since/a.frame_ms;return f<a.steps?int(f):-1;}
 inline AnimFrame chooseAnim(const View& v){
  const auto& p=v.progress;
  if(v.now-v.levelup_at<UI_CELEBRATE_MS)return{ANIM_LEVELUP,loopFrame(ANIM_LEVELUP,v.now-v.levelup_at)};
  if(v.now-v.fragment_at<UI_CELEBRATE_MS)return{ANIM_CHEER,loopFrame(ANIM_CHEER,v.now-v.fragment_at)};
- if(v.tuning)return{ANIM_LISTEN,0};
+ if(v.tuning)return{ANIM_LISTEN,loopFrame(ANIM_LISTEN,v.now)};
  if(p.active)return{ANIM_STRUM,loopFrame(ANIM_STRUM,v.now)};
  if(v.now-v.active_at>UI_SLEEP_MS&&!p.running)return{ANIM_SLEEP,loopFrame(ANIM_SLEEP,v.now)};
  int blink=shotFrame(ANIM_BLINK,v.now%UI_BLINK_EVERY_MS);
  if(blink>=0)return{ANIM_BLINK,blink};
  return{ANIM_IDLE,loopFrame(ANIM_IDLE,v.now)};
 }
-inline int spriteIndex(AnimFrame f){return VEX_ANIMS[f.anim].first+f.frame;}
+inline int spriteIndex(AnimFrame f){const auto& a=VEX_ANIMS[f.anim];return a.first+VEX_ANIM_STEPS[a.first_step+f.frame];}
+// Lead-square pulse while time is being earned: gold > fade > ink > fade, one step per UI_PULSE_MS, so the
+// brightness eases instead of flipping. All theme colours; the square is 4x4 so each step is one tiny band.
+inline uint16_t pulseColor(uint32_t now){static const uint16_t steps[4]={UI_GOLD,UI_FADE,UI_INK,UI_FADE};return steps[(now/UI_PULSE_MS)%4];}
 inline uint32_t quantise(uint32_t now){return now-now%DISPLAY_MS;}
 inline const char* stringName(int midi){
  // Nearest standard-tuning open string for a quick visual anchor; other notes show a dash.
@@ -135,8 +139,9 @@ template<class Canvas> void drawTuner(Canvas& c,const View& v){
  // Signal meter under the title: level relative to eight times the gate, gate mark at one eighth.
  float level=p.gate>0?v.rms/(p.gate*8):0;if(level>1){level=1;}if(level<0||!fresh){level=0;}
  c.fillRect(70,42,100,4,UI_DIM);c.fillRect(70,42,int(level*100),4,clipping?UI_RED:signal?UI_GOLD:UI_PLUM);c.fillRect(82,40,1,8,UI_INK);
+ int listener=spriteIndex({ANIM_LISTEN,loopFrame(ANIM_LISTEN,v.now)});   // ear-tilt loop while tuning
  if(clipping){
-  pet(c,VEX_ANIMS[ANIM_LISTEN].first,88,58,2);
+  pet(c,listener,88,58,2);
   title(c,"CLIP - TURN DOWN",131,1,UI_RED);
   c.drawFastHLine(40,166,160,UI_DIM);c.drawFastVLine(120,158,17,UI_DIM);
   centered(c,"lower the guitar volume",184,1,UI_RED);
@@ -145,7 +150,7 @@ template<class Canvas> void drawTuner(Canvas& c,const View& v){
  }else if(stale){
   tunerReading(c,v.last_pitch,false);
  }else{
-  pet(c,VEX_ANIMS[ANIM_LISTEN].first,88,58,2);
+  pet(c,listener,88,58,2);
   bool uncertain=v.uncertain&&signal;
   title(c,uncertain?"Hmm...":signal?"Listening":"Play one note",131,1,UI_INK);
   c.drawFastHLine(40,166,160,UI_DIM);c.drawFastVLine(120,158,17,UI_DIM);
@@ -157,8 +162,8 @@ template<class Canvas> void drawPet(Canvas& c,const View& v){
  const auto& p=v.progress;char s[64];
  // Quest ring: filled ticks follow session progress toward the goal; gold while running, dim when paused.
  uint32_t goal=p.goalMs();int filled=int((p.session_ms>=goal?goal:p.session_ms)*60/goal);
- // The leading square pulses ink/gold every UI_PULSE_MS while time is being earned.
- ring(c,filled,p.claimed||p.running?UI_GOLD:UI_PLUM,UI_DIM,p.running&&!p.claimed,(v.now/UI_PULSE_MS)%2?UI_INK:UI_GOLD);
+ // The leading square pulses through pulseColor while time is being earned.
+ ring(c,filled,p.claimed||p.running?UI_GOLD:UI_PLUM,UI_DIM,p.running&&!p.claimed,pulseColor(v.now));
  title(c,"VEX",16,1,UI_GOLD);
  pet(c,spriteIndex(chooseAnim(v)));
  bool celebrate=v.now-v.fragment_at<UI_CELEBRATE_MS,levelup=v.now-v.levelup_at<UI_CELEBRATE_MS,summary=v.now-v.summary_at<UI_SUMMARY_MS&&!p.running;

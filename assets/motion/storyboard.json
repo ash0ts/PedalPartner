@@ -1,7 +1,7 @@
 {
  "display_ms": 100,
  "fps": 10,
- "seconds": 15.8,
+ "seconds": 18.0,
  "segments": [
   {
    "caption": "Idle: breathe, blink every 4 s",
@@ -13,7 +13,7 @@
    ]
   },
   {
-   "caption": "Footswitch: strum while playing",
+   "caption": "Footswitch: six-step strum",
    "start_s": 2.2,
    "end_s": 4.6,
    "animations": [
@@ -46,25 +46,25 @@
    ]
   },
   {
-   "caption": "30 s idle: sleep",
+   "caption": "30 s idle: sleep, Z rises",
    "start_s": 11.8,
-   "end_s": 13.4,
+   "end_s": 14.8,
    "animations": [
     "sleep"
    ]
   },
   {
-   "caption": "MODE: tuner listens",
-   "start_s": 13.4,
-   "end_s": 14.6,
+   "caption": "MODE: tuner listens, ear tilts",
+   "start_s": 14.8,
+   "end_s": 16.8,
    "animations": [
     "listen"
    ]
   },
   {
    "caption": "Tuner: A4 at +12 cents",
-   "start_s": 14.6,
-   "end_s": 15.8,
+   "start_s": 16.8,
+   "end_s": 18.0,
    "animations": [
     "listen"
    ]

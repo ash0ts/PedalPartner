@@ -85,19 +85,29 @@ static void displayTests(){
  View v;v.stage=4;v.progress.calibrated=true;v.now=101000;v.active_at=v.now;v.fragment_at=v.levelup_at=v.summary_at=v.now-100000;v.notice_at=v.now-100000;
  // Every manifest period is a multiple of DISPLAY_MS, so one cadence step never repeats or skips a strum frame.
  v.progress.running=true;v.progress.active=true;int last=-1,steps=0;
- for(uint32_t t=0;t<4000;t+=DISPLAY_MS){View w=v;w.now=v.now+t;AnimFrame f=chooseAnim(quantised(w));assert(f.anim==ANIM_STRUM);if(last>=0){assert(f.frame==(last+1)%VEX_ANIMS[ANIM_STRUM].frames);steps++;}last=f.frame;}
+ for(uint32_t t=0;t<4000;t+=DISPLAY_MS){View w=v;w.now=v.now+t;AnimFrame f=chooseAnim(quantised(w));assert(f.anim==ANIM_STRUM);if(last>=0){assert(f.frame==(last+1)%VEX_ANIMS[ANIM_STRUM].steps);steps++;}last=f.frame;}
  assert(steps==4000/int(DISPLAY_MS)-1);
- // Idle breathes on a one-second loop and blinks as a one-shot inside each four-second window.
+ // Idle breathes through its manifest sequence (a ping-pong over the drawn frames) and blinks as a one-shot
+ // inside each four-second window. The step index is what the simulator and the bench link report.
  v.progress.active=false;v.progress.running=false;
- assert(chooseAnim(v).anim==ANIM_IDLE);View b=v;b.now=v.now+(UI_BLINK_EVERY_MS-v.now%UI_BLINK_EVERY_MS)%UI_BLINK_EVERY_MS;
- assert(chooseAnim(b).anim==ANIM_BLINK&&chooseAnim(b).frame==0);b.now+=VEX_ANIMS[ANIM_BLINK].frame_ms*VEX_ANIMS[ANIM_BLINK].frames;assert(chooseAnim(b).anim==ANIM_IDLE);
+ assert(chooseAnim(v).anim==ANIM_IDLE);
+ {const auto& a=VEX_ANIMS[ANIM_IDLE];assert(a.steps>=a.frames);int seen[16]={0};
+  uint32_t base=v.now-v.now%(a.frame_ms*a.steps)+1000;   // clear of the blink window at each 4 s boundary
+  for(int s=0;s<a.steps;s++){View w=v;w.now=base+s*a.frame_ms;AnimFrame f=chooseAnim(w);assert(f.anim==ANIM_IDLE&&f.frame==int(w.now/a.frame_ms%a.steps));int sprite=spriteIndex(f);assert(sprite>=a.first&&sprite<a.first+a.frames);seen[sprite-a.first]++;}
+  for(int f=0;f<a.frames;f++)assert(seen[f]>0);   // every drawn frame is used; the ping-pong revisits the middle one
+  // Breath budget: each idle step may redraw at most 30 % of the panel (the wings and collar, not the whole bat).
+  static DesktopCanvas f0,f1;Band out[FLUSH_MAX_BANDS];
+  for(int s=0;s<a.steps;s++){View w0=v,w1=v;w0.now=base+s*a.frame_ms;w1.now=w0.now+a.frame_ms;drawScreen(f0,w0);drawScreen(f1,w1);
+   int n=bands(f0.pixels.data(),f1.pixels.data(),out);assert(n>=1);assert(bandBytes(out,n)/(FRAME_W*2)<=FRAME_H*30/100);}}
+ View b=v;b.now=v.now+(UI_BLINK_EVERY_MS-v.now%UI_BLINK_EVERY_MS)%UI_BLINK_EVERY_MS;
+ assert(chooseAnim(b).anim==ANIM_BLINK&&chooseAnim(b).frame==0);b.now+=VEX_ANIMS[ANIM_BLINK].frame_ms*VEX_ANIMS[ANIM_BLINK].steps;assert(chooseAnim(b).anim==ANIM_IDLE);
  // Time inside the current cadence window is pulled back to its start; "long ago" sentinels stay long ago.
  View q=v;q.now=101150;q.fragment_at=101140;q=quantised(q);assert(q.now==101100&&q.fragment_at==101100&&q.now-q.levelup_at>=UI_CELEBRATE_MS);
  // Band diff: first frame is sent whole by the adapter; an unchanged screen produces no bands; the
  // second blink frame touches only the eye rows; a new caption adds a band near the bottom only.
  static DesktopCanvas a,c;drawScreen(a,v);drawScreen(c,v);Band out[FLUSH_MAX_BANDS];
  assert(bands(a.pixels.data(),c.pixels.data(),out)==0);
- b.now-=VEX_ANIMS[ANIM_BLINK].frame_ms*VEX_ANIMS[ANIM_BLINK].frames;assert(chooseAnim(b).anim==ANIM_BLINK);
+ b.now-=VEX_ANIMS[ANIM_BLINK].frame_ms*VEX_ANIMS[ANIM_BLINK].steps;assert(chooseAnim(b).anim==ANIM_BLINK);
  drawScreen(a,b);b.now+=DISPLAY_MS;drawScreen(c,b);int n=bands(a.pixels.data(),c.pixels.data(),out);assert(n>=1);uint32_t rows=bandBytes(out,n)/(FRAME_W*2);assert(rows>0&&rows<FRAME_H*15/100);
  drawScreen(a,v);
  View tick=v;tick.notice="Saved - safe to unplug";tick.notice_at=v.now;drawScreen(c,tick);n=bands(a.pixels.data(),c.pixels.data(),out);assert(n>=1&&out[0].y>=180);
