@@ -70,8 +70,12 @@ At handoff, update the current status, exact next action, decisions, failed/bloc
 
 - Installing local toolchains on this machine (arduino-cli and the pinned Teensy core, emscripten, the CAD virtualenv) is approved; install what the work needs instead of asking first.
 - Desktop tooling must be something the user can open and try by hand; when a workflow is judged unusable, research established patterns before redesigning rather than iterating on the current approach.
+- Verify delivered work end to end and show the evidence (drive the workbench through real pointer/keyboard events in headless Chrome, assert animations from simulator state, render a video), then leave the workbench running with short try-it steps so the user can test it by hand, and state plainly what can only be proven on the Teensy bench.
+- Finished work goes to `main` through a PR merged (merge commit, branch deleted) as soon as the Linux `make test` CI job passes; do not wait to be asked before merging.
 
 ## Learned Workspace Facts
 
 - On macOS, processes started from an agent shell (`nohup ... &`, subshells) are killed when that shell call ends and `setsid` does not exist; run long jobs such as `make hero` in the foreground with a long wait, or start servers with `subprocess.Popen(..., start_new_session=True)` and verify with `pgrep`.
 - System Python has no Pillow; sprite generation, gallery contact sheets and CAD/hero work use the disposable `build/venv` (`build/venv/bin/python`), which `make clean` removes.
+- Headless Chrome (`/Applications/Google Chrome.app/Contents/MacOS/Google Chrome --headless=new`, driven over CDP) can exercise the workbench: open it with `?noreload=1` so the live-reload long-poll does not hang virtual time, and auto-accept `Page.javascriptDialogOpening` because Factory reset uses `confirm()`. Mac microphone capture still needs a real browser gesture.
+- The Homebrew ffmpeg on this machine has no `drawtext` filter (no libfreetype); `tools/render_motion.py` draws video captions with the firmware display font and uses ffmpeg only to scale and encode.

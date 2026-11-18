@@ -1,0 +1,2 @@
+# Bench loop only: serial access for `make monitor` and `make sim DEVICE=auto`. Host tests do not need it.
+pyserial==3.5

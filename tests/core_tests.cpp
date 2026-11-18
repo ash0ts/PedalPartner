@@ -107,8 +107,34 @@ static void displayTests(){
  n=bands(p0,p1,out);assert(n==FLUSH_MAX_BANDS);
  assert(out[n-1].y+out[n-1].h==FRAME_H-19);for(int i=1;i<n;i++)assert(out[i].y>=out[i-1].y+out[i-1].h);
 }
+#include "../firmware/VEX_Pocket_Rival/link.h"
+// Bench link: band and state packets round-trip through the host parser, corruption is rejected, the parser
+// resynchronises past interleaved text, and a sample stream is written for tests/link_test.py (Python decoder).
+struct ByteSink{std::vector<uint8_t> bytes;void write(const uint8_t* p,size_t n){bytes.insert(bytes.end(),p,p+n);}};
+static void linkTests(){
+ using namespace vex;
+ struct MemStore:Store{uint8_t m[128]={};uint8_t read(int a)override{return m[a];}void update(int a,uint8_t v)override{m[a]=v;}} store;
+ App app(store,4);app.begin(101000,true);app.progress.calibrated=true;app.progress.gate=.004f;app.setRunning(true);app.progress.active=true;
+ for(int i=0;i<30;i++){app.observe(.05f,.2f,app.now);app.tick(app.now+10);}
+ LinkTiming timing;timing.tx_bytes=31200;timing.flush_us=4321;timing.flush_max_us=9876;timing.yin_us=1500;timing.yin_max_us=2200;timing.loop_max_us=12000;timing.cpu=12.5f;timing.cadence_mul=1;
+ LinkState s=linkState(app,timing);assert(s.stage==4&&(s.flags&LINK_RUNNING)&&(s.flags&LINK_ACTIVE)&&(s.flags&LINK_CALIBRATED)&&s.anim==ANIM_STRUM&&s.flush_us==4321&&s.now_ms==app.now);
+ static DesktopCanvas canvas;drawScreen(canvas,app.view());
+ ByteSink out;const char* text="{\"stage\":4,\"tx_bytes\":31200}\n";out.write((const uint8_t*)text,strlen(text));
+ linkBand(out,36,100,canvas.pixels.data()+36*FRAME_W);linkState(out,s);linkBand(out,200,8,canvas.pixels.data()+200*FRAME_W);
+ // Parse: skip text byte by byte, then each packet decodes with the right geometry and payload.
+ size_t at=0;int bandsSeen=0,statesSeen=0;
+ while(at<out.bytes.size()){LinkPacket p;long used=linkParse(out.bytes.data()+at,out.bytes.size()-at,p);if(used<=0){at++;continue;}
+  if(p.type==LINK_BAND){assert(p.length==size_t(p.b)*FRAME_W*2);assert(memcmp(p.payload,canvas.pixels.data()+size_t(p.a)*FRAME_W,p.length)==0);bandsSeen++;}
+  else{assert(p.length==sizeof(LinkState));LinkState back;memcpy(&back,p.payload,sizeof back);assert(back.flush_us==4321&&back.loop_max_us==12000&&back.anim==s.anim&&back.frame==s.frame);statesSeen++;}
+  at+=size_t(used);}
+ assert(bandsSeen==2&&statesSeen==1);
+ // A flipped payload bit fails the CRC; a truncated stream asks for more bytes rather than guessing.
+ std::vector<uint8_t> bad(out.bytes.begin()+strlen(text),out.bytes.end());bad[LINK_HEADER+5]^=1;LinkPacket p;assert(linkParse(bad.data(),bad.size(),p)==-1);
+ assert(linkParse(out.bytes.data()+strlen(text),LINK_HEADER+10,p)==0);
+ FILE* f=fopen("build/link_sample.bin","wb");if(f){fwrite(out.bytes.data(),1,out.bytes.size(),f);fclose(f);}
+}
 int main(){
- appTests();analyzerTests();displayTests();
+ appTests();analyzerTests();displayTests();linkTests();
  vex::Progress p;p.tick(100,.1,.2,true);assert(p.active_ms==0);p.calibrated=true;p.running=true;
  p.tick(100,.1,.2,true);assert(p.active_ms==100);p.tick(100,0,0,true);assert(!p.active&&p.active_ms==100);
  p.tick(100,.2,.99,true);p.tick(101,.2,.2,true);p.tick(100,.2,.2,false);p.tick(100,NAN,.2,true);assert(p.active_ms==100);
@@ -121,5 +147,5 @@ int main(){
  vex::Progress restored;vex::restore(restored,r);assert(restored.active_ms==p.active_ms&&restored.fragments==p.fragments&&!restored.running&&!restored.calibrated);
  vex::Button b;assert(b.update(true,10)==0);assert(b.update(false,20)==0);assert(b.update(false,50)==0);assert(b.update(true,100)==0);assert(b.update(true,130)==0);assert(b.update(false,200)==0);assert(b.update(false,230)==1);
  assert(b.update(true,300)==0);assert(b.update(true,330)==0);assert(b.update(true,1530)==2);assert(b.update(false,1600)==0);assert(b.update(false,1630)==0);
- puts("PASS: gating, clipping, stale input, quest exactly-once, goals, pitch math, CRC corruption, record restore, sequence rollover, button debounce and hold, app calibration/notice/save, YIN analyzer on tones/harmonics/noise, level accumulation, tuner smoothing, cadence-locked animation, dirty-band flush.");
+ puts("PASS: gating, clipping, stale input, quest exactly-once, goals, pitch math, CRC corruption, record restore, sequence rollover, button debounce and hold, app calibration/notice/save, YIN analyzer on tones/harmonics/noise, level accumulation, tuner smoothing, cadence-locked animation, dirty-band flush, bench link framing.");
 }
