@@ -6,7 +6,7 @@
 2. `docs/DECISIONS.md` explains choices; `docs/PLAN.md` lists the next work.
 3. Read the relevant CAD, software or build document before changing that subsystem.
 
-The product is VEX / Pocket Rival, a buildable first guitar companion with original pixel-bat personality. Preserve charcoal/crimson/muted gold, simple controls and the real small screen. Concept renders are not mechanical specifications.
+The product is VEX / Pocket Rival, a buildable first guitar companion with original pixel-bat personality. Three readers share the repository: a hobbyist alone, a hobbyist with a mentor, and a design studio taking it to product (`docs/STUDIO_BRIEF.md`); keep the build guide usable by all three and keep agent-facing material out of their route. Preserve charcoal/crimson/muted gold, simple controls and the real small screen. Concept renders are not mechanical specifications.
 
 ## Commands from repository root
 
@@ -25,7 +25,7 @@ The product is VEX / Pocket Rival, a buildable first guitar companion with origi
 | Regenerate CAD and validate exported STEP | `make cad cad-check` |
 | Assembly illustrations from existing meshes | `make render` |
 | Studio hero from checked-in STEP; no CAD rebuild | `make hero` |
-| Lean mentor review ZIP from existing files | `make pack-mentor` |
+| Review ZIP for a hobbyist/mentor, or the studio pack with the product brief | `make pack-mentor` / `make pack-studio` |
 | Regenerate BOM, guide and templates | `make docs` |
 | Import `art/` into the generated firmware headers / verify they match | `make art` / `make art-check` |
 | Verify motion segment by segment and re-encode `assets/motion/` (needs ffmpeg) | `make motion` |
@@ -59,7 +59,7 @@ Python 3.10+ and C++17 suffice for host tests. CAD uses build123d 0.10.0. Target
 - Run checks relevant to the change once. Reuse recorded evidence for unchanged CAD and firmware; do not reinstall toolchains, regenerate all assets or repeat fresh-agent reviews on every handoff.
 - Keep command output bounded. Redirect verbose builds to `build/` logs and inspect only a short error excerpt. Do not paste binary/base64 data or full build logs into chat.
 - Publish only changed files on a review branch; reuse unchanged blobs from the base tree. Prefer ordinary Git. A connector transfer must pass one complete, bounded file internally, verify its hash, and emit only metadata. Never use repeated chunk reads, shared-memory/bridge segment loops or payloads in model context. If one complete transfer is unavailable, stop that method and provide the local patch/archive. See `docs/PUBLISHING.md`.
-- For hero work, read `docs/MARKETING.md`: use actual STEP meshes and shared UI pixels; no generative imagery or invented hardware. `make hero` only tessellates/renders; `make pack-mentor` only packages. Neither requires target compilation. Do not overwrite assembly-guide illustrations for a marketing-only change.
+- For hero work, read `docs/MARKETING.md`: use actual STEP meshes and shared UI pixels; no generative imagery or invented hardware. `make hero` only tessellates/renders; `make pack-mentor` / `make pack-studio` only package. Neither requires target compilation. Do not overwrite assembly-guide illustrations for a marketing-only change.
 - When a toolchain is unavailable, record that limit and continue with the recoverable checkpoint. Do not repeatedly retry downloads or wait on optional CI.
 - Before a firmware upload to real hardware, compile the affected target stages and complete the documented bench checks. Manual CI is optional; local compilation is sufficient.
 

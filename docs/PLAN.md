@@ -3,13 +3,13 @@
 | Milestone | State | Done when |
 |---|---|---|
 | 0. Practical R1.1 package | Complete as a digital proposal | Grouped STEP, source, selected STLs/DXFs, BOM, illustrated guide and explicit limitations are present |
-| 0a. Presentation and mentor handoff | Prepared for PR review | Real-CAD hero/share images with provenance, reproducible lean ZIP, and bounded task/publication guidance |
+| 0a. Presentation and handoff | Complete 17 Nov 2026 | Real-CAD hero/share images with provenance, reproducible review ZIPs for a hobbyist/mentor (`make pack-mentor`) and a design studio (`make pack-studio` with `docs/STUDIO_BRIEF.md`), `docs/SOLO_BUILD.md`, and bounded task/publication guidance |
 | 1. Desktop behavior | Host tests passed; native simulator and the in-browser WebAssembly workbench run the shared `App`, analyzer and renderer | Fresh checkout passes tests; scenario scripts and golden frames cover practice, tuner states, calibration, holds, save/reboot, power-cut fallback and the reference recording through the shared detector; the WASM module renders native goldens |
 | 2. Target builds | Passed locally on 17 Nov 2026 (arduino-cli 1.6.0, Teensy 1.62.0; both analyzer paths) | All four stages compile with pinned dependencies; build report and binaries retained in `build/` |
 | 2a. Bench instrumentation | Built and host-tested 17 Nov 2026; nothing run on a board | Sketch reports `flush_us`/`loop_max_us`/`tx_bytes` JSON and takes serial switches and live knobs (SPI clock, codec level, test pattern); `make bench`/`make upload`/`make monitor`; workbench Device tab mirrors the panel over the `link.h` protocol; sessions logged and summarised by `make bench-report`; `make measure-check` gates fabrication on `measurements.csv` (see `docs/BRINGUP.md`) |
 | 3. Pet on desk | Next physical work | Stage 1/2 work; all controls and screen readable; actual supply measured; first-session observables in HANDOFF recorded (`flush_max_us`, seams, 100 vs 200 ms, mirror diff 0) |
 | 3a. Display driver decision | Gated on milestone 3 numbers | Keep the pinned Adafruit path if `flush_max_us` stays under about a third of the cadence with dirty bands and no seams; otherwise implement a DMA driver behind the sketch's `Panel` adapter with the measurement attached |
-| 4. Audio listener | Pending | Mentor-reviewed attenuator; stage 3 clean input; silence/playing/clipping distinctions verified for intended guitars |
+| 4. Audio listener | Pending | Second-person-reviewed attenuator; stage 3 clean input; silence/playing/clipping distinctions verified for intended guitars |
 | 5. Fit and fabrication | Pending | Real parts measured, CAD revised if needed, coupon accepted, full enclosure fits without force |
 | 6. Enclosed prototype | Pending | Service loops, plate/columns, window clearance, heat/noise and structural tests pass |
 | 7. Useful practice partner | Pending | Reference-note tuner trial, 5/10/20-minute quests, repeated save/reboot and normal rig presets pass |

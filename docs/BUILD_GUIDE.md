@@ -1,9 +1,11 @@
-# VEX Pocket Rival - Mentor Build Guide R1.1
+# VEX Pocket Rival - Build Guide R1.1
+
+For a hobbyist alone, a hobbyist with a mentor, or a design team; see the first page for who checks what.
 
 
 ## 01. Build a pocket rival
 
-A practical learning project for Anish + an electronics / fabrication mentor
+A practical first build for a hobbyist alone, a hobbyist with a mentor, or a design team taking it to product
 
 ### THE OBJECT
 
@@ -15,13 +17,17 @@ Teensy 4.1 + Audio Adapter + Adafruit 6178. USB power, one buffered audio input,
 
 ### THE STATUS
 
-Real CAD and original firmware source are included. Geometry and desktop logic checks are separate from the physical tests you will do with your mentor.
+Real CAD and original firmware source are included. Geometry and desktop logic checks are separate from the physical tests done on a bench.
+
+### WHO CHECKS
+
+Where this guide says mentor, read: an experienced second person, such as a mentor, a maker-space volunteer or a studio engineer. Building alone is covered in docs/SOLO_BUILD.md; the product brief for a studio is docs/STUDIO_BRIEF.md.
 
 **Checkpoint:** Start with pages 2-3. Buy the bench electronics first; print the final enclosure after measurement and screen tests.
 
-## 02. The first mentor session
+## 02. The first bench session
 
-Suggested 2-hour session; bring this pack and the actual parts
+Suggested 2-hour session, alone or with a mentor; bring this pack and the actual parts
 
 ### 00-20 MIN / REVIEW
 
@@ -69,7 +75,7 @@ Adafruit 6178 has a 1.28-inch round screen: approximately 32.4 mm visible diamet
 
 ### REAL CASE SIZE
 
-The body is 86 x146 x45 mm; controls extend higher. This is not a drop-in replacement for the small Lock In tuner. Use a paper footprint on the SA550XDM first.
+The body is 86 x146 x45 mm; controls extend higher. This is not a drop-in replacement for a compact pedal tuner. Use a paper footprint on your pedalboard first.
 
 ### PLAIN OPTICS + POWER
 
@@ -77,7 +83,7 @@ R1 uses a flat clear disc and direct USB power. A dome and protected pedalboard 
 
 ### FOOT LOAD
 
-An aluminum plate sits on four columns below the switch. The printed prototype starts with hand operation; the mentor verifies foot use before electronics are exposed to load.
+An aluminum plate sits on four columns below the switch. The printed prototype starts with hand operation; a load test with the electronics removed comes before foot use.
 
 **Checkpoint:** If the 32 mm display fails the standing test, choose a larger screen before committing to this enclosure.
 
@@ -118,7 +124,7 @@ Complete the bench circuits before ordering the enclosure
 |E14 / 1|26AWG stranded wire, shielded audio pair, heat shrink, 2 small cable ties|Harness and strain relief|$8-15|
 |E15 / 1|Micro-B to your Mac; USB5 V only|Power and firmware upload; measure plug envelope|$5-10|
 
-**Checkpoint:** Budget excludes mentor time, tools, a new buffered splitter, shipping and tax. BOM.csv contains all links and order stages.
+**Checkpoint:** Budget excludes labour, tools, a new buffered splitter, shipping and tax. BOM.csv contains all links and order stages.
 
 ## 08. Buy: mechanical parts
 
@@ -149,7 +155,7 @@ Use the included nuts and washers for the purchased controls
 |Footswitch|1|Included M12 hardware|Lower nut, metal plate, lid, top washer, top nut|
 |Buttons / input jack|3|Included retaining hardware|Confirm panel thickness and remaining thread|
 
-**Checkpoint:** Tools: temperature-controlled iron, solder/flux, fume extraction, meter, calipers, cutters, wire stripper, drivers and small files. Mentor handles drilling/cutting.
+**Checkpoint:** Tools: temperature-controlled iron, solder/flux, fume extraction, meter, calipers, cutters, wire stripper, drivers and small files. Drilling and plate cutting: a mentor, a maker space or a cutting service from the DXFs.
 
 ## 10. Where guitar audio goes
 
@@ -157,11 +163,11 @@ The companion listens on a separate branch
 
 ### 1 / FIND A DRY FEED
 
-Test G3S TUNER/AUX availability in every normal preset. If it is switched off during playing, use a dedicated buffered splitter output.
+Use a buffered tuner or auxiliary output on your multi-effects or pedal, and test that it stays live in every preset you play. If it mutes or switches off during playing, use a dedicated buffered splitter output.
 
 ### 2 / KEEP THE MAIN ROUTE
 
-Guitar -> G3S -> the existing OPUS / Orange routing. The companion has no audio output and does not replace that route.
+Guitar -> buffer or splitter -> your existing amp or modeller route. The companion has no audio output and does not replace that route.
 
 ### 3 / CONNECT THE LISTENER
 
@@ -171,7 +177,7 @@ Buffered dry output -> J1 -> attenuator -> Audio Adapter LINE IN L. No raw passi
 
 A clean branch avoids scoring reverb repeats or synthesized notes. It also keeps experimental firmware out of your audible guitar path.
 
-**Checkpoint:** With the companion disconnected, the original rig should work exactly as before. Log what G3S mute does to the dry feed.
+**Checkpoint:** With the companion disconnected, the original rig should work exactly as before. Log what the rig's tuner mute does to the dry feed.
 
 ## 11. Wire the display
 
@@ -216,7 +222,7 @@ INPUT_PULLUP holds the released pin HIGH. A press connects it to ground, so firm
 
 ## 13. Build the audio attenuator
 
-This small circuit needs mentor review before connection to the rig
+Have a second person check this small circuit before connection to the rig
 
 ### 1 / IDENTIFY THE TRIMMER
 
@@ -316,7 +322,7 @@ Serial must report codec=1. Slowly raise the trimmer while playing. Aim for peak
 
 ### 3 / COMPARE GUITARS
 
-Test the FGN with Fluence Moderns and the Duo-Sonic separately. Record trim position, peak and quiet RMS. Choose a setting that avoids clipping both.
+Test each guitar you will practise with separately, for example one with active and one with passive pickups. Record trim position, peak and quiet RMS. Choose a setting that avoids clipping any of them.
 
 ### IF IT FAILS
 
@@ -355,7 +361,7 @@ Keep the foot action predictable
 |MODE|Practice / tuner; pauses practice|Save current progress|
 |QUEST|While paused: choose 5/10/20 min; resets session|Calibrate noise; pauses practice|
 |FOOT|Start / pause (practice mode, calibrated)|New session; keeps lifetime XP and fragments|
-|Tuner|Large note and cents, A440, single notes only|No audio muting; G3S/Lock In handles mute|
+|Tuner|Large note and cents, A440, single notes only|No audio muting; your rig's tuner or mute handles that|
 |VEX|Riffs while active; rests after 30s without activity|No death, debt or punishment for missed days|
 
 **Checkpoint:** Streaks, timed schedules, rhythm scores, bend challenges and battles are future work. No clock/calendar or technique judging is implied.
@@ -532,9 +538,9 @@ Inspect from every side while lowering the lid. If it resists, reopen and find t
 
 ### 4 / ACCEPT
 
-Run the CSV acceptance log: electrical, software, optical, mechanical, thermal and rig-noise checks. Keep the Lock In/G3S tuner until the new tuner passes reference tests.
+Run the CSV acceptance log: electrical, software, optical, mechanical, thermal and rig-noise checks. Keep your existing tuner until the new tuner passes reference tests.
 
-**Checkpoint:** A valid STEP does not establish real wiring clearance or foot strength. The mentor signs the physical acceptance results.
+**Checkpoint:** A valid STEP does not establish real wiring clearance or foot strength. Whoever runs each physical test signs the checked_by column.
 
 ## 28. Develop it after the first working build
 
@@ -577,7 +583,7 @@ Use the earliest failing stage, then repeat later checks
 
 ## 30. What has been checked
 
-Understand what the package proves and what the mentor will prove
+Understand what the package proves and what the bench will prove
 
 ### COMPUTER CHECKS
 
@@ -591,7 +597,7 @@ Actual display/audio behavior, component revisions, wiring clearance, electrical
 
 make setup-firmware and make firmware-all compile all four stages without hardware (passes locally, 17 Nov 2026). Display timing is instrumented (flush_us, tx_bytes) but unmeasured until a board is on the bench.
 
-### MENTOR RELEASE
+### PHYSICAL RELEASE
 
 Review all purchased parts and the input circuit; complete the log before guitar/foot use. A successful desktop test is useful evidence, not a hardware certificate.
 
@@ -677,6 +683,6 @@ Product references checked 16Nov 2026; exact source URLs also in SOURCES.md
 |S15|Display manufacturer STEP directory|<link href="https://github.com/adafruit/Adafruit_CAD_Parts/tree/main/6178%201.28in%20Round%20TFT" color="#98394A">Open source</link>|
 |S16|Display manufacturer PCB|<link href="https://github.com/adafruit/Adafruit-1.28-240x240-Round-Display-PCB" color="#98394A">Open source</link>|
 |S17|build 123d documentation|<link href="https://build 123d.readthedocs.io/en/latest/" color="#98394A">Open source</link>|
-|S18|G3 2026 manual: verify tuner/AUX behavior on the actual rig|<link href="https://cdn.shopify.com/s/files/1/0756/7638/5564/files/G32026.pdf" color="#98394A">Open source</link>|
+|S18|Example multi-effects manual (Zoom G3): check how your own rig treats its tuner/AUX dry feed|<link href="https://cdn.shopify.com/s/files/1/0756/7638/5564/files/G32026.pdf" color="#98394A">Open source</link>|
 
 **Checkpoint:** Adafruit CAD/PCB attribution is retained in vendor/. Imported community models are references; verify the actual hardware.

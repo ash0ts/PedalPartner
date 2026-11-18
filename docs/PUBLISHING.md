@@ -49,5 +49,5 @@ reads, repeated range extraction or manually copied payloads. The earlier failed
 conversations ended at the chat-length limit during such transfers. A retry loop
 does not fix this. Preserve the finished patch/archive for local Git upload.
 
-The lean mentor ZIP is produced by `make pack-mentor`; see [MENTOR_PACK.md](MENTOR_PACK.md).
+The review ZIPs are produced by `make pack-mentor` and `make pack-studio`; see [MENTOR_PACK.md](MENTOR_PACK.md).
 It is a shareable review packet, not a repository replacement or publication channel.

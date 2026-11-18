@@ -1,4 +1,4 @@
-id,test,pass_condition,actual,pass_fail,date,mentor
+id,test,pass_condition,actual,pass_fail,date,checked_by
 00,Parts / pin identities,All IDs and revisions match BOM; alternate measured and recorded,,,,
 01,Unpowered rails,No steady low-ohm 3.3V-to-GND short; inspect capacitor charging behavior,,,,
 02,Power,3.3V within 3.20-3.40V; no abnormal heating; record USB input and add-on current,,,,
@@ -11,8 +11,8 @@ id,test,pass_condition,actual,pass_fail,date,mentor
 09,Quest award,Five active minutes grant exactly one fragment; no extra from redraws,,,,
 10,Save / boot,"Pause, holdMODE, Saved message, unplug/replug; total and fragment retained; paused",,,,
 11,Tuner reference,"Known single notes E2-A4 checked; target median<=3cents, no stable octave errors",,,,
-12,Source behavior,Dry feed remains available across normal G3S presets; log TUNER/AUX mute behavior,,,,
-13,Guitars,Repeat level/noise checks for FGN Fluence Moderns and Fender Duo-Sonic,,,,
+12,Source behavior,Buffered dry feed stays live in every preset used while playing; log what the rig tuner/mute does to it,,,,
+13,Guitars,Repeat level/noise checks for each guitar used (at least one active-pickup and one passive-pickup instrument),,,,
 14,Mechanical fit,Coupon fits stock parts; lid closes freely; no wire trapped; window does not press LCD,,,,
 15,Readability,Large note identifiable while standing at actual board angle / room light,,,,
 16,Foot operation,Mentor-approved load test without electronics; no flex/cracks/travel binding,,,,

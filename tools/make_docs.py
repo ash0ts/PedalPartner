@@ -1,4 +1,4 @@
-"""Generate mentor workbook, 1:1 templates, CSVs and editable Markdown.
+"""Generate the illustrated build guide, 1:1 templates, CSVs and editable Markdown.
 All assembly pictures come from build_cad.py -> meshes -> render_cad.py.
 """
 from pathlib import Path
@@ -68,7 +68,7 @@ def table(c,rows,widths,x=36,y=480,fs=9.3):
  return y-h
 def routing(c):
  x=361;y=404
- box(c,'GUITAR',x,y,95);box(c,'G3S / dry split',x+130,y,145);box(c,'Existing rig',x+310,y,125);arrow(c,x+95,y+21,x+130,y+21);arrow(c,x+275,y+21,x+310,y+21)
+ box(c,'GUITAR',x,y,95);box(c,'Buffered dry split',x+130,y,145);box(c,'Existing rig',x+310,y,125);arrow(c,x+95,y+21,x+130,y+21);arrow(c,x+275,y+21,x+310,y+21)
  arrow(c,x+202,y,x+202,y-49);box(c,'BUFFERED DRY FEED<br/>test every preset',x+130,y-100,145,50)
  arrow(c,x+202,y-100,x+202,y-132);box(c,'J1 / input attenuator',x+130,y-174,145)
  arrow(c,x+202,y-174,x+202,y-204);box(c,'Audio Adapter<br/>LINE IN L',x+130,y-254,145,50)
@@ -133,11 +133,12 @@ def exploded_key(c):
 
 PAGES=[]
 def add(title,kicker,items=None,fig=None,check='',diagram=None,rows=None,widths=None):PAGES.append(dict(title=title,kicker=kicker,items=items,fig=fig,check=check,diagram=diagram,rows=rows,widths=widths))
-add('Build a pocket rival','A practical learning project for Anish + an electronics / fabrication mentor',[
+add('Build a pocket rival','A practical first build for a hobbyist alone, a hobbyist with a mentor, or a design team taking it to product',[
  ('THE OBJECT','A black, crimson and ochre practice companion with a round pixel pet, activity XP and an experimental tuner.'),
  ('THE FIRST BUILD','Teensy 4.1 + Audio Adapter + Adafruit 6178. USB power, one buffered audio input, two finger buttons and one momentary footswitch.'),
- ('THE STATUS','Real CAD and original firmware source are included. Geometry and desktop logic checks are separate from the physical tests you will do with your mentor.')],fig='01_closed',check='Start with pages 2-3. Buy the bench electronics first; print the final enclosure after measurement and screen tests.')
-add('The first mentor session','Suggested 2-hour session; bring this pack and the actual parts',[
+ ('THE STATUS','Real CAD and original firmware source are included. Geometry and desktop logic checks are separate from the physical tests done on a bench.'),
+ ('WHO CHECKS','Where this guide says mentor, read: an experienced second person, such as a mentor, a maker-space volunteer or a studio engineer. Building alone is covered in docs/SOLO_BUILD.md; the product brief for a studio is docs/STUDIO_BRIEF.md.')],fig='01_closed',check='Start with pages 2-3. Buy the bench electronics first; print the final enclosure after measurement and screen tests.')
+add('The first bench session','Suggested 2-hour session, alone or with a mentor; bring this pack and the actual parts',[
  ('00-20 MIN / REVIEW','Confirm the USB-only sensing architecture, display choice and source of buffered dry guitar. Review the input attenuator before connecting the rig.'),
  ('20-50 MIN / LEARN','Practise one solder joint. Identify switch lugs and trimmer wiper with a meter. Mark every power and signal wire before soldering.'),
  ('50-100 MIN / MAKE','Upload Stage 1. Add the display and buttons, then upload Stage 2. Get VEX and the control readings working on the desk.'),
@@ -148,25 +149,25 @@ add('Build in three milestones','Each milestone produces something usable and te
  ('3 / ENCLOSE + USE','Fit the real parts, assemble the case, route wires and verify readability and strength. Then test the companion alongside your rig.')],diagram='routing',check='R1 does not provide audio bypass, silent muting, 9V pedal power, MIDI control, daily streaks or technique assessment.')
 add('The important design choices','Read this before ordering or printing',[
  ('REAL SCREEN SIZE','Adafruit 6178 has a 1.28-inch round screen: approximately 32.4mm visible diameter. It is smaller than the concept art, chosen for a documented SPI driver.'),
- ('REAL CASE SIZE','The body is 86 x146 x45mm; controls extend higher. This is not a drop-in replacement for the small Lock In tuner. Use a paper footprint on the SA550XDM first.'),
+ ('REAL CASE SIZE','The body is 86 x146 x45mm; controls extend higher. This is not a drop-in replacement for a compact pedal tuner. Use a paper footprint on your pedalboard first.'),
  ('PLAIN OPTICS + POWER','R1 uses a flat clear disc and direct USB power. A dome and protected pedalboard 9V conversion are later engineering changes.'),
- ('FOOT LOAD','An aluminum plate sits on four columns below the switch. The printed prototype starts with hand operation; the mentor verifies foot use before electronics are exposed to load.')],fig='01_closed',check='If the 32mm display fails the standing test, choose a larger screen before committing to this enclosure.')
+ ('FOOT LOAD','An aluminum plate sits on four columns below the switch. The printed prototype starts with hand operation; a load test with the electronics removed comes before foot use.')],fig='01_closed',check='If the 32mm display fails the standing test, choose a larger screen before committing to this enclosure.')
 add('Buy: the bench electronics','Exact identities matter; budget columns are allowances, not current quotations',rows=[['ID / qty','Part to order','Why / source','Allowance']] + [[f'{a} / {b}',d,e+' ['+f+']',f'${g:g}-{h:g}'] for a,b,c,d,e,f,g,h,stage in BOM[:7]],widths=[62,274,319,115],check='Do not substitute the old ST7789 square display or a Rev C audio board into these pin tables.')
-add('Buy: wiring and small parts','Complete the bench circuits before ordering the enclosure',rows=[['ID / qty','Part / specification','Purpose','Allowance']]+[[f'{a} / {b}',d,e,f'${g:g}-{h:g}'] for a,b,c,d,e,f,g,h,stage in BOM[7:15]],widths=[62,300,293,115],check='Budget excludes mentor time, tools, a new buffered splitter, shipping and tax. BOM.csv contains all links and order stages.')
+add('Buy: wiring and small parts','Complete the bench circuits before ordering the enclosure',rows=[['ID / qty','Part / specification','Purpose','Allowance']]+[[f'{a} / {b}',d,e,f'${g:g}-{h:g}'] for a,b,c,d,e,f,g,h,stage in BOM[7:15]],widths=[62,300,293,115],check='Budget excludes labour, tools, a new buffered splitter, shipping and tax. BOM.csv contains all links and order stages.')
 add('Buy: mechanical parts','Order after the measured-fit gate',rows=[['ID / qty','Part / specification','Purpose','Allowance']]+[[f'{a} / {b}',d,e,f'${g:g}-{h:g}'] for a,b,c,d,e,f,g,h,stage in BOM[15:]],widths=[62,300,293,115],check='Use hardware/generated/drawings/ for cut profiles and the fastener schedule on the next page. Test a coupon before any full enclosure print.')
-add('Fasteners and tools','Use the included nuts and washers for the purchased controls',rows=[['Location','Qty','Screw / part','Mating hardware']]+[[a,b,c,d] for a,b,c,d in FASTENERS],widths=[150,40,195,385],check='Tools: temperature-controlled iron, solder/flux, fume extraction, meter, calipers, cutters, wire stripper, drivers and small files. Mentor handles drilling/cutting.')
+add('Fasteners and tools','Use the included nuts and washers for the purchased controls',rows=[['Location','Qty','Screw / part','Mating hardware']]+[[a,b,c,d] for a,b,c,d in FASTENERS],widths=[150,40,195,385],check='Tools: temperature-controlled iron, solder/flux, fume extraction, meter, calipers, cutters, wire stripper, drivers and small files. Drilling and plate cutting: a mentor, a maker space or a cutting service from the DXFs.')
 add('Where guitar audio goes','The companion listens on a separate branch',[
- ('1 / FIND A DRY FEED','Test G3S TUNER/AUX availability in every normal preset. If it is switched off during playing, use a dedicated buffered splitter output.'),
- ('2 / KEEP THE MAIN ROUTE','Guitar -> G3S -> the existing OPUS / Orange routing. The companion has no audio output and does not replace that route.'),
+ ('1 / FIND A DRY FEED','Use a buffered tuner or auxiliary output on your multi-effects or pedal, and test that it stays live in every preset you play. If it mutes or switches off during playing, use a dedicated buffered splitter output.'),
+ ('2 / KEEP THE MAIN ROUTE','Guitar -> buffer or splitter -> your existing amp or modeller route. The companion has no audio output and does not replace that route.'),
  ('3 / CONNECT THE LISTENER','Buffered dry output -> J1 -> attenuator -> Audio Adapter LINE IN L. No raw passive-pickup input, amplifier speaker output or phantom-powered input.'),
- ('WHY','A clean branch avoids scoring reverb repeats or synthesized notes. It also keeps experimental firmware out of your audible guitar path.')],diagram='routing',check='With the companion disconnected, the original rig should work exactly as before. Log what G3S mute does to the dry feed.')
+ ('WHY','A clean branch avoids scoring reverb repeats or synthesized notes. It also keeps experimental firmware out of your audible guitar path.')],diagram='routing',check='With the companion disconnected, the original rig should work exactly as before. Log what the rig\'s tuner mute does to the dry feed.')
 add('Wire the display','Use the board silkscreen names, not cable colors or a guessed pin order',rows=[['Wire','From','To','Detail']]+[[a,b,c,e] for a,b,c,d,e in WIRING[:10]],widths=[50,155,225,340],check='Teensy logic is 3.3V. Display VIN is an input; display 3Vo is an output and is left disconnected.')
 add('Wire the controls','Test every switch before connecting it to a GPIO',[
  ('1 / IDENTIFY CONTACTS','Remove power. In continuity mode, the selected pair must be open when released and close only while pressed. Use SPST normally-open momentary switches.'),
  ('2 / CONNECT','MODE -> pin0; QUEST -> pin1; FOOT -> pin2. The other lug of each switch goes to GND. Insulate all solder lugs.'),
  ('3 / ADD THE LED','Pin9 -> 1k resistor R3 -> LED anode. Cathode -> GND. Identify polarity before trimming the leads.'),
  ('WHY','INPUT_PULLUP holds the released pin HIGH. A press connects it to ground, so firmware reads LOW.')],diagram='controls',check='Unpowered: the switch wire is not shorted to any power rail. Stage 2 must show exactly one changing input per press.')
-add('Build the audio attenuator','This small circuit needs mentor review before connection to the rig',[
+add('Build the audio attenuator','Have a second person check this small circuit before connection to the rig',[
  ('1 / IDENTIFY THE TRIMMER','Bourns 3386P-1-103LF is 10k. Meter terminals1-3: approximately10k. Terminal2 is the wiper; its resistance to either end changes as you turn.'),
  ('2 / WIRE THE DIVIDER','TIP -> R1 10k -> terminal3. Terminal1 -> ground. Wiper2 -> R2 1k -> LINE IN L. Jack sleeve -> LINE IN ground.'),
  ('3 / BEGIN AT MINIMUM','Set the wiper near terminal1 using the meter. Check continuity and shorts, then begin Stage3 with a quiet known line-level source.'),
@@ -189,14 +190,14 @@ add('Upload 2: screen and buttons','Disconnect USB before adding each wiring gro
 add('Upload 3: audio and level','Begin with a known low-level line source; then test the buffered guitar feed',[
  ('1 / START SMALL','Set VEX_STAGE3. Codec input level stays0, the least sensitive setting (3.12Vpp full scale). Trimmer begins at minimum.'),
  ('2 / OBSERVE','Serial must report codec=1. Slowly raise the trimmer while playing. Aim for peaks roughly0.10-0.80 during strong playing; 0.98 means clipping.'),
- ('3 / COMPARE GUITARS','Test the FGN with Fluence Moderns and the Duo-Sonic separately. Record trim position, peak and quiet RMS. Choose a setting that avoids clipping both.'),
+ ('3 / COMPARE GUITARS','Test each guitar you will practise with separately, for example one with active and one with passive pickups. Record trim position, peak and quiet RMS. Choose a setting that avoids clipping any of them.'),
  ('IF IT FAILS','codec=0: inspect3.3V, GND and I2C18/19. Flat-zero audio: inspect LINE IN L, input ground and short I2S headers. Low signal: confirm source before increasing gain.')],diagram='circuit',check='Confirm audible rig noise does not change with USB connected. Avoid correcting hum by disconnecting protective mains earth.')
 add('Upload 4: bring VEX to life','Participation XP and one reward per completed practice session',[
  ('1 / CALIBRATE','Set VEX_STAGE4 and upload. Mute the strings, then hold QUEST for1.2s. Remain quiet for3s. Calibration pauses counting and runs again after every boot.'),
  ('2 / PRACTISE','Tap FOOT to start. Detected playing earns10XP per active minute. Silence, pause, clipping and stale audio do not earn time. A completed goal earns one fragment.'),
  ('3 / SAVE','Tap FOOT to pause. Hold MODE until Saved appears before unplugging. The two-record save scheme checks CRC and retains the previous valid record if one write tears.'),
  ('LIMIT','Automatic saves wait for quiet gaps after60s. Abrupt power loss can lose the unsaved portion of a continuous session. This is activity detection, not proof of musical quality.')],diagram='ui',check='Complete a5-minute active goal, verify one fragment, save and reboot. Confirm totals persist and startup is paused.')
-add('Controls, tuning and pet behavior','Keep the foot action predictable',rows=[['Control','Tap','Hold 1.2 seconds'],['MODE','Practice / tuner; pauses practice','Save current progress'],['QUEST','While paused: choose5/10/20min; resets session','Calibrate noise; pauses practice'],['FOOT','Start / pause (practice mode, calibrated)','New session; keeps lifetime XP and fragments'],['Tuner','Large note and cents, A440, single notes only','No audio muting; G3S/Lock In handles mute'],['VEX','Riffs while active; rests after30s without activity','No death, debt or punishment for missed days']],widths=[115,330,325],check='Streaks, timed schedules, rhythm scores, bend challenges and battles are future work. No clock/calendar or technique judging is implied.')
+add('Controls, tuning and pet behavior','Keep the foot action predictable',rows=[['Control','Tap','Hold 1.2 seconds'],['MODE','Practice / tuner; pauses practice','Save current progress'],['QUEST','While paused: choose5/10/20min; resets session','Calibrate noise; pauses practice'],['FOOT','Start / pause (practice mode, calibrated)','New session; keeps lifetime XP and fragments'],['Tuner','Large note and cents, A440, single notes only','No audio muting; your rig\'s tuner or mute handles that'],['VEX','Riffs while active; rests after30s without activity','No death, debt or punishment for missed days']],widths=[115,330,325],check='Streaks, timed schedules, rhythm scores, bend challenges and battles are future work. No clock/calendar or technique judging is implied.')
 add('Understand the CAD','A real assembly, with explicit limits on purchased-part models',[
  ('OPEN','Import VEX_Pocket_Rival_Assembly.step into Fusion. It contains separate named components. STEP preserves geometry, not the Python feature history.'),
  ('EDIT','build_cad.py is the parametric source. Base/lid width and length are linked; component positions and cutouts also appear as explicit construction values. Re-run checks after edits.'),
@@ -236,18 +237,18 @@ add('Assembly 5: harness, close and test','Finish with service access and repeat
  ('1 / ROUTE','Keep the shielded analog pair short and away from display/SPI wires. Use the right-side wire lane. Add heat shrink at every exposed solder lug and resistor lead.'),
  ('2 / SERVICE LOOP','Leave enough slack to lift the lid about50mm and rest it beside the base without pulling display wires. Add strain relief without loading a connector.'),
  ('3 / CLOSE','Inspect from every side while lowering the lid. If it resists, reopen and find the obstruction. Tighten4M3x10 case screws evenly; do not force the printed posts.'),
- ('4 / ACCEPT','Run the CSV acceptance log: electrical, software, optical, mechanical, thermal and rig-noise checks. Keep the Lock In/G3S tuner until the new tuner passes reference tests.')],fig='05_loaded',check='A valid STEP does not establish real wiring clearance or foot strength. The mentor signs the physical acceptance results.')
+ ('4 / ACCEPT','Run the CSV acceptance log: electrical, software, optical, mechanical, thermal and rig-noise checks. Keep your existing tuner until the new tuner passes reference tests.')],fig='05_loaded',check='A valid STEP does not establish real wiring clearance or foot strength. Whoever runs each physical test signs the checked_by column.')
 add('Develop it after the first working build','Small code changes with observable results',[
  ('1 / PERSONALITY','Edit the PNG/JSON art in art/ and run tools/make_sprites.py to regenerate the headers, then make sim-build and tools/render_screen.py. Shared ui.h renders the pet on desktop and device.'),
  ('2 / A NEW REWARD','Change quest rules in core.h. Add a test proving the reward happens once at the threshold and persists after save/restore. Run tests before uploading.'),
  ('3 / BETTER CHALLENGES','Add rhythm/bend scoring as separate exercises with known targets. Keep participation XP independent. Test noise, chords and wrong notes before trusting scores.'),
  ('4 / HARDWARE NEXT','Larger screen, dome, MIDI or9V power each needs a new wiring/CAD revision. Freeze the working R1 files and change one subsystem at a time.')],diagram='ui',check='No new feature should silently change pin ownership, saved-record layout or the meaning of a practice score.')
 add('Troubleshoot by the failed checkpoint','Use the earliest failing stage, then repeat later checks',rows=[['Symptom','First checks','Do next'],['No USB port / upload','Known data cable; board selection; physical Program button','Return to Stage1 with other wiring unplugged'],['White / wrong screen','Send t for the test pattern: border, corner colours, TOP label; VIN/GND; CS/DC/RST; MOSI11 and SCK13','Stage2; shorten wires; send - to lower the SPI clock; rotated means setRotation, not wiring'],['Button always pressed','Wrong lug pair or solder bridge to ground','Meter with power off; retest one button'],['codec=0 / no audio','Audio board revision;3.3V;I2C18/19;header alignment','Stage3; known low-level line source'],['False XP in silence','Threshold too low; wrong/wet source; ground noise','Fix source/noise, then recalibrate'],['No XP while playing','Paused / tuner mode; calibration missing; clipping; stale samples','Watch Serial; reduce level or inspect timing'],['Lid will not close','Jack body, solder tails, service loop, stack height','Reopen and measure; never pull shut with screws'],['Tuning unreadable / unstable','Screen size/angle, glare, pitch confidence, clipping, polyphonic input','Use one reference note; retain existing tuner']],widths=[150,330,290],check='Open issues and measured values belong in acceptance_log.csv and measurements.csv, not in assumptions. make bench-report summarises a session; make measure-check reads the measurements.')
-add('What has been checked','Understand what the package proves and what the mentor will prove',[
+add('What has been checked','Understand what the package proves and what the bench will prove',[
  ('COMPUTER CHECKS','Valid CAD solids and STEP re-import; all-component overlap checks including fasteners; source-derived display mounts; host tests of counting, rewards, pitch math, saves and button logic.'),
  ('NOT YET PROVEN','Actual display/audio behavior, component revisions, wiring clearance, electrical noise, temperature, lens readability and enclosure strength.'),
  ('TARGET BUILD EVIDENCE','make setup-firmware and make firmware-all compile all four stages without hardware (passes locally, 17 Nov 2026). Display timing is instrumented (flush_us, tx_bytes) but unmeasured until a board is on the bench.'),
- ('MENTOR RELEASE','Review all purchased parts and the input circuit; complete the log before guitar/foot use. A successful desktop test is useful evidence, not a hardware certificate.')],fig='02_exploded',check='See hardware/generated/checks/ and GitHub Actions. Compile success and physical acceptance are separate evidence.')
+ ('PHYSICAL RELEASE','Review all purchased parts and the input circuit; complete the log before guitar/foot use. A successful desktop test is useful evidence, not a hardware certificate.')],fig='02_exploded',check='See hardware/generated/checks/ and GitHub Actions. Compile success and physical acceptance are separate evidence.')
 
 add('Review and edit the grouped CAD','Five service groups keep related hardware together',[
  ('OPEN THE ASSEMBLY','Use hardware/generated/VEX_Pocket_Rival_Assembly.step: Chassis, Front Panel, Electronics Carrier, Rear IO and Footswitch. Separate subassembly exports and a flat fallback are also supplied.'),
@@ -268,7 +269,7 @@ for start in [0,9]:
 
 PAGES.insert(4,dict(title='How the pieces fit',kicker='Exploded view of the actual CAD assembly',items=None,fig=None,diagram='exploded_key',rows=None,widths=None,check='Letters match the part filenames. Display hardware is recessed; the clear window is captured separately above it.'))
 def write_pdf():
- c=canvas.Canvas(str(R/'docs/VEX_Pocket_Rival_Mentor_Guide.pdf'),pagesize=(W,H));c.setTitle('VEX Pocket Rival - Mentor Build Guide R1.1');c.setAuthor('Anish Shah - Guitar project')
+ c=canvas.Canvas(str(R/'docs/VEX_Pocket_Rival_Mentor_Guide.pdf'),pagesize=(W,H));c.setTitle('VEX Pocket Rival - Build Guide R1.1');c.setAuthor('Anish Shah - Guitar project')
  for n,p in enumerate(PAGES,1):
   c.bookmarkPage(f'page{n}');c.addOutlineEntry(p['title'],f'page{n}',level=0)
   header(c,n,p['title'],p['kicker'])
@@ -304,15 +305,15 @@ def templates():
 def export_data():
  with open(D/'BOM.csv','w',newline='') as f:
   w=csv.writer(f);w.writerow(['id','qty','part','specification','purpose','source_id','budget_low_usd','budget_high_usd','order_stage','source_url']);urls={a:c for a,b,c in SOURCES};w.writerows([list(r)+[urls.get(r[5],'Original design')] for r in BOM])
- for name,heads,rows in [('wiring.csv',['wire','from','to','suggested_color','note'],WIRING),('fasteners.csv',['location','quantity','screw','mating_hardware'],FASTENERS),('acceptance_log.csv',['id','test','pass_condition','actual','pass_fail','date','mentor'],[list(r)+['','','',''] for r in ACCEPTANCE])]:
+ for name,heads,rows in [('wiring.csv',['wire','from','to','suggested_color','note'],WIRING),('fasteners.csv',['location','quantity','screw','mating_hardware'],FASTENERS),('acceptance_log.csv',['id','test','pass_condition','actual','pass_fail','date','checked_by'],[list(r)+['','','',''] for r in ACCEPTANCE])]:
   if name == 'acceptance_log.csv' and (D/name).exists(): continue
   with open(D/name,'w',newline='') as f:w=csv.writer(f);w.writerow(heads);w.writerows(rows)
  if not (D/'measurements.csv').exists():
   with open(D/'measurements.csv','w',newline='') as f:
-   w=csv.writer(f);w.writerow(['item','CAD_assumption_mm','measured_mm','change_required','mentor_initials'])
+   w=csv.writer(f);w.writerow(['item','CAD_assumption_mm','measured_mm','change_required','checked_by'])
    for m in MEASUREMENTS:w.writerow([m[0],m[1],'','',''])   # tools/measure_check.py reads the filled CSV against the same list
  (R/'docs/SOURCES.md').write_text('# Sources\n\nChecked16 November2026. External files and source provenance are distinguished from original enclosure geometry.\n\n'+'\n'.join(f'- **{a} {b}:** {u}' for a,b,u in SOURCES)+'\n\nAdafruit display STEP SHA:66f39106daee442a08a0b5f994fe7cbfb830bd64. Mount coordinates extracted from manufacturer Eagle PCB. Designed by Limor Fried/Ladyada for Adafruit Industries. Manufacturer PCB license is retained in vendor/ADAFRUIT_LICENSE.txt. Prior community Teensy and audio models are carried over from the user\'s earlier pack, with unresolved physical revision differences.\n')
- md='# VEX Pocket Rival - Mentor Build Guide R1.1\n\n'
+ md='# VEX Pocket Rival - Build Guide R1.1\n\nFor a hobbyist alone, a hobbyist with a mentor, or a design team; see the first page for who checks what.\n\n'
  for i,p in enumerate(PAGES,1):
   md+=f'\n## {i:02}. {p["title"]}\n\n{p["kicker"]}\n\n'
   for t,b in p.get('items') or []:md+=f'### {t}\n\n{b}\n\n'

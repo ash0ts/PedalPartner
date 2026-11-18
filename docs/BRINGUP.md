@@ -52,8 +52,8 @@ Gate 1 (A2 -> B2): the header seated gap and the screen at the real board angle 
 2. `make measure-check`. Each row names the `build_cad.py` constant it stands for and the parts it gates; the table at the end says *print now*, *ready* or *wait* with the reason. An out-of-tolerance row with an empty `change_required` is flagged; write the decision in the CSV before editing CAD.
 3. For a deviation: edit `hardware/cad/build_cad.py`, `make cad cad-check`, `make measure-check` again; update the CSV's assumption column only when the CAD constant changed (the checker compares them).
 4. Print in order: spacers and tray (depend on the display and header rows), faceplate and bezel, base; cut the plate and window from the DXFs last. Never pull a lid shut with screws; reopen and measure.
-5. Row 14 (fit), 15 (readability), 16 (mentor load test without electronics) close the enclosure track.
+5. Row 14 (fit), 15 (readability), 16 (load test without electronics) close the enclosure track.
 
-## What stays unprovable until the bench or the mentor
+## What stays unprovable until the bench or a load test
 
-Upload against a board, SPI clocks above 16 MHz, codec level steps, the test pattern on glass, USB throughput with the link on, tearing at band seams, perceived motion at 32.4 mm, and every row of the acceptance log. The printed enclosure has no force rating until the mentor-defined load test. Write what was seen, not what was expected.
+Upload against a board, SPI clocks above 16 MHz, codec level steps, the test pattern on glass, USB throughput with the link on, tearing at band seams, perceived motion at 32.4 mm, and every row of the acceptance log. The printed enclosure has no force rating until a load test with the electronics removed (solo builders: `SOLO_BUILD.md`). Write what was seen, not what was expected.

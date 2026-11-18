@@ -11,7 +11,7 @@ Work from the repository root. Read `AGENTS.md`, `docs/HANDOFF.md` and `docs/CAD
 
 - Read `docs/MARKETING.md` for hero work. Run `make hero` to tessellate the existing grouped STEP and render the real assembly. Preserve hardware geometry, proportions and the 32.4 mm display. Use existing shared UI pixels. Change lighting, materials, camera or layout only; never generate imaginary product imagery.
 - Inspect both JPEGs and `assets/marketing/provenance.json`. Confirm the assembly hash and all 72 components. Keep large render intermediates under ignored `build/hero/`; leave assembly-guide renders unchanged.
-- Read `docs/MENTOR_PACK.md` for the lean ZIP. Run `make pack-mentor` and verify its manifest/index. Do not regenerate CAD, firmware or guide PDFs merely to package existing outputs.
+- Read `docs/MENTOR_PACK.md` for the two review ZIPs. Run `make pack-mentor` or `make pack-studio` and verify the manifest/index. Do not regenerate CAD, firmware or guide PDFs merely to package existing outputs.
 - Run `make test` once after source/doc edits. Reuse recorded mechanical checks when geometry is unchanged. Publish only the changed files using `docs/PUBLISHING.md`; stop any method that needs repeated payload chunks.
 
 ## Geometry or purchased-interface changes

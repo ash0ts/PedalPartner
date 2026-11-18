@@ -28,7 +28,7 @@ The hierarchy nests related mounting hardware with the part it services. Every p
 | Clearance review | Separate `hardware/generated/cad/Wiring_Reserves.step` |
 | Assembly pictures | `make render`; Blender renders of actual meshes, not dimensioned drawings |
 | README/share images | `make hero`; [provenance and reproduction](MARKETING.md), using checked-in STEP geometry |
-| Lean mentor ZIP | `make pack-mentor`; [contents and navigation](MENTOR_PACK.md), packaging current outputs |
+| Review ZIPs | `make pack-mentor` (hobbyist/mentor) or `make pack-studio` (design team); [contents and navigation](MENTOR_PACK.md), packaging current outputs |
 
 STEP preserves solids and assembly names; **it does not contain a Fusion/FreeCAD feature timeline or constrained mechanical joints**. The Python construction is the editable source. A Fusion import can be directly edited, but those changes do not flow back into Python automatically. Record and transfer them before regeneration.
 

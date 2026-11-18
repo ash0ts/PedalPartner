@@ -1,14 +1,20 @@
-# Lean mentor review pack
+# Review packs: hobbyist / mentor and design studio
 
-Run `make pack-mentor` from the repository root. Python's standard library creates
-`dist/VEX_R1.1_Mentor_Review.zip` from current checked-in outputs. No dependencies,
-compilation, CAD rebuild or image generation are required. The command fails if
-required files are missing, or the hero's assembly/image hashes are stale.
+Two ZIPs are built from the same checked-in outputs by Python's standard library.
+No dependencies, compilation, CAD rebuild or image generation are required. Each
+command fails if a required file is missing or the hero's assembly/image hashes are stale.
 
-Unzip once and open **VEX_R1.1_Mentor_Review/START_HERE.md**. Keep the folders
-together. The guide PDF is the main reading route; the STEP is the CAD review route.
-The pack is for mentor review and fit planning, not a complete developer checkout
-or permission to fabricate before measurement.
+| Reader | Command | Output | Adds |
+|---|---|---|---|
+| Hobbyist alone, or hobbyist with a mentor | `make pack-mentor` | `dist/VEX_R1.1_Mentor_Review.zip` | The review set below |
+| Design studio or product team | `make pack-studio` | `dist/VEX_R1.1_Studio_Pack.zip` | The same set plus [the product brief](STUDIO_BRIEF.md), [decisions](DECISIONS.md), [extensibility](EXTENSIBILITY.md), [bring-up plan](BRINGUP.md), [sources](SOURCES.md), `parameters.json`, `config.h`, the motion video and storyboard, and the screen contact sheet |
+
+Unzip once and open **START_HERE.md** inside the top folder. Keep the folders
+together. For a builder the guide PDF is the main reading route and the STEP the CAD
+review route; for a studio the brief comes first, then the renders, motion and STEP.
+Neither pack is a complete developer checkout or permission to fabricate before
+measurement. Solo builders should also read [SOLO_BUILD.md](SOLO_BUILD.md), which is
+in the repository rather than the ZIP.
 
 | Included | Purpose |
 |---|---|
@@ -21,13 +27,13 @@ or permission to fabricate before measurement.
 | License and third-party provenance/notices | Retain attribution and unresolved source-license limits |
 | START_HERE.md and SHA-256 manifest | Navigation and exact included-byte identity |
 
-The ZIP omits flat and subassembly duplicates, vendor source CAD, historical/concept
+Both ZIPs omit flat and subassembly duplicates, vendor source CAD, historical/concept
 images, firmware/toolchains, Blender intermediates and private local files. Full
 editable sources and software remain in the GitHub repository. The two PDFs remain
 the reviewed R1.1 hardware guides; this presentation change does not add future
 software features to the hardware instructions.
 
-For planning, give the mentor these exact intended parts: **Teensy 4.1, Audio
+For planning, give whoever reviews the fit these exact intended parts: **Teensy 4.1, Audio
 Adapter Rev D/D2, Adafruit 6178, two SparkFun COM-11992 buttons, P-H605-BLK
 footswitch and Switchcraft 111X jack**. Those identities let them check dimensions
 and mounting requirements before choosing raw stock. Bring the actual parts for

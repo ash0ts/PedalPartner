@@ -14,7 +14,7 @@
 
 All selected STLs are in `hardware/generated/stl/`, centered in XY with their print face at Z=0. The bezel export is already flipped pocket-up. STEP stays in assembly coordinates.
 
-Starting print profile:0.2 mm layers,5 perimeters,6 solid top/bottom layers,35% infill. This profile has not been printed or load tested. Inspect layer adhesion, dimensions and holes with your mentor.
+Starting print profile:0.2 mm layers,5 perimeters,6 solid top/bottom layers,35% infill. This profile has not been printed or load tested. Inspect layer adhesion, dimensions and holes against the measurement sheet; a second person helps.
 
 ## Cut these parts, do not print them for their final function
 
@@ -32,7 +32,7 @@ Each row of `measurements.csv` maps to the `build_cad.py` constant it stands for
 
 The Adafruit display mounting coordinates come from its PCB source, but purchased revisions still need checking. The Teensy/audio geometry is community-sourced. Header gap, exact RevD/D2 component heights, jack body/retention and button hardware are not guaranteed by the model.
 
-The footswitch plate rests on four columns at x=+/-23 mm, y=-57/-35 mm. Confirm actual contact at all four pads. Test loading with electronics removed and a mentor-defined protocol before foot operation. No force rating is claimed for the printed enclosure.
+The footswitch plate rests on four columns at x=+/-23 mm, y=-57/-35 mm. Confirm actual contact at all four pads. Test loading with electronics removed and a written protocol (yours, a mentor's or a studio's) before foot operation. No force rating is claimed for the printed enclosure.
 
 ## Editing CAD
 

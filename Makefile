@@ -10,7 +10,7 @@ SEND ?=
 HEADERS := $(wildcard firmware/VEX_Pocket_Rival/*.h)
 ART := $(wildcard art/*.json art/*/*.json art/*/*.png)
 
-.PHONY: test sim sim-build art art-check motion web web-check firmware firmware-all setup-firmware upload monitor ports bench bench-report measure-check cad cad-check render render-meshes hero pack-mentor docs check clean
+.PHONY: test sim sim-build art art-check motion web web-check firmware firmware-all setup-firmware upload monitor ports bench bench-report measure-check cad cad-check render render-meshes hero pack-mentor pack-studio docs check clean
 build:
 	mkdir -p build
 build/core-tests: tests/core_tests.cpp $(HEADERS) | build
@@ -81,6 +81,8 @@ hero: render-meshes
 	$(PYTHON) tools/compose_hero.py
 pack-mentor:
 	$(PYTHON) tools/pack_mentor.py
+pack-studio:
+	$(PYTHON) tools/pack_mentor.py --profile studio
 docs:
 	$(PYTHON) tools/make_docs.py
 check: test

@@ -56,7 +56,7 @@ struct App {
  void controls(bool m,bool q,bool f,uint32_t t){
   now=t;raw_mode=m;raw_quest=q;raw_foot=f;int em=mode.update(m,t),eq=quest.update(q,t),ef=foot.update(f,t);
   if(stage!=4)return;
-  if(em==1){tuning=!tuning;setRunning(false);progress.active=false;message(tuning?"G3S handles muting":"Tap footswitch to start");}
+  if(em==1){tuning=!tuning;setRunning(false);progress.active=false;message(tuning?"Rig handles muting":"Tap footswitch to start");}
   if(em==2)save();
   if(eq==1){if(progress.setGoal((progress.goal_index+1)%3))message("Goal set; session reset");else message("Pause to change goal");}
   if(eq==2)calibrate();

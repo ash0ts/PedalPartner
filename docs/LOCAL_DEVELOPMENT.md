@@ -211,6 +211,6 @@ The Adafruit GC9A01A library writes pixels blocking on SPI. The sketch isolates 
 - Plain Markdown or agent-guidance edits: edit the relevant files and run `make test`; no CAD or Arduino dependencies are needed.
 - CAD geometry or generated hardware guides: run `make measure-check` first so the edit answers a measured deviation (it names the `build_cad.py` constant and the parts each row gates), create a Python virtualenv, install `requirements-cad.txt`, then regenerate only affected outputs with `make cad cad-check`, `make render` (Blender) and `make docs`. The order of operations with a board and parts arriving together is in [BRINGUP.md](BRINGUP.md).
 - Presentation only: `make hero` renders the existing STEP using Blender and the CAD/Pillow environment; [details](MARKETING.md). It does not compile firmware or rebuild geometry.
-- Mentor handoff: `make pack-mentor` creates the lean review ZIP using standard-library Python and existing files; [contents](MENTOR_PACK.md). It performs no builds.
+- Handoff ZIPs: `make pack-mentor` (hobbyist or mentor review) and `make pack-studio` (adds the product brief, decisions, motion and screen references for a design team) use standard-library Python and existing files; [contents](MENTOR_PACK.md). Neither performs builds.
 
 Record target build results and actual bench measurements separately. A green host test does not prove firmware compilation, and successful compilation does not prove the electrical build.
