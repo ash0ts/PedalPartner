@@ -57,8 +57,11 @@ EMSCRIPTEN_KEEPALIVE int vex_audio_push(int n,uint32_t now){
  return analyzed;
 }
 EMSCRIPTEN_KEEPALIVE uint32_t vex_last_analysis_us(){return lastAnalysisUs;}
+bool testPattern=false;
+// Serial `t` on the bench: render ui.h drawTestPattern instead of the app screen.
+EMSCRIPTEN_KEEPALIVE void vex_test(int on){testPattern=on!=0;}
 EMSCRIPTEN_KEEPALIVE uint8_t* vex_render(uint32_t now){
- (void)now;vex::drawScreen(canvas,app->view());
+ if(testPattern)vex::drawTestPattern(canvas,now);else vex::drawScreen(canvas,app->view());
  for(int i=0;i<240*240;i++){uint16_t p=canvas.px[i];uint8_t r=(p>>11)&31,g=(p>>5)&63,b=p&31;
   // Same integer scaling as simulator/canvas.h so WASM frames can be compared with native goldens.
   rgba[i*4]=uint8_t(r*255/31);rgba[i*4+1]=uint8_t(g*255/63);rgba[i*4+2]=uint8_t(b*255/31);rgba[i*4+3]=255;}

@@ -215,4 +215,24 @@ template<class Canvas> void drawScreen(Canvas& c,const View& raw){
   centered(c,v.calibrating?"MUTE STRINGS...":v.notice,195,1,UI_GOLD);
  }
 }
+// Bench test pattern (serial `t`), independent of App state, for the first minutes with a panel on the
+// desk: a 1 px ink border and four differently coloured corner marks (gold top-left, red top-right, plum
+// bottom-left, ink bottom-right) expose a mirrored or rotated panel; "TOP" labels the orientation; seven
+// theme-colour bars show colour order and bit depth; a ruler tick at every 16th row on both edges makes a
+// missing or shifted band visible; the frame counter and a marker that walks one cell per display cadence
+// show whether the flush is keeping up. Theme colours only; deterministic in `now`.
+template<class Canvas> void drawTestPattern(Canvas& c,uint32_t now){
+ now=quantise(now);char s[32];
+ c.fillScreen(UI_BG);
+ c.drawFastHLine(0,0,240,UI_INK);c.drawFastHLine(0,239,240,UI_INK);c.drawFastVLine(0,0,240,UI_INK);c.drawFastVLine(239,0,240,UI_INK);
+ c.fillRect(2,2,10,10,UI_GOLD);c.fillRect(228,2,10,10,UI_RED);c.fillRect(2,228,10,10,UI_PLUM);c.fillRect(228,228,10,10,UI_INK);
+ for(int y=16;y<240;y+=16){c.drawFastHLine(2,y,6,UI_FADE);c.drawFastHLine(232,y,6,UI_FADE);}
+ title(c,"TOP",18,1,UI_GOLD);
+ static const uint16_t bars[7]={UI_INK,UI_GOLD,UI_RED,UI_PLUM,UI_DIM,UI_FADE,UI_BG};
+ c.fillRect(21,55,198,50,UI_FADE);for(int i=0;i<7;i++)c.fillRect(22+i*28,56,28,48,bars[i]);
+ c.drawFastHLine(100,120,40,UI_INK);c.drawFastVLine(120,100,40,UI_INK);
+ snprintf(s,sizeof(s),"FRAME %lu",(unsigned long)(now/DISPLAY_MS%10000));title(c,s,146);
+ c.drawFastHLine(24,186,192,UI_DIM);c.fillRect(24+int(now/DISPLAY_MS%24)*8,176,8,8,UI_GOLD);
+ centered(c,"SPI TEST PATTERN",200,1,UI_FADE);centered(c,"serial t returns to VEX",212,1,UI_FADE);
+}
 }

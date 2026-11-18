@@ -116,7 +116,7 @@ class DeviceBridge:
             except (OSError,serial.SerialException) as e:
                 self.serial=None;self.bump(status='waiting',port=None,error=str(e)[:200]);time.sleep(1)
     def send(self,chars):
-        chars=''.join(c for c in chars if c in 'fb12l?mqkMQKcspr')
+        chars=''.join(c for c in chars if c in 'fb12l?mqkMQKcspr+-gGt')
         with self.lock:
             if self.status!='connected':return False
             self.outbox.append(chars);return bool(chars)
@@ -202,12 +202,14 @@ VexModule().then(M=>{
   // tests/scenarios/personality.txt: two consecutive strum frames one display cadence apart.
   M._vex_boot(4,0);now=0;
   M._vex_serial(99,now);audio(3100,.001,.002,0,0);press('foot',100);audio(3000,.1,.3);frames.push(frame());audio(100,.1,.3);frames.push(frame());
+  // tests/scenarios/stages_and_tuner.txt: stage 2, then the bench test pattern (serial `t`).
+  M._vex_boot(2,0);now=0;press('foot',100);M._vex_test(1);frames.push(frame());M._vex_test(0);
   process.stdout.write(frames.join('\n'));
 });'''
     r=subprocess.run([node,'-e',script,str(OUT/'vex.js')],capture_output=True,text=True,cwd=ROOT)
     if r.returncode:sys.exit('node failed:\n'+r.stderr[-2000:])
     import base64
-    names=['pet_listening','tuner_sharp','strum_frame_a','strum_frame_b'];got=r.stdout.strip().split('\n')
+    names=['pet_listening','tuner_sharp','strum_frame_a','strum_frame_b','test_pattern'];got=r.stdout.strip().split('\n')
     if len(got)!=len(names):sys.exit(f'WASM check produced {len(got)} frames, expected {len(names)}')
     for name,frame in zip(names,got):
         golden=png_rgb((ROOT/f'tests/golden/{name}.png').read_bytes());d=diff_count(golden,base64.b64decode(frame))

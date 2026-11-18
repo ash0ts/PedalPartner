@@ -245,7 +245,9 @@ function devRender(j){
    `flush ${s.flush_us} µs (max ${s.flush_max_us}) · loop max ${s.loop_max_us} µs · tx ${s.tx_bytes} B · yin ${s.yin_us} µs (max ${s.yin_max_us}) · audio cpu ${s.cpu.toFixed(1)} % · cadence ${s.cadence_mul}× · ${flags}`;
   $('dev-frame-info').textContent=j.frame_complete?`device ${fmtClock(s.now_ms)}`:'waiting for a full frame (press Link)';}
  else{$('dev-state').textContent=j.status==='connected'?'telemetry only so far; press Link to stream the panel':'';$('dev-frame-info').textContent='';}
- const rows=j.telemetry||[];spark('sp-tx',rows,'tx_bytes',v=>`${v} B`);spark('sp-flush',rows,'flush_us',v=>`${v} µs`);spark('sp-yin',rows,'yin_us',v=>`${v} µs`);spark('sp-cpu',rows,'cpu',v=>`${Number(v).toFixed(1)} %`);
+ const rows=j.telemetry||[],last=rows[rows.length-1];
+ $('dev-knobs').textContent=last&&last.spi_hz!==undefined?`spi ${(last.spi_hz/1e6).toFixed(0)} MHz · line-in ${last.in_level} · test ${last.test?'on':'off'} · cadence ${last.cadence_ms} ms · diff ${last.diff?'on':'off'}${last.full?' · full':''}`:'';
+ spark('sp-tx',rows,'tx_bytes',v=>`${v} B`);spark('sp-flush',rows,'flush_us',v=>`${v} µs`);spark('sp-yin',rows,'yin_us',v=>`${v} µs`);spark('sp-cpu',rows,'cpu',v=>`${Number(v).toFixed(1)} %`);
  if(j.log)$('dev-log').textContent=j.log.join('\n');
  if(M&&image){dev.wctx.putImageData(image,0,0);devDiff();}
 }

@@ -31,7 +31,7 @@ struct FileStore:vex::Store{
 
 struct Sim{
  FileStore store;int stage=4;std::unique_ptr<vex::App> app;std::unique_ptr<vex::Analyzer> analyzer=std::make_unique<vex::Analyzer>();DesktopCanvas canvas;
- bool raw_mode=false,raw_quest=false,raw_foot=false;
+ bool raw_mode=false,raw_quest=false,raw_foot=false,test=false;   // `test on` renders ui.h drawTestPattern as the sketch does for serial `t`
  // Injected observations active during `audio`; absent during `wait` so samples go stale.
  bool inject=false;float rms=0,peak=0,hz=0,probability=0;
  double sample_ms=0;uint32_t analyses=0;
@@ -74,7 +74,7 @@ struct Sim{
    <<",\"pitch_midi\":"<<app->pitchNow.midi<<",\"pitch_cents\":"<<app->pitchNow.cents<<",\"pitch_valid\":"<<(app->pitchNow.valid?"true":"false")<<",\"uncertain\":"<<(app->uncertain?"true":"false")
    <<",\"hz\":"<<analyzer->hz<<",\"probability\":"<<analyzer->probability<<",\"analyses\":"<<analyses<<",\"now_ms\":"<<app->now;
   // Animation the renderer picks for this instant (index into art/vex/manifest.json order, frame within it).
-  vex::AnimFrame f=vex::chooseAnim(vex::quantised(app->view()));o<<",\"anim\":"<<f.anim<<",\"frame\":"<<f.frame<<"}";
+  vex::AnimFrame f=vex::chooseAnim(vex::quantised(app->view()));o<<",\"anim\":"<<f.anim<<",\"frame\":"<<f.frame<<",\"test\":"<<(test?"true":"false")<<"}";
   return o.str();
  }
 };
@@ -103,9 +103,11 @@ int main(int argc,char** argv){
   else if(cmd=="reboot"){sim.store.flush();sim.boot();}
   else if(cmd=="corrupt"){if(sim.app->saved_slot>=0){sim.store.powered=true;sim.store.bytes[64*sim.app->saved_slot+40]^=1;sim.store.dirty=true;}}
   else if(cmd=="reset"){sim.store.wipe();sim.boot();}
+  else if(cmd=="test"){std::string v;in>>v;if(v!="on"&&v!="off")return 2;sim.test=v=="on";}
   else if(cmd!="state")return 3;
   sim.store.flush();
-  vex::drawScreen(sim.canvas,sim.app->view());sim.canvas.write(frame);
+  if(sim.test)vex::drawTestPattern(sim.canvas,sim.app->now);else vex::drawScreen(sim.canvas,sim.app->view());
+  sim.canvas.write(frame);
   std::cout<<sim.json()<<std::endl;
  }
 }

@@ -116,6 +116,11 @@ static void displayTests(){
  for(int y=0;y<FRAME_H;y+=20){p1[y*FRAME_W]=1;}
  n=bands(p0,p1,out);assert(n==FLUSH_MAX_BANDS);
  assert(out[n-1].y+out[n-1].h==FRAME_H-19);for(int i=1;i<n;i++)assert(out[i].y>=out[i-1].y+out[i-1].h);
+ // Bench test pattern (serial `t`): deterministic in `now`; every 16-row stripe differs from a blank panel,
+ // so a dropped or shifted band is visible; one cadence later only the counter and marker rows change.
+ {static DesktopCanvas t0,t1;drawTestPattern(t0,123456);drawTestPattern(t1,123456);assert(bands(t0.pixels.data(),t1.pixels.data(),out)==0);
+  for(int y=0;y<FRAME_H;y+=16){bool dirty=false;for(int r=y;r<y+16&&r<FRAME_H&&!dirty;r++)for(int x=0;x<FRAME_W&&!dirty;x++)dirty=t0.pixels[r*FRAME_W+x]!=UI_BG;assert(dirty);}
+  drawTestPattern(t1,123456+DISPLAY_MS);n=bands(t0.pixels.data(),t1.pixels.data(),out);assert(n>=1);for(int i=0;i<n;i++)assert(out[i].y>=140&&out[i].y+out[i].h<=190);}
 }
 #include "../firmware/VEX_Pocket_Rival/link.h"
 // Bench link: band and state packets round-trip through the host parser, corruption is rejected, the parser

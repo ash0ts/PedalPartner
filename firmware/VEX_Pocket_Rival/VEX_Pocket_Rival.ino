@@ -8,8 +8,12 @@
  *   f  force a full-frame flush every cadence      b  toggle the dirty-band diff (default on)
  *   1 / 2  redraw every 1x / 2x DISPLAY_MS          l  toggle the bench link (band + state packets)
  *   m q k  tap MODE / QUEST / FOOT (100 ms)         M Q K  hold MODE / QUEST / FOOT (1.3 s)
+ *   - / +  panel SPI clock down / up (8 16 24 30 40 60 MHz; boots at TFT_HZ)
+ *   g / G  codec line-in level down / up (0..15; boots at INPUT_LEVEL; stage 3-4 with a codec)
+ *   t  toggle the display test pattern (ui.h drawTestPattern; full flush while on)
  *   ?  print the current switch settings
  * Telemetry is one JSON line per second; tools/web.py serve --device mirrors the panel from the link.
+ * Every knob boots at its config.h value; nothing typed here is remembered across a reset.
  */
 #include <Audio.h>
 #include <Wire.h>
@@ -64,7 +68,12 @@ float rms=0,peak=0;
 uint32_t drawAt=0,printAt=0,txMaxBytes=0;
 vex::LinkTiming timing;
 // Bench switches (serial) and simulated control presses; presses go through App::controls like buttons.
-bool forceFull=false,bandDiff=true,linkOn=false;uint32_t tapUntil[3]={0,0,0};
+bool forceFull=false,bandDiff=true,linkOn=false,testOn=false;uint32_t tapUntil[3]={0,0,0};
+// Live knobs: boot at the config.h values, step from serial, never persisted. Steps the GC9A01A and
+// the Teensy 4.1 SPI divider can both produce; 16 MHz is the documented starting point.
+const uint32_t SPI_STEPS[]={8000000,16000000,24000000,30000000,40000000,60000000};
+uint32_t spiHz=TFT_HZ;uint8_t inLevel=INPUT_LEVEL;
+void setSpi(uint32_t hz){spiHz=hz;lcd.setSPISpeed(hz);shadowValid=false;}   // full frame so a bad clock shows at once
 void benchCommand(char c,uint32_t now){
  switch(c){
   case 'f':forceFull=!forceFull;break;
@@ -72,9 +81,14 @@ void benchCommand(char c,uint32_t now){
   case '1':timing.cadence_mul=1;break;
   case '2':timing.cadence_mul=2;break;
   case 'l':linkOn=!linkOn;shadowValid=false;break;   // a fresh full frame so the mirror starts complete
+  case 't':testOn=!testOn;shadowValid=false;break;
+  case '-':for(int i=5;i>=0;i--)if(SPI_STEPS[i]<spiHz){setSpi(SPI_STEPS[i]);break;}break;
+  case '+':for(int i=0;i<6;i++)if(SPI_STEPS[i]>spiHz){setSpi(SPI_STEPS[i]);break;}break;
+  case 'g':if(VEX_STAGE>=3&&app.codec_ok&&inLevel>0){inLevel--;codec.lineInLevel(inLevel);}break;
+  case 'G':if(VEX_STAGE>=3&&app.codec_ok&&inLevel<15){inLevel++;codec.lineInLevel(inLevel);}break;
   case 'm':tapUntil[0]=now+100;break;case 'q':tapUntil[1]=now+100;break;case 'k':tapUntil[2]=now+100;break;
   case 'M':tapUntil[0]=now+1300;break;case 'Q':tapUntil[1]=now+1300;break;case 'K':tapUntil[2]=now+1300;break;
-  case '?':Serial.printf("{\"switches\":1,\"full\":%d,\"diff\":%d,\"cadence_ms\":%lu,\"link\":%d}\n",forceFull,bandDiff,(unsigned long)(DISPLAY_MS*timing.cadence_mul),linkOn);break;
+  case '?':Serial.printf("{\"switches\":1,\"full\":%d,\"diff\":%d,\"cadence_ms\":%lu,\"link\":%d,\"test\":%d,\"spi_hz\":%lu,\"in_level\":%u}\n",forceFull,bandDiff,(unsigned long)(DISPLAY_MS*timing.cadence_mul),linkOn,testOn,(unsigned long)spiHz,inLevel);break;
   default:if(VEX_STAGE==4)app.command(c,now);
  }
 }
@@ -112,9 +126,10 @@ void loop(){
  digitalWrite(PIN_LED,app.led());
  if(now-drawAt>=DISPLAY_MS*timing.cadence_mul){
   drawAt=now;uint32_t flushStart=micros();
-  vex::drawScreen(frame,app.view());const uint16_t* px=frame.getBuffer();
+  if(testOn)vex::drawTestPattern(frame,now);else vex::drawScreen(frame,app.view());
+  const uint16_t* px=frame.getBuffer();
   vex::Band bands[vex::FLUSH_MAX_BANDS];int n;
-  if(shadowValid&&bandDiff&&!forceFull)n=vex::bands(shadow,px,bands);else{bands[0].y=0;bands[0].h=vex::FRAME_H;n=1;shadowValid=true;}
+  if(shadowValid&&bandDiff&&!forceFull&&!testOn)n=vex::bands(shadow,px,bands);else{bands[0].y=0;bands[0].h=vex::FRAME_H;n=1;shadowValid=true;}
   if(n){
    panel.begin();
    for(int i=0;i<n;i++){size_t at=size_t(bands[i].y)*vex::FRAME_W,count=size_t(bands[i].h)*vex::FRAME_W;panel.writeBand(bands[i].y,bands[i].h,px+at);memcpy(shadow+at,px+at,count*2);}
@@ -127,9 +142,9 @@ void loop(){
  if(now-printAt>=1000){
   printAt=now;const auto& p=app.progress;timing.cpu=VEX_STAGE>=3?AudioProcessorUsageMax():0;vex::AnimFrame f=vex::chooseAnim(vex::quantised(app.view()));
   Serial.printf("{\"stage\":%d,\"codec\":%d,\"rms\":%.5f,\"peak\":%.3f,\"gate\":%.5f,\"active\":%d,\"running\":%d,\"session_s\":%lu,\"total_s\":%lu,\"fragments\":%lu,\"level\":%lu,\"cpu\":%.1f,\"memory\":%u,"
-   "\"tx_bytes\":%lu,\"tx_max_bytes\":%lu,\"flush_us\":%lu,\"flush_max_us\":%lu,\"loop_max_us\":%lu,\"cadence_ms\":%lu,\"diff\":%d,\"full\":%d,\"link\":%d,\"anim\":%d,\"frame\":%d",
+   "\"tx_bytes\":%lu,\"tx_max_bytes\":%lu,\"flush_us\":%lu,\"flush_max_us\":%lu,\"loop_max_us\":%lu,\"cadence_ms\":%lu,\"diff\":%d,\"full\":%d,\"link\":%d,\"test\":%d,\"spi_hz\":%lu,\"in_level\":%u,\"anim\":%d,\"frame\":%d",
    VEX_STAGE,app.codec_ok,app.rms,app.peak,p.gate,p.active,p.running,(unsigned long)(p.session_ms/1000),(unsigned long)(p.active_ms/1000),(unsigned long)p.fragments,(unsigned long)p.level(),timing.cpu,VEX_STAGE>=3?AudioMemoryUsageMax():0,
-   (unsigned long)timing.tx_bytes,(unsigned long)txMaxBytes,(unsigned long)timing.flush_us,(unsigned long)timing.flush_max_us,(unsigned long)timing.loop_max_us,(unsigned long)(DISPLAY_MS*timing.cadence_mul),bandDiff,forceFull,linkOn,f.anim,f.frame);
+   (unsigned long)timing.tx_bytes,(unsigned long)txMaxBytes,(unsigned long)timing.flush_us,(unsigned long)timing.flush_max_us,(unsigned long)timing.loop_max_us,(unsigned long)(DISPLAY_MS*timing.cadence_mul),bandDiff,forceFull,linkOn,testOn,(unsigned long)spiHz,inLevel,f.anim,f.frame);
 #ifdef VEX_PITCH_PJRC
   Serial.printf(",\"pitch\":\"pjrc\",\"midi\":%d,\"cents\":%.1f,\"valid\":%d}\n",app.pitchNow.midi,app.pitchNow.cents,app.pitchNow.valid);
 #else
