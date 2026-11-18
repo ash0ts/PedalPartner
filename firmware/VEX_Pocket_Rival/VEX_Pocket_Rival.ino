@@ -141,9 +141,9 @@ void loop(){
  }
  if(now-printAt>=1000){
   printAt=now;const auto& p=app.progress;timing.cpu=VEX_STAGE>=3?AudioProcessorUsageMax():0;vex::AnimFrame f=vex::chooseAnim(vex::quantised(app.view()));
-  Serial.printf("{\"stage\":%d,\"codec\":%d,\"rms\":%.5f,\"peak\":%.3f,\"gate\":%.5f,\"active\":%d,\"running\":%d,\"session_s\":%lu,\"total_s\":%lu,\"fragments\":%lu,\"level\":%lu,\"cpu\":%.1f,\"memory\":%u,"
+  Serial.printf("{\"stage\":%d,\"up_ms\":%lu,\"codec\":%d,\"rms\":%.5f,\"peak\":%.3f,\"gate\":%.5f,\"active\":%d,\"running\":%d,\"session_s\":%lu,\"total_s\":%lu,\"fragments\":%lu,\"level\":%lu,\"cpu\":%.1f,\"memory\":%u,"
    "\"tx_bytes\":%lu,\"tx_max_bytes\":%lu,\"flush_us\":%lu,\"flush_max_us\":%lu,\"loop_max_us\":%lu,\"cadence_ms\":%lu,\"diff\":%d,\"full\":%d,\"link\":%d,\"test\":%d,\"spi_hz\":%lu,\"in_level\":%u,\"anim\":%d,\"frame\":%d",
-   VEX_STAGE,app.codec_ok,app.rms,app.peak,p.gate,p.active,p.running,(unsigned long)(p.session_ms/1000),(unsigned long)(p.active_ms/1000),(unsigned long)p.fragments,(unsigned long)p.level(),timing.cpu,VEX_STAGE>=3?AudioMemoryUsageMax():0,
+   VEX_STAGE,(unsigned long)now,app.codec_ok,app.rms,app.peak,p.gate,p.active,p.running,(unsigned long)(p.session_ms/1000),(unsigned long)(p.active_ms/1000),(unsigned long)p.fragments,(unsigned long)p.level(),timing.cpu,VEX_STAGE>=3?AudioMemoryUsageMax():0,
    (unsigned long)timing.tx_bytes,(unsigned long)txMaxBytes,(unsigned long)timing.flush_us,(unsigned long)timing.flush_max_us,(unsigned long)timing.loop_max_us,(unsigned long)(DISPLAY_MS*timing.cadence_mul),bandDiff,forceFull,linkOn,testOn,(unsigned long)spiHz,inLevel,f.anim,f.frame);
 #ifdef VEX_PITCH_PJRC
   Serial.printf(",\"pitch\":\"pjrc\",\"midi\":%d,\"cents\":%.1f,\"valid\":%d}\n",app.pitchNow.midi,app.pitchNow.cents,app.pitchNow.valid);

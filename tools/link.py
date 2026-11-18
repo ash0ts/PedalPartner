@@ -67,3 +67,31 @@ class Frame:
         for i in range(FRAME_W*FRAME_H):
             v=px[2*i]|px[2*i+1]<<8;out[3*i]=(v>>11&31)*255//31;out[3*i+1]=(v>>5&63)*255//63;out[3*i+2]=(v&31)*255//31
         return bytes(out)
+class BenchLog:
+    """Append-only record of one bench session in build/bench/<start>.jsonl (build/bench/latest.jsonl
+    points at it). One JSON object per line: {"at": seconds since start, "telemetry": {...}} for each
+    JSON line the sketch printed, {"at", "state": {...}} for each decoded state packet, {"at", "text": ...}
+    for any other line. tools/bench_report.py summarises a log; nothing under build/ is committed."""
+    def __init__(self,root,port='',note=''):
+        import json,time
+        from pathlib import Path
+        self.json=json;self.t0=time.monotonic();d=Path(root)/'build/bench';d.mkdir(parents=True,exist_ok=True)
+        self.path=d/time.strftime('%Y%m%d-%H%M%S.jsonl');self.file=open(self.path,'a')
+        latest=d/'latest.jsonl'
+        try:
+            if latest.is_symlink() or latest.exists():latest.unlink()
+            latest.symlink_to(self.path.name)
+        except OSError:pass
+        self.write('session',{'started':time.strftime('%Y-%m-%dT%H:%M:%S'),'port':port,'note':note})
+    def write(self,kind,item):
+        import time
+        self.file.write(self.json.dumps({'at':round(time.monotonic()-self.t0,3),kind:item},separators=(',',':'))+'\n');self.file.flush()
+    def record(self,kind,item):
+        """Route one Decoder item: text lines that parse as JSON become telemetry; state dicts and other text pass through."""
+        if kind=='state':self.write('state',item)
+        elif kind=='text':
+            if item.startswith('{'):
+                try:self.write('telemetry',self.json.loads(item));return
+                except ValueError:pass
+            self.write('text',item)
+    def close(self):self.file.close()

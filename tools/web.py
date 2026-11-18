@@ -73,6 +73,7 @@ class DeviceBridge:
     def __init__(self,device):
         self.device=device;self.port=None;self.status='waiting';self.error='';self.serial=None
         self.frame=link.Frame();self.state=None;self.telemetry=[];self.log=[];self.generation=0;self.frame_generation=0
+        self.benchlog=None   # build/bench/<start>.jsonl, opened on connect (link.BenchLog)
         self.lock=threading.Lock();self.cond=threading.Condition(self.lock);self.outbox=[]
         threading.Thread(target=self.run,daemon=True).start()
     def find(self):
@@ -96,6 +97,8 @@ class DeviceBridge:
             try:
                 with serial.Serial(port,115200,timeout=.05) as s:
                     self.serial=s;decoder=link.Decoder();self.bump(status='connected',port=port,error='',frame=link.Frame())
+                    if self.benchlog:self.benchlog.close()
+                    self.benchlog=link.BenchLog(ROOT,port,'tools/web.py serve --device');print(f'bench log {self.benchlog.path.relative_to(ROOT)} (make bench-report summarises it)',flush=True)
                     while True:
                         with self.lock:out=''.join(self.outbox);self.outbox.clear()
                         if out:s.write(out.encode())
@@ -105,6 +108,7 @@ class DeviceBridge:
                         if not items:continue
                         with self.cond:
                             for kind,item in items:
+                                if kind!='band' and self.benchlog:self.benchlog.record(kind,item)
                                 if kind=='band':self.frame.apply(*item);self.frame_generation+=1
                                 elif kind=='state':self.state=item
                                 else:
@@ -124,7 +128,8 @@ class DeviceBridge:
         with self.cond:
             if self.generation==want:self.cond.wait(wait)
             return {'status':self.status,'port':self.port,'error':self.error,'generation':self.generation,'frame_generation':self.frame_generation,
-                    'frame_complete':self.frame.complete,'state':self.state,'telemetry':list(self.telemetry),'log':self.log[-30:]}
+                    'frame_complete':self.frame.complete,'state':self.state,'telemetry':list(self.telemetry),'log':self.log[-30:],
+                    'bench_log':str(self.benchlog.path.relative_to(ROOT)) if self.benchlog else None}
     def pixels(self):
         with self.lock:return bytes(self.frame.pixels),self.frame_generation
 

@@ -238,7 +238,7 @@ function spark(id,rows,key,fmt){const c=$(id),g=c.getContext('2d');g.clearRect(0
  g.fillStyle='#9a9199';g.font='10px ui-monospace,monospace';g.fillText(fmt(max),2,10);$(id+'-v').textContent=fmt(v[v.length-1]);}
 function devRender(j){
  const st=$('dev-status');st.className='sub mono '+(j.status==='connected'?'ok':j.status==='off'?'':'bad');
- st.textContent=j.status==='off'?'bridge off · run make sim DEVICE=auto':j.status==='connected'?`${j.port} · live`:j.status==='waiting'?`waiting for a Teensy (${j.error||'none on USB'})`:`error · ${j.error}`;
+ st.textContent=j.status==='off'?'bridge off · run make sim DEVICE=auto':j.status==='connected'?`${j.port} · live${j.bench_log?` · log ${j.bench_log} (make bench-report)`:''}`:j.status==='waiting'?`waiting for a Teensy (${j.error||'none on USB'})`:`error · ${j.error}`;
  const s=j.state;dev.state=s;
  if(s){const flags=['running','calibrated','active','tuning','calibrating','claimed','codec','pitch_valid'].filter(k=>s[k]).join(' ')||'idle';
   $('dev-state').innerHTML=`stage ${s.stage} · <b>${s.anim_name}</b>/${s.frame} · level ${s.level} · fragments ${s.fragments} · session ${Math.floor(s.session_ms/1000)} s · total ${Math.floor(s.active_ms/1000)} s · goal ${s.goal_minutes} min · slot ${s.saved_slot}<br>`+
