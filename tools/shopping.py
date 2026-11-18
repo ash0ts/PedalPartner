@@ -7,7 +7,12 @@ from project_data import BOM, FASTENERS, SOURCES
 def write_shopping(root):
     urls = {key: url for key, title, url in SOURCES}
     lines = ['# Final R1.1 shopping list', '',
-        'This list matches the current CAD and wiring. Buy the bench electronics first. Measure the actual hardware and pass the fit coupon before committing to the full enclosure. Product links identify the specified parts; stock and prices can change.', '',
+        'This list matches the current CAD and wiring. Buy the bench electronics first, or source one complete set for CAD fit verification. Product links point to live retail listings checked November 2026; stock and prices can change.', '',
+        '## Quick vendor consolidation', '',
+        '- **SparkFun** (official Teensy manufacturer/retailer): Teensy 4.1 unpinned (`DEV-16771`, or `DEV-20359` without Ethernet), Teensy 4 Audio Shield Rev D (`DEV-15845`), 2 × red panel buttons (`COM-11992`), 2.54 mm breakaway male + female headers (`PRT-00116` + `PRT-00115`, trimmed to two 14-pin rows), USB Micro-B data cable (`CAB-10215`).',
+        '- **Adafruit**: 1.28" 240×240 round GC9A01A TFT (`#6178`). Do **not** substitute a square ST7789 breakout; the optional EYESPI flex cable is unused because VEX wires to the 0.1" pads.',
+        '- **Amplified Parts**: soft SPST momentary footswitch (`P-H605-BLK`) and Switchcraft `111X` enclosed ¼" mono jack (`W-SC-111X`, includes nut and washer).',
+        '- **DigiKey / Mouser / McMaster / shop stock**: Bourns `3386P-1-103LF` 10 kΩ trimmer, two `10 kΩ` and two `1 kΩ` 1% 0.25 W through-hole resistors, 3 mm amber LED, 2.54 mm FR4 protoboard, metric M2/M3 screws, nuts and M2 nylon spacers (schedule below), 2 mm aluminum sheet (`Foot_Plate_2mm_Aluminum.dxf`), and 1 mm clear polycarbonate (`Window_1mm_Polycarbonate.dxf`).', '',
         '## Electronics and wiring', '', '| ID | Qty | Buy | Purpose / fit note |', '|---|---:|---|---|']
     for row in BOM:
         ident, qty, name, spec, purpose, source, low, high, stage = row
@@ -32,9 +37,9 @@ def write_shopping(root):
         '- Thin peripheral anti-rattle foam for the window, about 0.1 mm adhesive for the cosmetic inserts, insulating material as needed, four small rubber feet or pedalboard hook-and-loop.',
         '- Optional: cream/white decal labels and paint for the shallow panel marks. Do not fill moving clearances with paint.', '',
         '## Tools and budget', '',
-        'Have a temperature-controlled soldering iron, solder/flux, fume extraction, multimeter, calipers, cutters, wire stripper, drivers and small files available with the mentor. Arrange drilling/cutting and a PETG printer or print service. No custom PCB fabrication is required.', '',
-        f'Planning allowance: **${sum(r[6] for r in BOM):.0f}–${sum(r[7] for r in BOM):.0f}**, roughly **$140–260** for parts and basic fabrication. These are budget allowances, not a live cart or guaranteed quotes. Excludes tools, mentor time, shipping/tax and any new buffered splitter. Buy quantities in the Qty column; CSV allowance columns are per line, not per individual item.', '',
-        'The existing rig must provide a verified **buffered dry feed** that remains available while playing. If it does not, select a suitable buffered splitter with the mentor before ordering an extra pedal; the companion cannot take a raw passive guitar feed directly through this attenuator.', '',
+        'Have a temperature-controlled soldering iron, solder/flux, fume extraction, multimeter, calipers, cutters, wire stripper, drivers and small files on hand. Arrange drilling/cutting and a PETG printer or fabrication service. No custom PCB fabrication is required for R1.1.', '',
+        f'Planning allowance: **${sum(r[6] for r in BOM):.0f}–${sum(r[7] for r in BOM):.0f}**, roughly **$130–260** for parts and basic prototype materials. These are budget allowances, not a live cart or fabrication quote. Excludes labour, tools, shipping/tax and any external buffered splitter. Buy quantities in the Qty column; CSV allowance columns are per line, not per individual item.', '',
+        'The player\'s rig must provide a verified **buffered dry feed** that remains live while playing. If it does not, use an external buffered splitter in front of the pedalboard; R1.1 has no output jack and cannot take a raw passive guitar pickup directly through its line-level attenuator.', '',
         'Machine-readable versions: [BOM.csv](../hardware/data/BOM.csv), [fasteners.csv](../hardware/data/fasteners.csv), [wiring.csv](../hardware/data/wiring.csv). Canonical editable source: `hardware/data/project_data.py`.']
     (root/'docs/SHOPPING.md').write_text('\n'.join(lines)+'\n')
 

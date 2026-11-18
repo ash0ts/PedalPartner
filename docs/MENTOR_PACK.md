@@ -7,7 +7,7 @@ command fails if a required file is missing or the hero's assembly/image hashes 
 | Reader | Command | Output | Adds |
 |---|---|---|---|
 | Hobbyist alone, or hobbyist with a mentor | `make pack-mentor` | `dist/VEX_R1.1_Mentor_Review.zip` | The review set below |
-| Design studio or product team | `make pack-studio` | `dist/VEX_R1.1_Studio_Pack.zip` | The same set plus [the product brief](STUDIO_BRIEF.md), [decisions](DECISIONS.md), [extensibility](EXTENSIBILITY.md), [bring-up plan](BRINGUP.md), [sources](SOURCES.md), `parameters.json`, `config.h`, the motion video and storyboard, and the screen contact sheet |
+| Design studio or product team | `make pack-studio` | `dist/VEX_R1.1_Studio_Pack.zip` | The same set plus [the studio brief](STUDIO_BRIEF.md), [CAD review map](CAD_REVIEW.md), [decisions](DECISIONS.md), [extensibility](EXTENSIBILITY.md), [bring-up plan](BRINGUP.md), [handoff](HANDOFF.md), [editable guide](BUILD_GUIDE.md), [local dev](LOCAL_DEVELOPMENT.md), [milestones](PLAN.md), [sources](SOURCES.md), `parameters.json`, `config.h`, the motion video and storyboard, and the screen contact sheet |
 
 Unzip once and open **START_HERE.md** inside the top folder. Keep the folders
 together. For a builder the guide PDF is the main reading route and the STEP the CAD

@@ -12,7 +12,7 @@ Checked16 November2026. External files and source provenance are distinguished f
 - **S8 Arduino 2 / Teensy installation:** https://www.pjrc.com/teensy/td_download.html
 - **S9 SparkFun red panel button COM-11992:** https://www.sparkfun.com/momentary-button-panel-mount-red.html
 - **S10 SPST soft footswitch P-H605-BLK:** https://www.amplifiedparts.com/products/footswitch-spst-momentary-solder-lugs-soft-switch-black
-- **S11 Switchcraft 111X mono jack:** https://www.switchcraft.com/open-circuit-solder-lug-termination/111x/
+- **S11 Switchcraft 111X mono jack (Amplified Parts W-SC-111X):** https://www.amplifiedparts.com/products/14-jack-switchcraft-111x-mono-enclosed-open-circuit
 - **S12 Bourns 3386P trimmer dimensions / pinout:** https://www.bourns.com/docs/product-datasheets/3386.pdf
 - **S13 Teensy Audio Workshop teaching reference:** https://www.pjrc.com/store/workshop_t4.pdf
 - **S14 Teenage Engineering assembly-layout reference:** https://assets.teenage.engineering/_img/6399cd15132d7e0af3c8620c_original.pdf
@@ -20,5 +20,9 @@ Checked16 November2026. External files and source provenance are distinguished f
 - **S16 Display manufacturer PCB:** https://github.com/adafruit/Adafruit-1.28-240x240-Round-Display-PCB
 - **S17 build123d documentation:** https://build123d.readthedocs.io/en/latest/
 - **S18 Example multi-effects manual (Zoom G3): check how your own rig treats its tuner/AUX dry feed:** https://cdn.shopify.com/s/files/1/0756/7638/5564/files/G32026.pdf
+- **S19 SparkFun Teensy 4.1 retail listing (DEV-16771; DEV-20359 without Ethernet):** https://www.sparkfun.com/teensy-4-1.html
+- **S20 SparkFun Teensy 4 Audio Shield Rev D retail listing (DEV-15845):** https://www.sparkfun.com/teensy-4-audio-shield-rev-d.html
+- **S21 SparkFun 2.54mm female header strip PRT-00115 (pair with male PRT-00116):** https://www.sparkfun.com/female-headers.html
+- **S22 SparkFun USB-A to Micro-B data cable CAB-10215:** https://www.sparkfun.com/usb-micro-b-cable-6-foot.html
 
 Adafruit display STEP SHA:66f39106daee442a08a0b5f994fe7cbfb830bd64. Mount coordinates extracted from manufacturer Eagle PCB. Designed by Limor Fried/Ladyada for Adafruit Industries. Manufacturer PCB license is retained in vendor/ADAFRUIT_LICENSE.txt. Prior community Teensy and audio models are carried over from the user's earlier pack, with unresolved physical revision differences.
