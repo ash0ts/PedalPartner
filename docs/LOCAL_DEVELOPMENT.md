@@ -25,6 +25,7 @@ Use Python 3.10+ and a C++17 compiler. Linux needs `python3`, `make` and `g++`. 
 - **Audio** tab: synthetic observations (the same `audio` semantics as scenarios), a synth note with detune and level through the real YIN analyzer, the bundled 24 s test recording fed at simulated time, or Mac input through an AudioWorklet at 44.1 kHz. The input meter shows RMS against the gate, peak with clipping, the estimator's Hz/probability and the analysis time on this machine.
 - **State**, **EEPROM**, **Log** tabs: the native simulator's JSON fields, both slots decoded and hex-dumped with validity, a power-cut-after-N-writes control, a telemetry line per simulated second in the serial-monitor shape and the notice history. Saved bytes persist in the browser like EEPROM.
 - **Scenario** tab: a recorder turns your session into `press`/`audio`/`wait` protocol lines to paste into `tests/scenarios/`, and a runner replays scenario text (including `expect` lines) against the same module.
+- **Device** tab: the bench mirror described in [section 4](#4-bench-loop-with-a-teensy-attached). Without `--device` it says so and stays quiet.
 
 Walkthrough:
 
@@ -90,13 +91,94 @@ Outputs are `build/stage-N/output/` and `build/target_build_report.json`. The or
 
 ## 3. Upload only when the bench is ready
 
-Install Arduino IDE 2 and Teensy support using [PJRC's instructions](https://www.pjrc.com/teensy/td_download.html). Install the same three display-library versions through Library Manager. Open `firmware/VEX_Pocket_Rival/VEX_Pocket_Rival.ino`, choose **Teensy 4.1**, USB type **Serial**, 600 MHz, and select the board's USB port.
+Two routes program the board; both need the mentor's unpowered wiring check first.
 
-Start with `VEX_STAGE 1` in `config.h`. Use **Verify** first, then **Upload** when the mentor has checked the unpowered wiring. Follow stages in order, editing the number and repeating Verify/Upload after each passing checkpoint. The physical Program button can recover entry to the Teensy loader. Use a data-capable Micro-B cable, not a charge-only cable.
+**From this repository** (same pinned core and libraries as `make firmware`):
+
+```sh
+make ports                      # lists Teensy serial ports (PJRC USB VID 16c0)
+make firmware STAGE=1
+make upload STAGE=1             # add SERIAL=/dev/cu.usbmodemXXXX when more than one board is attached
+make monitor                    # read the serial output; Ctrl-C stops
+```
+
+`make upload` refuses to guess: it needs a compiled `build/stage-N/output/` image and either `SERIAL=` or exactly one Teensy on USB. It writes `build/upload_report.json`. `make test`, `make firmware` and `make sim` never touch the port.
+
+**From Arduino IDE 2**: install Teensy support using [PJRC's instructions](https://www.pjrc.com/teensy/td_download.html) and the same three display-library versions through Library Manager. Open `firmware/VEX_Pocket_Rival/VEX_Pocket_Rival.ino`, choose **Teensy 4.1**, USB type **Serial**, 600 MHz, and select the board's USB port. Use **Verify** first, then **Upload**.
+
+Either way, start with `VEX_STAGE 1` in `config.h`. Follow stages in order, editing the number and repeating compile/upload after each passing checkpoint. The physical Program button can recover entry to the Teensy loader. Use a data-capable Micro-B cable, not a charge-only cable.
 
 The USB 5 V path powers the Teensy; no 9 V connection exists. Begin audio tests with the trimmer at minimum signal. Confirm terminal identities with a meter. Use the circuit and pin table in the [build guide](BUILD_GUIDE.md), not a generic Teensy tutorial with different hardware.
 
 The [left-only test WAV](../test_audio/README.md) can exercise reference notes through a known line source. Start with the source volume down; digital WAV amplitude does not establish analog volts. Confirm actual amplitude before raising the trimmer. This is hardware-in-the-loop testing, not an emulator.
+
+## 4. Bench loop with a Teensy attached
+
+The firmware is instrumented so the questions the desktop cannot answer (how long a flush takes, whether bands tear, how the motion reads on the real panel) are measured instead of inferred, and the browser workbench can sit beside the real device while you develop.
+
+### What the sketch reports
+
+From stage 2 up, the sketch prints **one JSON line per second**, for example:
+
+```json
+{"stage":4,"codec":1,"rms":0.05012,"peak":0.201,"gate":0.00400,"active":1,"running":1,"session_s":42,"total_s":642,"fragments":2,"level":2,"cpu":11.3,"memory":12,"tx_bytes":28800,"tx_max_bytes":115200,"flush_us":4120,"flush_max_us":17890,"loop_max_us":18240,"cadence_ms":100,"diff":1,"full":0,"link":0,"anim":2,"frame":3,"pitch":"yin","hz":110.02,"prob":0.93,"yin_us":1480,"yin_max_us":2210}
+```
+
+| Field | Meaning |
+|---|---|
+| `flush_us`, `flush_max_us` | `micros()` around draw + band transfer for the last cadence, and the maximum since boot. Must stay well under `cadence_ms × 1000`; if `flush_max_us` approaches it, motion will stutter. |
+| `loop_max_us` | Longest pass through `loop()` in the last second (includes YIN and the flush). |
+| `tx_bytes`, `tx_max_bytes` | Bytes sent to the panel this cadence (dirty bands) and the largest so far. 115200 is a full frame. |
+| `cadence_ms`, `diff`, `full`, `link` | Current switch settings (below). |
+| `anim`, `frame` | The animation and step the renderer chose, in `art/vex/manifest.json` order — the same numbers the native simulator and scenarios use. |
+| `yin_us`, `yin_max_us`, `cpu`, `memory` | Pitch-analysis time and PJRC audio-library CPU/memory maxima (stage 3+). |
+
+`?` prints the switch settings as a one-line JSON object. Numbers in this document are examples of shape, not measurements; record real values in `docs/HANDOFF.md`.
+
+### Serial switches
+
+Single characters, stages 2–4 (stage 4 also keeps the older `c s p r`):
+
+| Key | Effect | Use it to |
+|---|---|---|
+| `f` | Toggle **full-frame flush** every cadence | Compare `flush_us` for a whole frame against dirty bands; see whether band seams are visible |
+| `b` | Toggle the **dirty-band diff** (default on) | Same as above from the other side |
+| `1` / `2` | Redraw every 1× / 2× `DISPLAY_MS` | Judge whether 100 ms motion is needed or 200 ms reads the same on the panel |
+| `l` | Toggle the **bench link** (binary band + state packets between the JSON lines) | Mirror the panel in the Device tab; off by default so plain serial stays readable |
+| `m` `q` `k` | Tap MODE / QUEST / FOOT for 100 ms | Drive the device from the workbench without reaching for the switches |
+| `M` `Q` `K` | Hold MODE / QUEST / FOOT for 1.3 s | Save, calibrate, new session |
+| `?` | Print switch settings | Confirm what the device is doing |
+
+Taps go through `App::controls` exactly like the GPIO lines, so debounce and hold timing are the device's.
+
+### The Device tab
+
+```sh
+python3 -m pip install -r requirements-bench.txt     # pyserial, bench only
+make sim DEVICE=auto                                 # or DEVICE=/dev/cu.usbmodemXXXX
+```
+
+`tools/web.py serve --device` opens the port in a thread, splits the stream with the same decoder as `make monitor` (`tools/link.py`, stdlib), assembles the 240 × 240 RGB565 frame from band packets, keeps the last state packet and sixty telemetry rows, and exposes them to the page as `/device` (long-poll), `/device/frame` (raw pixels) and `/device/send?c=` (one character). Unplugging shows "waiting" and reconnects when the port returns.
+
+In the browser, open **Device**:
+
+- Left canvas: the real panel, built from the rows the Teensy actually sent. Right canvas: this page's WebAssembly frame. Between them a count of differing pixels — zero means the device and the simulator are drawing the same thing for the same state.
+- Buttons send the switches and taps above; **also tap this page** mirrors taps into the browser device so the two stay in step. **Adopt device record** writes the Teensy's progress (fragments, active and session time, goal) into the page's EEPROM slot 0 and reboots it, so both start from the same record.
+- Sparklines: `tx_bytes`, `flush_us`, `yin_us` and audio `cpu` over the last minute, with the maximum printed in the corner. Below them the raw telemetry lines.
+
+A pseudo-terminal fed by a script that writes the same packet format exercised the whole path end to end (link, mirror, diff, taps, adopt, sparklines) in headless Chrome; the protocol itself is round-tripped by `tests/core_tests.cpp` and `tests/link_test.py` in `make test`. What has **not** been done without a board: the upload, the real serial throughput (band packets at 115200 bytes per full frame share the USB CDC link with the JSON lines; USB serial on Teensy 4.1 is high-speed, so a full frame should take a few milliseconds, but that is a prediction), and the measurements themselves.
+
+### First bench session checklist
+
+1. `make firmware STAGE=2`, `make upload STAGE=2`, `make monitor`: confirm the screen picture and that each `M Q F` reading follows its own switch. Note `flush_us` and `flush_max_us` for the stage 2 screen.
+2. `make firmware STAGE=4`, `make upload STAGE=4`, `make sim DEVICE=auto`, open **Device**, press **Link**. The left canvas should fill with the boot screen within a second and match the right canvas after **Adopt device record**.
+3. Calibrate (`Q` hold), start a session (`k`), play: watch `flush_us` while the six-step strum runs. Record `flush_max_us`, `loop_max_us`, `tx_max_bytes` and `cpu` in the handoff. Press `f` and compare; press `2` and judge whether 200 ms reads as smoothly.
+4. Look for tearing at band seams during the strum and the breath (band edges fall on sprite row boundaries). If seams show, the fix is a DMA panel driver behind the `Panel` adapter in the sketch, not a renderer change.
+5. Leave the link on for a minute: the pixel-diff count should stay at zero whenever both devices are in the same state; any persistent difference is a renderer or timing bug worth a scenario.
+
+### Measured-flush gate for a DMA driver
+
+The Adafruit GC9A01A library writes pixels blocking on SPI. The sketch isolates that behind `struct Panel { begin(); writeBand(y, h, rows); end(); }` so a DMA-capable driver (`ILI9341_T4`-style) can replace it without touching the renderer, the band diff or the link. Switch only on evidence from step 3: if `flush_max_us` stays under about a third of the cadence with the dirty-band diff on and no seams are visible, the blocking path is adequate for R1; if it does not, record the numbers and open the DMA work in `docs/PLAN.md`.
 
 ## Editing and regeneration
 
@@ -105,7 +187,8 @@ The [left-only test WAV](../test_audio/README.md) can exercise reference notes t
 - Audio analysis: edit shared `analyzer.h`, extend the synthetic cases in `tests/core_tests.cpp` or `tests/scenarios/real_audio.txt`, then compile all stages and read `yin_us`/`cpu` in the stage 3/4 serial telemetry on the bench.
 - Layout: edit shared `ui.h`, watch it live with `make sim` (saves rebuild and reload the page) or render every state with `python3 tools/render_gallery.py`, update goldens, then compile the target.
 - Browser adapter only (`simulator/web/`): `make sim` while editing; `make test` confirms the module still matches native goldens. No target compile is needed when the shared headers are untouched.
-- Character, colours, fonts, motion timing: edit the PNG/JSON sources in `art/` (any pixel editor), run `python3 tools/make_sprites.py` (standard library only; it validates and regenerates the headers), then `make sim` to watch it or `make sim-build` + `python3 tools/render_gallery.py`, and update goldens. Details and drawing guidance in [ART.md](ART.md). `python3 tools/render_screen.py` creates the CAD texture from the actual shared renderer; a changed texture requires `make hero` so provenance stays valid.
+- Character, colours, fonts, motion timing: edit the PNG/JSON sources in `art/` (any pixel editor), run `python3 tools/make_sprites.py` (standard library only; it validates, regenerates the headers and prints what each animation step costs the panel), then `make sim` to watch it or `make sim-build` + `python3 tools/render_gallery.py`, and update goldens.
+- Bench instrumentation (`link.h`, the sketch's switches and telemetry, `tools/link.py`, the Device tab): keep `LinkState` and `tools/link.py` `STATE` in step (the `static_assert` and `assert` on its size catch drift), extend `linkTests()` and `tests/link_test.py`, `make test`, then `make firmware-all`. Details and drawing guidance in [ART.md](ART.md). `python3 tools/render_screen.py` creates the CAD texture from the actual shared renderer; a changed texture requires `make hero` so provenance stays valid.
 - Plain Markdown or agent-guidance edits: edit the relevant files and run `make test`; no CAD or Arduino dependencies are needed.
 - CAD geometry or generated hardware guides: create a Python virtualenv, install `requirements-cad.txt`, then regenerate only affected outputs with `make cad cad-check`, `make render` (Blender) and `make docs`.
 - Presentation only: `make hero` renders the existing STEP using Blender and the CAD/Pillow environment; [details](MARKETING.md). It does not compile firmware or rebuild geometry.

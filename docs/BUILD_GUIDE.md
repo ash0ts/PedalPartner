@@ -276,7 +276,7 @@ Open firmware/VEX_Pocket_Rival/VEX_Pocket_Rival.ino. Choose Teensy 4.1, USB Type
 
 ### 4 / VERIFY + UPLOAD
 
-Click Verify, then Upload. Select the Teensy port. If prompted, press the physical Program button. Open Serial Monitor at 115200.
+Click Verify, then Upload. Select the Teensy port. If prompted, press the physical Program button. Open Serial Monitor at 115200. From a terminal the same steps are make firmware STAGE=1, make upload STAGE=1, make monitor.
 
 **Checkpoint:** Onboard LED blinks and Serial says VEX USB OK. No .hex is supplied: the complete target build still needs this verification.
 
@@ -290,7 +290,7 @@ Add display wires W01-W10 and controls W11-W14. Keep SPI wires short, initially 
 
 ### 2 / UPLOAD
 
-Set VEX_STAGE2, Verify and Upload. The display should show the bat and live M/Q/F button states.
+Set VEX_STAGE2, Verify and Upload. The display should show the bat and live M/Q/F button states. Serial prints one JSON line a second: flush_us is the time to draw and send one cadence, tx_bytes the rows sent. Type f, b, 1 or 2 in the monitor to compare full-frame, band-diff and 100 vs 200ms redraws.
 
 ### 3 / EXERCISE
 
@@ -589,7 +589,7 @@ Actual display/audio behavior, component revisions, wiring clearance, electrical
 
 ### TARGET BUILD EVIDENCE
 
-Run make setup-firmware and make firmware-all without hardware. GitHub Actions compiles all stages. Check the run result for this commit; local preparation downloads were blocked by HTTP403.
+make setup-firmware and make firmware-all compile all four stages without hardware (passes locally, 17 Nov 2026). Display timing is instrumented (flush_us, tx_bytes) but unmeasured until a board is on the bench.
 
 ### MENTOR RELEASE
 
@@ -639,7 +639,11 @@ Install Arduino CLI; make setup-firmware; make firmware-all. This compiles all f
 
 The simulator injects RMS/peak/Hz; it does not emulate the ADC, pitch detector, USB noise, switches or physical screen optics.
 
-**Checkpoint:** See docs/LOCAL_DEVELOPMENT.md for Mac setup, dependencies and staged Verify/Upload instructions.
+### WITH A TEENSY ATTACHED
+
+make sim DEVICE=auto opens the Device tab: the real panel mirrored over USB beside the simulator frame, a pixel diff, the serial switches and telemetry sparklines.
+
+**Checkpoint:** See docs/LOCAL_DEVELOPMENT.md for Mac setup, dependencies, staged Verify/Upload instructions and the bench loop.
 
 ## 33. Sources and design provenance
 

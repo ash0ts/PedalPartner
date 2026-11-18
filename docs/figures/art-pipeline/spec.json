@@ -5,23 +5,23 @@
  "title": "VEX art pipeline",
  "eyebrow": "PedalPartner / technical guide",
  "question": "How does a PNG drawn by an artist become pixels on the pedal without touching C++?",
- "summary": "Artists edit PNG strips, a manifest and a theme in art/. tools/make_sprites.py validates them and generates sprites.h, anim.h, theme.h and two font headers. ui.h renders on a 100 ms cadence; flush.h finds the changed rows and the Teensy sends only those bands.",
+ "summary": "Artists edit PNG strips, a manifest (with optional play sequences) and a theme in art/. tools/make_sprites.py validates them, prints what each animation step costs the panel and generates sprites.h, anim.h, theme.h and two font headers. ui.h renders on a 100 ms cadence; flush.h finds the changed rows, the Teensy sends only those bands and reports flush_us and tx_bytes over serial.",
  "provenance": "actual",
  "steps": [
   {
    "id": "draw",
    "title": "Draw in art/",
-   "body": "PNG strips of 32 x 32 frames, manifest.json timing and theme.json colours."
+   "body": "PNG strips of 32 x 32 frames, manifest.json timing and play sequences, theme.json colours."
   },
   {
    "id": "import",
    "title": "Import and validate",
-   "body": "tools/make_sprites.py rejects off-palette pixels, partial alpha, wrong strip sizes and frame periods that are not multiples of DISPLAY_MS, then writes the committed headers."
+   "body": "tools/make_sprites.py rejects off-palette pixels, partial alpha, wrong strip sizes, frame periods that are not multiples of DISPLAY_MS and out-of-range sequences, writes the committed headers and prints the step cost."
   },
   {
    "id": "render",
    "title": "Render and flush",
-   "body": "ui.h quantises time to DISPLAY_MS; flush.h compares rows with the shadow buffer and the .ino writes only the dirty bands over SPI."
+   "body": "ui.h quantises time to DISPLAY_MS; flush.h compares rows with the shadow buffer; the .ino writes only the dirty bands over SPI, times the flush and can stream the bands to the workbench Device tab."
   }
  ],
  "states": [
@@ -62,7 +62,7 @@
     "render"
    ],
    "artwork": "render.svg",
-   "caption": "Band sizes measured on the host simulator; bench SPI timing still to be recorded."
+   "caption": "Band sizes are the importer's prediction; flush_us and the Device tab mirror come from the bench."
   }
  ],
  "source_links": [

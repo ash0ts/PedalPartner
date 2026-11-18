@@ -14,9 +14,11 @@ The product is VEX / Pocket Rival, a buildable first guitar companion with origi
 |---|---|
 | Host logic, simulator, repository consistency | `make test` |
 | In-browser workbench (firmware as WebAssembly; needs `em++`) | `make sim` |
+| Workbench with a Teensy mirrored in the Device tab (needs pyserial) | `make sim DEVICE=auto` |
 | Compile the WebAssembly module only / compare it with native goldens | `make web` / `make web-check` |
 | Install target dependencies | `make setup-firmware` |
 | Compile all target stages; no upload | `make firmware-all` |
+| List PJRC serial ports / program one compiled stage / read telemetry and link packets | `make ports` / `make upload STAGE=n [SERIAL=/dev/cu.…]` / `make monitor` |
 | Install CAD/docs packages in a virtualenv | `python3 -m pip install -r requirements-cad.txt` |
 | Regenerate CAD and validate exported STEP | `make cad cad-check` |
 | Assembly illustrations from existing meshes | `make render` |
@@ -35,6 +37,7 @@ Python 3.10+ and C++17 suffice for host tests. CAD uses build123d 0.10.0. Target
 - Practice, pitch math and record layout: `firmware/VEX_Pocket_Rival/core.h`.
 - Device behavior (controls, calibration, notices, saves): shared `app.h`; level/pitch analysis: shared `analyzer.h`.
 - Display: shared `ui.h`; dirty-band flush `flush.h`. Sprites, animation timing, theme colours and fonts: `art/` (PNG + JSON), imported by `tools/make_sprites.py` into generated `theme.h`, `sprites.h`, `anim.h`, `tinyfont.h`, `displayfont.h`; never hand-edit those. See `docs/ART.md`.
+- Bench link (band/state packets, CRC-32, 76-byte `LinkState`): shared `link.h` and its Python mirror `tools/link.py`; telemetry JSON, serial switches and the `Panel` adapter: `.ino`; upload/monitor: `tools/firmware.py`; serial bridge and Device tab: `tools/web.py`, `simulator/web/`.
 - Physical integration: `.ino` (adapters only); native simulator and test oracle: `simulator/main.cpp`; browser adapter and page: `simulator/web/` (built by `tools/web.py`); scenario scripts and golden frames: `tests/scenarios/`, `tests/golden/`.
 - Evidence: `hardware/generated/checks/`, `checks/`, GitHub Actions, measured CSV logs.
 
