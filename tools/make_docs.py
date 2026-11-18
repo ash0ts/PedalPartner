@@ -310,7 +310,7 @@ def export_data():
  if not (D/'measurements.csv').exists():
   with open(D/'measurements.csv','w',newline='') as f:
    w=csv.writer(f);w.writerow(['item','CAD_assumption_mm','measured_mm','change_required','mentor_initials'])
-   for row in [('Display mounting pitch','22.86'),('Display total thickness','5.21 in imported STEP'),('Audio shield revision','D community model; measure D2'),('Header seated gap','9.4'),('Display spacer thickness','2.0'),('Jack body reserve','17.5x31x17.5'),('Jack mounting hole','9.8'),('Button mounting hole','7.2'),('Foot mounting hole','12.4'),('Foot upper panel stack','2 plate +3 lid +1 washer'),('USB plug reserve','14x19x9'),('Board footprint available','86x146 plus cables'),('Screen readability','32.4 visible diameter'),('Wire service loop','lid lifts50')]:w.writerow(list(row)+['','',''])
+   for m in MEASUREMENTS:w.writerow([m[0],m[1],'','',''])   # tools/measure_check.py reads the filled CSV against the same list
  (R/'docs/SOURCES.md').write_text('# Sources\n\nChecked16 November2026. External files and source provenance are distinguished from original enclosure geometry.\n\n'+'\n'.join(f'- **{a} {b}:** {u}' for a,b,u in SOURCES)+'\n\nAdafruit display STEP SHA:66f39106daee442a08a0b5f994fe7cbfb830bd64. Mount coordinates extracted from manufacturer Eagle PCB. Designed by Limor Fried/Ladyada for Adafruit Industries. Manufacturer PCB license is retained in vendor/ADAFRUIT_LICENSE.txt. Prior community Teensy and audio models are carried over from the user\'s earlier pack, with unresolved physical revision differences.\n')
  md='# VEX Pocket Rival - Mentor Build Guide R1.1\n\n'
  for i,p in enumerate(PAGES,1):

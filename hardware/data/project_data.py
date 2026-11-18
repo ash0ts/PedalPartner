@@ -95,3 +95,27 @@ ACCEPTANCE=[
 ('17','Rig noise','Compare main rig with companion unplugged, powered and USB-connected; no added hum'),
 ('18','Heat / run','30min running with lid fitted; stable audio/UI, no reset; record case/board temperatures'),
 ]
+# Measurements that gate fabrication. One tuple per hardware/data/measurements.csv row, in CSV order:
+# (item, CAD assumption as printed in the CSV, tolerance in mm or None for a text/judgement row,
+#  where the number lives in hardware/cad/build_cad.py, parts whose print or cut waits on it).
+# The Fit_Coupon is the instrument for the hole rows, so it is never listed as a dependent.
+# tools/measure_check.py reads the CSV against this list; tools/make_docs.py seeds a missing CSV from it.
+MEASUREMENTS=[
+('Display mounting pitch','22.86',.2,'DISPLAY=[(-11.43,14.22),(11.43,14.22)]: lid countersinks, K_display_spacer/screw/nut positions',['B_faceplate','K_display_spacer_1','K_display_spacer_2']),
+('Display total thickness','5.21 in imported STEP',.3,'display=Pos(0,32,40.0) with P[display_plane]=40.0; bezel aperture cy(17.3) and window pocket cy(20.3,1.3) at z 44-45',['B_faceplate','C_gold_bezel','D_clear_window','K_display_spacer_1','K_display_spacer_2']),
+('Audio shield revision','D community model; measure D2',None,'AUDIO=[(-29.42,36.71),(.88,24.11),(.88,54.11)] tray holes; I_audio_spacer 15 mm; audio=Pos(-32.32,56.31,23)',['E_electronics_tray']),
+('Header seated gap','9.4',.5,'J_header box(2.54,35.56,9.4,x,38.7,13.6); I_audio_spacer ring(...,15,...) at z 8; stack must clear the faceplate at z 42',['E_electronics_tray','A_base']),
+('Display spacer thickness','2.0',.2,'K_display_spacer ring(2.3,1.1,2.,x,y,40.)',['K_display_spacer_1','K_display_spacer_2']),
+('Jack body reserve','17.5x31x17.5',None,'jack=box(17.5,31,17.5,18,54,11.25); base jack bore at (18,68,20) and rear portal box(18,10,12,-12,72,10)',['A_base']),
+('Jack mounting hole','9.8',.2,'base-=Cylinder(4.9,12) at (18,68,20); coupon cy(4.9) at x 20',['A_base']),
+('Button mounting hole','7.2',.2,'lid-=cy(3.6,5,x,-12,41) for x in -17,17; coupon cy(3.6) at x -16',['B_faceplate']),
+('Foot mounting hole','12.4',.2,'lid-=cy(6.2,5,0,-46,41); plate=rr(55,32,2,3,y=-46,z=40)-cy(6.2,...); coupon cy(6.2) at x 0',['B_faceplate','M_foot_reinforcement']),
+('Foot upper panel stack','2 plate +3 lid +1 washer',None,'plate z 40 (2 mm) + lid z 42 (3 mm) + N_switch_washer 1 mm against the M12 thread length of N_momentary_footswitch',['B_faceplate','M_foot_reinforcement']),
+('USB plug reserve','14x19x9',None,'reserves[USB_plug]=box(14,19,9,-12,65,10); base portal box(18,10,12,-12,72,10)',['A_base']),
+('Board footprint available','86x146 plus cables',None,'P[width]=86, P[length]=146: outside shell, lid and CASE post centres',['A_base','B_faceplate']),
+('Screen readability','32.4 visible diameter',None,'bezel aperture cy(17.3): judgement at board angle; a failure is a redesign, not a part tweak',[]),
+('Wire service loop','lid lifts50',None,'reserves[display_wire_service]=box(30,10,5,0,7,31) and right_wire_lane: wiring length, not geometry',[]),
+('Footswitch cap bore','10.4',.2,'cap=cy(8.5,5,0,-46,56)-cy(5.2,3.8,...): 10.4 mm bore over the switch shaft; omit the cap if it binds travel',['O_crimson_cap']),
+]
+# Cut profiles in hardware/generated/drawings/ and the part each one is for.
+CUT_PROFILES={'Foot_Plate_2mm_Aluminum.dxf':'M_foot_reinforcement','Window_1mm_Polycarbonate.dxf':'D_clear_window'}

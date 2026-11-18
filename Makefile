@@ -23,6 +23,7 @@ test: build/core-tests build/vex-sim
 	$(PYTHON) tests/art_test.py
 	$(PYTHON) tests/link_test.py
 	$(PYTHON) tests/bench_report_test.py
+	$(PYTHON) tests/measure_check_test.py
 	$(PYTHON) tools/check_project.py
 	$(PYTHON) tools/web.py check
 sim-build: build/vex-sim
@@ -62,6 +63,9 @@ bench:
 # Summarise the latest bench log (build/bench/latest.jsonl) or LOG=path.
 bench-report:
 	$(PYTHON) tools/bench_report.py $(LOG)
+# Measured parts against CAD assumptions, and which STL/DXF files may be fabricated now.
+measure-check:
+	$(PYTHON) tools/measure_check.py
 cad:
 	$(PYTHON) hardware/cad/build_cad.py
 	$(PYTHON) hardware/cad/make_cut_profiles.py
