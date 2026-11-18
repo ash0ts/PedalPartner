@@ -72,7 +72,8 @@ def monitor(port,baud,send):
     sys.path.insert(0,str(ROOT/'tools'));import link
     try:import serial
     except ImportError:sys.exit('pyserial is missing: python3 -m pip install -r requirements-bench.txt')
-    decoder=link.Decoder();print(f'Monitoring {port} at {baud}; Ctrl-C stops. Characters typed here are not forwarded; use --send or the workbench Device tab.',flush=True)
+    decoder=link.Decoder();log=link.BenchLog(ROOT,port,'tools/firmware.py monitor')
+    print(f'Monitoring {port} at {baud}; Ctrl-C stops. Characters typed here are not forwarded; use --send or the workbench Device tab.\nbench log {log.path.relative_to(ROOT)} (make bench-report summarises it)',flush=True)
     with serial.Serial(port,baud,timeout=.2) as s:
         if send:s.write(send.encode())
         try:
@@ -80,8 +81,10 @@ def monitor(port,baud,send):
                 chunk=s.read(4096)
                 if not chunk:continue
                 for kind,item in decoder.feed(chunk):
+                    if kind!='band':log.record(kind,item)
                     if kind=='text':print(item,flush=True)
                     elif kind=='band':print(f'[band y={item[0]} h={item[1]}]',flush=True)
                     elif kind=='state':print(f'[state anim={item["anim"]} frame={item["frame"]} flush_us={item["flush_us"]} tx_bytes={item["tx_bytes"]}]',flush=True)
-        except KeyboardInterrupt:print('\nMonitor stopped.')
+        except KeyboardInterrupt:print(f'\nMonitor stopped. Summary: make bench-report')
+        finally:log.close()
 if __name__=='__main__':main()

@@ -10,7 +10,7 @@
 - `E_electronics_tray.stl`: PETG, flat.
 - `K_display_spacer_1.stl`, `K_display_spacer_2.stl`: nominal 2.0 mm thickness; actual washer/spacer stack may replace these after measurement.
 - `O_crimson_cap.stl`: optional fit experiment. Its 10.4 mm bore is not a guaranteed press fit. Omit it if loose or if it limits switch travel; a purchased compatible cap is an alternative.
-- Print `Fit_Coupon.stl` first.
+- Print `Fit_Coupon.stl` first. `make measure-check` reads `hardware/data/measurements.csv` and lists every STL and DXF as *print now* (nothing measured gates it: the coupon and the two cosmetic inserts), *ready* (its measurements are in and within tolerance) or *wait* (with the rows still needed). Follow that table rather than this list once parts are in hand.
 
 All selected STLs are in `hardware/generated/stl/`, centered in XY with their print face at Z=0. The bezel export is already flipped pocket-up. STEP stays in assembly coordinates.
 
@@ -27,6 +27,8 @@ Starting print profile:0.2 mm layers,5 perimeters,6 solid top/bottom layers,35% 
 The combined assembly, vendor PCBs, switch/jack envelopes, fasteners or `Wiring_Reserves.step` are references, not printable replacements.
 
 ## Measure before release
+
+Each row of `measurements.csv` maps to the `build_cad.py` constant it stands for and the parts that wait on it (`MEASUREMENTS` in `hardware/data/project_data.py`; `make measure-check` prints the mapping). An out-of-tolerance value with an empty `change_required` column is flagged until a decision is written.
 
 The Adafruit display mounting coordinates come from its PCB source, but purchased revisions still need checking. The Teensy/audio geometry is community-sourced. Header gap, exact RevD/D2 component heights, jack body/retention and button hardware are not guaranteed by the model.
 

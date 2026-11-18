@@ -10,6 +10,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/'hardware/data'))
 from project_data import BOM, FASTENERS, WIRING
+sys.path.insert(0, str(ROOT/'tools'))
+import measure_check
 
 def main():
     errors = []
@@ -57,9 +59,10 @@ def main():
         text = path.read_text()
         require(('ui.h' in text or 'app.h' in text) and 'vex::drawScreen' in text, f'{path}: shared renderer disconnected')
         require('app.h' in text and 'vex::App' in text, f'{path}: shared device state machine disconnected')
+    errors += measure_check.structural_check()
     if errors:
         raise SystemExit('\n'.join(errors))
-    print('PASS: source syntax, BOM/wiring exports, assembly ownership, STEP report, hero provenance, document links and skills')
+    print('PASS: source syntax, BOM/wiring exports, assembly ownership, STEP report, hero provenance, measurement gate data, document links and skills')
 
 if __name__ == '__main__':
     main()

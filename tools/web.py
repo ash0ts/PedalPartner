@@ -73,6 +73,7 @@ class DeviceBridge:
     def __init__(self,device):
         self.device=device;self.port=None;self.status='waiting';self.error='';self.serial=None
         self.frame=link.Frame();self.state=None;self.telemetry=[];self.log=[];self.generation=0;self.frame_generation=0
+        self.benchlog=None   # build/bench/<start>.jsonl, opened on connect (link.BenchLog)
         self.lock=threading.Lock();self.cond=threading.Condition(self.lock);self.outbox=[]
         threading.Thread(target=self.run,daemon=True).start()
     def find(self):
@@ -96,6 +97,8 @@ class DeviceBridge:
             try:
                 with serial.Serial(port,115200,timeout=.05) as s:
                     self.serial=s;decoder=link.Decoder();self.bump(status='connected',port=port,error='',frame=link.Frame())
+                    if self.benchlog:self.benchlog.close()
+                    self.benchlog=link.BenchLog(ROOT,port,'tools/web.py serve --device');print(f'bench log {self.benchlog.path.relative_to(ROOT)} (make bench-report summarises it)',flush=True)
                     while True:
                         with self.lock:out=''.join(self.outbox);self.outbox.clear()
                         if out:s.write(out.encode())
@@ -105,6 +108,7 @@ class DeviceBridge:
                         if not items:continue
                         with self.cond:
                             for kind,item in items:
+                                if kind!='band' and self.benchlog:self.benchlog.record(kind,item)
                                 if kind=='band':self.frame.apply(*item);self.frame_generation+=1
                                 elif kind=='state':self.state=item
                                 else:
@@ -116,7 +120,7 @@ class DeviceBridge:
             except (OSError,serial.SerialException) as e:
                 self.serial=None;self.bump(status='waiting',port=None,error=str(e)[:200]);time.sleep(1)
     def send(self,chars):
-        chars=''.join(c for c in chars if c in 'fb12l?mqkMQKcspr')
+        chars=''.join(c for c in chars if c in 'fb12l?mqkMQKcspr+-gGt')
         with self.lock:
             if self.status!='connected':return False
             self.outbox.append(chars);return bool(chars)
@@ -124,7 +128,8 @@ class DeviceBridge:
         with self.cond:
             if self.generation==want:self.cond.wait(wait)
             return {'status':self.status,'port':self.port,'error':self.error,'generation':self.generation,'frame_generation':self.frame_generation,
-                    'frame_complete':self.frame.complete,'state':self.state,'telemetry':list(self.telemetry),'log':self.log[-30:]}
+                    'frame_complete':self.frame.complete,'state':self.state,'telemetry':list(self.telemetry),'log':self.log[-30:],
+                    'bench_log':str(self.benchlog.path.relative_to(ROOT)) if self.benchlog else None}
     def pixels(self):
         with self.lock:return bytes(self.frame.pixels),self.frame_generation
 
@@ -202,12 +207,14 @@ VexModule().then(M=>{
   // tests/scenarios/personality.txt: two consecutive strum frames one display cadence apart.
   M._vex_boot(4,0);now=0;
   M._vex_serial(99,now);audio(3100,.001,.002,0,0);press('foot',100);audio(3000,.1,.3);frames.push(frame());audio(100,.1,.3);frames.push(frame());
+  // tests/scenarios/stages_and_tuner.txt: stage 2, then the bench test pattern (serial `t`).
+  M._vex_boot(2,0);now=0;press('foot',100);M._vex_test(1);frames.push(frame());M._vex_test(0);
   process.stdout.write(frames.join('\n'));
 });'''
     r=subprocess.run([node,'-e',script,str(OUT/'vex.js')],capture_output=True,text=True,cwd=ROOT)
     if r.returncode:sys.exit('node failed:\n'+r.stderr[-2000:])
     import base64
-    names=['pet_listening','tuner_sharp','strum_frame_a','strum_frame_b'];got=r.stdout.strip().split('\n')
+    names=['pet_listening','tuner_sharp','strum_frame_a','strum_frame_b','test_pattern'];got=r.stdout.strip().split('\n')
     if len(got)!=len(names):sys.exit(f'WASM check produced {len(got)} frames, expected {len(names)}')
     for name,frame in zip(names,got):
         golden=png_rgb((ROOT/f'tests/golden/{name}.png').read_bytes());d=diff_count(golden,base64.b64decode(frame))

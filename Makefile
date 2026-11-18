@@ -6,10 +6,11 @@ PORT ?= 8765
 # Bench loop: DEVICE is a serial port (/dev/cu.usbmodem*) or `auto` (exactly one Teensy); empty = no device.
 DEVICE ?=
 SERIAL ?=
+SEND ?=
 HEADERS := $(wildcard firmware/VEX_Pocket_Rival/*.h)
 ART := $(wildcard art/*.json art/*/*.json art/*/*.png)
 
-.PHONY: test sim sim-build art art-check motion web web-check firmware firmware-all setup-firmware upload monitor ports cad cad-check render render-meshes hero pack-mentor docs check clean
+.PHONY: test sim sim-build art art-check motion web web-check firmware firmware-all setup-firmware upload monitor ports bench bench-report measure-check cad cad-check render render-meshes hero pack-mentor docs check clean
 build:
 	mkdir -p build
 build/core-tests: tests/core_tests.cpp $(HEADERS) | build
@@ -22,6 +23,8 @@ test: build/core-tests build/vex-sim
 	$(PYTHON) tests/pack_test.py
 	$(PYTHON) tests/art_test.py
 	$(PYTHON) tests/link_test.py
+	$(PYTHON) tests/bench_report_test.py
+	$(PYTHON) tests/measure_check_test.py
 	$(PYTHON) tools/check_project.py
 	$(PYTHON) tools/web.py check
 sim-build: build/vex-sim
@@ -50,9 +53,20 @@ firmware-all:
 upload:
 	$(PYTHON) tools/firmware.py upload --stage $(STAGE) $(if $(SERIAL),--port $(SERIAL),)
 monitor:
-	$(PYTHON) tools/firmware.py monitor $(if $(SERIAL),--port $(SERIAL),)
+	$(PYTHON) tools/firmware.py monitor $(if $(SERIAL),--port $(SERIAL),) $(if $(SEND),--send '$(SEND)',)
 ports:
 	$(PYTHON) tools/firmware.py ports
+# One bench loop: compile the stage, program the board, open the workbench with the Device tab bridged.
+bench:
+	$(MAKE) firmware STAGE=$(STAGE)
+	$(MAKE) upload STAGE=$(STAGE) SERIAL=$(SERIAL)
+	$(MAKE) sim DEVICE=$(if $(SERIAL),$(SERIAL),auto)
+# Summarise the latest bench log (build/bench/latest.jsonl) or LOG=path.
+bench-report:
+	$(PYTHON) tools/bench_report.py $(LOG)
+# Measured parts against CAD assumptions, and which STL/DXF files may be fabricated now.
+measure-check:
+	$(PYTHON) tools/measure_check.py
 cad:
 	$(PYTHON) hardware/cad/build_cad.py
 	$(PYTHON) hardware/cad/make_cut_profiles.py

@@ -3,6 +3,13 @@ stage 2
 press foot 100
 expect stage=2 running=false calibrated=false
 golden stage2_screen_check
+# Bench `t`: the display test pattern replaces the screen until toggled off; App state is untouched.
+test on
+expect test=true stage=2
+golden test_pattern
+test off
+expect test=false
+golden stage2_screen_check
 stage 3
 audio 200 .02 .45
 expect stage=3 rms=.02 peak=.45
