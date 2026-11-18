@@ -99,13 +99,13 @@ Exact identities matter; budget columns are allowances, not current quotations
 
 |ID / qty|Part to order|Why / source|Allowance|
 |---|---|---|---|
-|E01 / 1|PJRC TEENSY41 / TEENSY41_NE; non-lockable|Processor, USB, saved progress [S1]|$32-40|
-|E02 / 1|PJRC TEENSY4_AUDIO Rev D or D2; not Rev C|Line input and conversion [S2]|$20-28|
-|E03 / 1|Adafruit 6178; GC9A01A; 240x240|Documented driver and mounting geometry [S4]|$17.5-17.5|
-|E04 / 2|SparkFun COM-11992, SPST normally open|Mode / Quest; solder lugs [S9]|$2.5-2.5|
-|E05 / 1|P-H605-BLK; SPST normally open; M12|Start/pause; not an audio bypass switch [S10]|$5-10|
-|E06 / 1|Switchcraft 111X, mono solder lug, with nut/washer|Buffered dry input only [S11]|$3-7|
-|E07 / 1|Bourns 3386P-1-103LF|Input level adjustment, tool operated [S12]|$2-4|
+|E01 / 1|SparkFun DEV-16771 (or DEV-20359 no-Eth); PJRC TEENSY41, unpinned, non-lockable|Processor, USB, saved progress (pinout: S1) [S19]|$30-40|
+|E02 / 1|SparkFun DEV-15845; PJRC TEENSY4_AUDIO Rev D or D2 (not Rev C)|Line input and conversion (pinout: S2) [S20]|$10-28|
+|E03 / 1|Adafruit 6178; GC9A01A 1.28in 240x240 TFT (wired 0.1in pads; EYESPI cable unused)|Documented driver and mounting geometry [S4]|$17.5-17.5|
+|E04 / 2|SparkFun COM-11992, SPST normally open, 6.75 mm thread, nut/washer|Mode / Quest; solder lugs [S9]|$2.5-3|
+|E05 / 1|Amplified Parts P-H605-BLK; SPST normally open soft switch, M12x1|Start/pause; not an audio bypass switch [S10]|$5-10|
+|E06 / 1|Switchcraft 111X (Amplified Parts W-SC-111X), 1/4in mono enclosed, nut/washer|Buffered dry input only; 0.276in bushing [S11]|$3.25-7|
+|E07 / 1|Bourns 3386P-1-103LF, 10k cermet single-turn (DigiKey/Mouser)|Input level adjustment, tool operated [S12]|$2-4|
 
 **Checkpoint:** Do not substitute the old ST7789 square display or a Rev C audio board into these pin tables.
 
@@ -115,14 +115,14 @@ Complete the bench circuits before ordering the enclosure
 
 |ID / qty|Part / specification|Purpose|Allowance|
 |---|---|---|---|
-|E08 / 1|10k ohm, 1%, 0.25W, through-hole|Input attenuator series arm|$0.1-0.5|
-|E09 / 2|1k ohm, 1%, 0.25W, through-hole|Audio series resistor / LED limit|$0.2-1|
-|E10 / 1|10k ohm, 1%, 0.25W, through-hole|Hold display SDCS high|$0.1-0.5|
-|E11 / 1|3 mm amber diffused, ordinary low-current LED|Playing indicator|$0.2-1|
-|E12 / 1|2.54 mm pitch; cut 14x28 mm for input board|Hand-wired attenuator; no custom PCB needed|$3-8|
-|E13 / 1|Two 14-pin male strips + two 14-pin female socket strips, 2.54 mm; access to used pins|Socketed audio stack, nominal 9.4 mm gap; measure|$4-10|
-|E14 / 1|26AWG stranded wire, shielded audio pair, heat shrink, 2 small cable ties|Harness and strain relief|$8-15|
-|E15 / 1|Micro-B to your Mac; USB5 V only|Power and firmware upload; measure plug envelope|$5-10|
+|E08 / 1|10k ohm, 1%, 0.25W, through-hole metal film|Input attenuator series arm|$0.1-0.5|
+|E09 / 2|1k ohm, 1%, 0.25W, through-hole metal film|Audio series resistor / LED limit|$0.2-1|
+|E10 / 1|10k ohm, 1%, 0.25W, through-hole metal film|Hold display SDCS high|$0.1-0.5|
+|E11 / 1|3 mm amber diffused, standard 2 V 20mA through-hole LED|Playing indicator|$0.2-1|
+|E12 / 1|2.54 mm FR4 plated-through protoboard; cut 14x28 mm for input board|Hand-wired attenuator; no custom PCB needed|$3-8|
+|E13 / 1|Two 14-pin male + two 14-pin female 2.54 mm strips (e.g. SparkFun PRT-00116 + PRT-00115 cut to 14p)|Socketed audio stack, nominal 9.4 mm gap; measure|$4-10|
+|E14 / 1|26AWG stranded hookup wire, shielded 1-pair audio cable, heat shrink, 2 narrow zip ties|Harness and strain relief|$8-15|
+|E15 / 1|USB-A to Micro-B data cable (e.g. SparkFun CAB-10215; not charge-only); USB 5 V only|Power and firmware upload; measure plug envelope|$5-10|
 
 **Checkpoint:** Budget excludes labour, tools, a new buffered splitter, shipping and tax. BOM.csv contains all links and order stages.
 
@@ -653,7 +653,7 @@ make sim DEVICE=auto opens the Device tab: the real panel mirrored over USB besi
 
 ## 33. Sources and design provenance
 
-Product references checked 16Nov 2026; exact source URLs also in SOURCES.md
+Product references and live vendor links; exact URLs also in SOURCES.md
 
 |ID|Primary source / purpose|Link|
 |---|---|---|
@@ -669,14 +669,14 @@ Product references checked 16Nov 2026; exact source URLs also in SOURCES.md
 
 **Checkpoint:** Adafruit CAD/PCB attribution is retained in vendor/. Imported community models are references; verify the actual hardware.
 
-## 34. Sources and next-session handoff
+## 34. Sources and provenance (2)
 
-Product references checked 16Nov 2026; exact source URLs also in SOURCES.md
+Product references and live vendor links; exact URLs also in SOURCES.md
 
 |ID|Primary source / purpose|Link|
 |---|---|---|
 |S10|SPST soft footswitch P-H605-BLK|<link href="https://www.amplifiedparts.com/products/footswitch-spst-momentary-solder-lugs-soft-switch-black" color="#98394A">Open source</link>|
-|S11|Switchcraft 111X mono jack|<link href="https://www.switchcraft.com/open-circuit-solder-lug-termination/111x/" color="#98394A">Open source</link>|
+|S11|Switchcraft 111X mono jack (Amplified Parts W-SC-111X)|<link href="https://www.amplifiedparts.com/products/14-jack-switchcraft-111x-mono-enclosed-open-circuit" color="#98394A">Open source</link>|
 |S12|Bourns 3386P trimmer dimensions / pinout|<link href="https://www.bourns.com/docs/product-datasheets/3386.pdf" color="#98394A">Open source</link>|
 |S13|Teensy Audio Workshop teaching reference|<link href="https://www.pjrc.com/store/workshop_t4.pdf" color="#98394A">Open source</link>|
 |S14|Teenage Engineering assembly-layout reference|<link href="https://assets.teenage.engineering/_img/6399cd 15132d7e0af 3c8620c_original.pdf" color="#98394A">Open source</link>|
@@ -684,5 +684,18 @@ Product references checked 16Nov 2026; exact source URLs also in SOURCES.md
 |S16|Display manufacturer PCB|<link href="https://github.com/adafruit/Adafruit-1.28-240x240-Round-Display-PCB" color="#98394A">Open source</link>|
 |S17|build 123d documentation|<link href="https://build 123d.readthedocs.io/en/latest/" color="#98394A">Open source</link>|
 |S18|Example multi-effects manual (Zoom G3): check how your own rig treats its tuner/AUX dry feed|<link href="https://cdn.shopify.com/s/files/1/0756/7638/5564/files/G32026.pdf" color="#98394A">Open source</link>|
+
+**Checkpoint:** Adafruit CAD/PCB attribution is retained in vendor/. Imported community models are references; verify the actual hardware.
+
+## 35. Sources and provenance (3)
+
+Product references and live vendor links; exact URLs also in SOURCES.md
+
+|ID|Primary source / purpose|Link|
+|---|---|---|
+|S19|SparkFun Teensy 4.1 retail listing (DEV-16771; DEV-20359 without Ethernet)|<link href="https://www.sparkfun.com/teensy-4-1.html" color="#98394A">Open source</link>|
+|S20|SparkFun Teensy 4 Audio Shield Rev D retail listing (DEV-15845)|<link href="https://www.sparkfun.com/teensy-4-audio-shield-rev-d.html" color="#98394A">Open source</link>|
+|S21|SparkFun 2.54 mm female header strip PRT-00115 (pair with male PRT-00116)|<link href="https://www.sparkfun.com/female-headers.html" color="#98394A">Open source</link>|
+|S22|SparkFun USB-A to Micro-B data cable CAB-10215|<link href="https://www.sparkfun.com/usb-micro-b-cable-6-foot.html" color="#98394A">Open source</link>|
 
 **Checkpoint:** Adafruit CAD/PCB attribution is retained in vendor/. Imported community models are references; verify the actual hardware.

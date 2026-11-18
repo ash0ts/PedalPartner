@@ -262,10 +262,10 @@ add('Try the device before hardware arrives','Shared C++ practice logic and scre
  ('UNDERSTAND THE LIMIT','The simulator injects RMS/peak/Hz; it does not emulate the ADC, pitch detector, USB noise, switches or physical screen optics.'),
  ('WITH A TEENSY ATTACHED','make sim DEVICE=auto opens the Device tab: the real panel mirrored over USB beside the simulator frame, a pixel diff, the serial switches and telemetry sparklines.')],diagram='ui',check='See docs/LOCAL_DEVELOPMENT.md for Mac setup, dependencies, staged Verify/Upload instructions and the bench loop.')
 
-for start in [0,9]:
+for page_idx,start in enumerate(range(0,len(SOURCES),9)):
  rows=[['ID','Primary source / purpose','Link']]
  for sid,title,url in SOURCES[start:start+9]: rows.append([sid,title,f'<link href="{url}" color="#98394A">Open source</link>'])
- add('Sources and design provenance' if start==0 else 'Sources and next-session handoff','Product references checked16Nov2026; exact source URLs also in SOURCES.md',rows=rows,widths=[45,590,135],check='Adafruit CAD/PCB attribution is retained in vendor/. Imported community models are references; verify the actual hardware.')
+ add('Sources and design provenance' if page_idx==0 else f'Sources and provenance ({page_idx+1})','Product references and live vendor links; exact URLs also in SOURCES.md',rows=rows,widths=[45,590,135],check='Adafruit CAD/PCB attribution is retained in vendor/. Imported community models are references; verify the actual hardware.')
 
 PAGES.insert(4,dict(title='How the pieces fit',kicker='Exploded view of the actual CAD assembly',items=None,fig=None,diagram='exploded_key',rows=None,widths=None,check='Letters match the part filenames. Display hardware is recessed; the clear window is captured separately above it.'))
 def write_pdf():

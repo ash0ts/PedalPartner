@@ -1,26 +1,33 @@
 # Final R1.1 shopping list
 
-This list matches the current CAD and wiring. Buy the bench electronics first. Measure the actual hardware and pass the fit coupon before committing to the full enclosure. Product links identify the specified parts; stock and prices can change.
+This list matches the current CAD and wiring. Buy the bench electronics first, or source one complete set for CAD fit verification. Product links point to live retail listings checked November 2026; stock and prices can change.
+
+## Quick vendor consolidation
+
+- **SparkFun** (official Teensy manufacturer/retailer): Teensy 4.1 unpinned (`DEV-16771`, or `DEV-20359` without Ethernet), Teensy 4 Audio Shield Rev D (`DEV-15845`), 2 × red panel buttons (`COM-11992`), 2.54 mm breakaway male + female headers (`PRT-00116` + `PRT-00115`, trimmed to two 14-pin rows), USB Micro-B data cable (`CAB-10215`).
+- **Adafruit**: 1.28" 240×240 round GC9A01A TFT (`#6178`). Do **not** substitute a square ST7789 breakout; the optional EYESPI flex cable is unused because VEX wires to the 0.1" pads.
+- **Amplified Parts**: soft SPST momentary footswitch (`P-H605-BLK`) and Switchcraft `111X` enclosed ¼" mono jack (`W-SC-111X`, includes nut and washer).
+- **DigiKey / Mouser / McMaster / shop stock**: Bourns `3386P-1-103LF` 10 kΩ trimmer, two `10 kΩ` and two `1 kΩ` 1% 0.25 W through-hole resistors, 3 mm amber LED, 2.54 mm FR4 protoboard, metric M2/M3 screws, nuts and M2 nylon spacers (schedule below), 2 mm aluminum sheet (`Foot_Plate_2mm_Aluminum.dxf`), and 1 mm clear polycarbonate (`Window_1mm_Polycarbonate.dxf`).
 
 ## Electronics and wiring
 
 | ID | Qty | Buy | Purpose / fit note |
 |---|---:|---|---|
-| E01 | 1 | **[Teensy 4.1](https://www.pjrc.com/store/teensy41.html)** — PJRC TEENSY41 / TEENSY41_NE; non-lockable | Processor, USB, saved progress; Bench |
-| E02 | 1 | **[Audio Adapter](https://www.pjrc.com/store/teensy3_audio.html)** — PJRC TEENSY4_AUDIO Rev D or D2; not Rev C | Line input and conversion; Bench |
-| E03 | 1 | **[Round display](https://www.adafruit.com/product/6178)** — Adafruit 6178; GC9A01A; 240x240 | Documented driver and mounting geometry; Bench |
-| E04 | 2 | **[Red finger button](https://www.sparkfun.com/momentary-button-panel-mount-red.html)** — SparkFun COM-11992, SPST normally open | Mode / Quest; solder lugs; Bench |
-| E05 | 1 | **[Momentary footswitch](https://www.amplifiedparts.com/products/footswitch-spst-momentary-solder-lugs-soft-switch-black)** — P-H605-BLK; SPST normally open; M12 | Start/pause; not an audio bypass switch; Bench |
-| E06 | 1 | **[Input jack](https://www.switchcraft.com/open-circuit-solder-lug-termination/111x/)** — Switchcraft 111X, mono solder lug, with nut/washer | Buffered dry input only; Fit gate |
-| E07 | 1 | **[10k trimmer](https://www.bourns.com/docs/product-datasheets/3386.pdf)** — Bourns 3386P-1-103LF | Input level adjustment, tool operated; Bench |
-| E08 | 1 | **Resistor R1** — 10k ohm, 1%, 0.25W, through-hole | Input attenuator series arm; Bench |
-| E09 | 2 | **Resistors R2 / R3** — 1k ohm, 1%, 0.25W, through-hole | Audio series resistor / LED limit; Bench |
-| E10 | 1 | **Resistor R4** — 10k ohm, 1%, 0.25W, through-hole | Hold display SDCS high; Bench |
-| E11 | 1 | **Status LED** — 3mm amber diffused, ordinary low-current LED | Playing indicator; Bench |
-| E12 | 1 | **Perfboard stock** — 2.54mm pitch; cut 14x28mm for input board | Hand-wired attenuator; no custom PCB needed; Bench |
-| E13 | 1 | **[Header / socket set](https://www.pjrc.com/store/teensy3_audio.html)** — Two 14-pin male strips + two 14-pin female socket strips, 2.54mm; access to used pins | Socketed audio stack, nominal 9.4mm gap; measure; Fit gate |
-| E14 | 1 | **Wire and insulation** — 26AWG stranded wire, shielded audio pair, heat shrink, 2 small cable ties | Harness and strain relief; Bench |
-| E15 | 1 | **[USB data cable](https://www.pjrc.com/store/teensy41.html)** — Micro-B to your Mac; USB5V only | Power and firmware upload; measure plug envelope; Bench |
+| E01 | 1 | **[Teensy 4.1](https://www.sparkfun.com/teensy-4-1.html)** — SparkFun DEV-16771 (or DEV-20359 no-Eth); PJRC TEENSY41, unpinned, non-lockable | Processor, USB, saved progress (pinout: S1); Bench |
+| E02 | 1 | **[Audio Adapter](https://www.sparkfun.com/teensy-4-audio-shield-rev-d.html)** — SparkFun DEV-15845; PJRC TEENSY4_AUDIO Rev D or D2 (not Rev C) | Line input and conversion (pinout: S2); Bench |
+| E03 | 1 | **[Round display](https://www.adafruit.com/product/6178)** — Adafruit 6178; GC9A01A 1.28in 240x240 TFT (wired 0.1in pads; EYESPI cable unused) | Documented driver and mounting geometry; Bench |
+| E04 | 2 | **[Red finger button](https://www.sparkfun.com/momentary-button-panel-mount-red.html)** — SparkFun COM-11992, SPST normally open, 6.75mm thread, nut/washer | Mode / Quest; solder lugs; Bench |
+| E05 | 1 | **[Momentary footswitch](https://www.amplifiedparts.com/products/footswitch-spst-momentary-solder-lugs-soft-switch-black)** — Amplified Parts P-H605-BLK; SPST normally open soft switch, M12x1 | Start/pause; not an audio bypass switch; Bench |
+| E06 | 1 | **[Input jack](https://www.amplifiedparts.com/products/14-jack-switchcraft-111x-mono-enclosed-open-circuit)** — Switchcraft 111X (Amplified Parts W-SC-111X), 1/4in mono enclosed, nut/washer | Buffered dry input only; 0.276in bushing; Fit gate |
+| E07 | 1 | **[10k trimmer](https://www.bourns.com/docs/product-datasheets/3386.pdf)** — Bourns 3386P-1-103LF, 10k cermet single-turn (DigiKey/Mouser) | Input level adjustment, tool operated; Bench |
+| E08 | 1 | **Resistor R1** — 10k ohm, 1%, 0.25W, through-hole metal film | Input attenuator series arm; Bench |
+| E09 | 2 | **Resistors R2 / R3** — 1k ohm, 1%, 0.25W, through-hole metal film | Audio series resistor / LED limit; Bench |
+| E10 | 1 | **Resistor R4** — 10k ohm, 1%, 0.25W, through-hole metal film | Hold display SDCS high; Bench |
+| E11 | 1 | **Status LED** — 3mm amber diffused, standard 2V 20mA through-hole LED | Playing indicator; Bench |
+| E12 | 1 | **Perfboard stock** — 2.54mm FR4 plated-through protoboard; cut 14x28mm for input board | Hand-wired attenuator; no custom PCB needed; Bench |
+| E13 | 1 | **[Header / socket set](https://www.sparkfun.com/female-headers.html)** — Two 14-pin male + two 14-pin female 2.54mm strips (e.g. SparkFun PRT-00116 + PRT-00115 cut to 14p) | Socketed audio stack, nominal 9.4mm gap; measure; Fit gate |
+| E14 | 1 | **Wire and insulation** — 26AWG stranded hookup wire, shielded 1-pair audio cable, heat shrink, 2 narrow zip ties | Harness and strain relief; Bench |
+| E15 | 1 | **[USB data cable](https://www.sparkfun.com/usb-micro-b-cable-6-foot.html)** — USB-A to Micro-B data cable (e.g. SparkFun CAB-10215; not charge-only); USB 5V only | Power and firmware upload; measure plug envelope; Bench |
 
 ## Mechanical parts and finishing
 
@@ -67,10 +74,10 @@ Small electrical totals: **two 10 kΩ fixed resistors, two 1 kΩ fixed resistors
 
 ## Tools and budget
 
-Have a temperature-controlled soldering iron, solder/flux, fume extraction, multimeter, calipers, cutters, wire stripper, drivers and small files available with the mentor. Arrange drilling/cutting and a PETG printer or print service. No custom PCB fabrication is required.
+Have a temperature-controlled soldering iron, solder/flux, fume extraction, multimeter, calipers, cutters, wire stripper, drivers and small files on hand. Arrange drilling/cutting and a PETG printer or fabrication service. No custom PCB fabrication is required for R1.1.
 
-Planning allowance: **$139–$257**, roughly **$140–260** for parts and basic fabrication. These are budget allowances, not a live cart or guaranteed quotes. Excludes tools, mentor time, shipping/tax and any new buffered splitter. Buy quantities in the Qty column; CSV allowance columns are per line, not per individual item.
+Planning allowance: **$127–$258**, roughly **$130–260** for parts and basic prototype materials. These are budget allowances, not a live cart or fabrication quote. Excludes labour, tools, shipping/tax and any external buffered splitter. Buy quantities in the Qty column; CSV allowance columns are per line, not per individual item.
 
-The existing rig must provide a verified **buffered dry feed** that remains available while playing. If it does not, select a suitable buffered splitter with the mentor before ordering an extra pedal; the companion cannot take a raw passive guitar feed directly through this attenuator.
+The player's rig must provide a verified **buffered dry feed** that remains live while playing. If it does not, use an external buffered splitter in front of the pedalboard; R1.1 has no output jack and cannot take a raw passive guitar pickup directly through its line-level attenuator.
 
 Machine-readable versions: [BOM.csv](../hardware/data/BOM.csv), [fasteners.csv](../hardware/data/fasteners.csv), [wiring.csv](../hardware/data/wiring.csv). Canonical editable source: `hardware/data/project_data.py`.

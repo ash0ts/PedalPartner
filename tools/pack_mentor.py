@@ -33,9 +33,14 @@ FIXED += tuple('hardware/generated/stl/' + name + '.stl' for name in PRINT_PARTS
 GLOBS = ('hardware/data/*.csv', 'hardware/generated/drawings/*.dxf')
 STUDIO_EXTRA = (
     'docs/STUDIO_BRIEF.md',
+    'docs/CAD_REVIEW.md',
     'docs/DECISIONS.md',
     'docs/EXTENSIBILITY.md',
     'docs/BRINGUP.md',
+    'docs/HANDOFF.md',
+    'docs/BUILD_GUIDE.md',
+    'docs/LOCAL_DEVELOPMENT.md',
+    'docs/PLAN.md',
     'docs/SOURCES.md',
     'hardware/generated/parameters.json',
     'firmware/VEX_Pocket_Rival/config.h',
@@ -69,7 +74,7 @@ read: an experienced second person.
 
 The nominal enclosure is 86 x 146 x 45 mm; the active screen is 32.4 mm across.
 USB 5 V only. Buffered dry audio input only. No audio output or bypass.
-Teensy target compilation and physical acceptance remain unverified.
+All four firmware stages compile locally for Teensy 4.1; physical acceptance remains unverified.
 
 The pack deliberately omits duplicate flat/subassembly STEPs, vendor source CAD,
 legacy/concept images, Blender intermediates and firmware toolchains. Source,
@@ -81,40 +86,38 @@ which bytes were packaged, not that new CAD or electrical checks were performed.
 Read `docs/THIRD_PARTY.md` and `hardware/vendor/PROVENANCE.md` for attribution and
 unresolved redistribution terms for community reference geometry.
 """
-START_STUDIO = """# VEX / Pocket Rival — R1.1 studio pack
+START_STUDIO = """# VEX / Pocket Rival — R1.1 studio & fabrication pack
 
 Unzip once and open this file. Keep the folders together. This packet is for a
-design studio or product team asked to take a working hobbyist prototype towards
-a manufacturable product. It is a proposal with stated evidence, not a validated
-design.
+design studio or fabrication partner reviewing physical fit against sourced BOM
+components and building the R1.1 3D-printed and laser-cut prototype enclosure.
 
-1. Read `docs/STUDIO_BRIEF.md` first: what the product is, what is fixed, what is
-   open, what we are asking for and what is deliberately not here.
-2. `assets/marketing/` shows the intended appearance (renders of the actual CAD,
-   proposed finishes). `assets/motion/vex-motion.mp4` and `storyboard.png` show the
-   character in motion at the real 240 x 240 resolution; `assets/screens/contact_sheet.png`
-   shows every screen state. These pixels are the product's personality; keep them.
-3. Open `hardware/generated/VEX_Pocket_Rival_Assembly.step` in CAD: five named service
+1. Read `docs/STUDIO_BRIEF.md` first: what VEX is, the locked R1.1 off-the-shelf
+   electronics BOM, where you have full geometry/layout latitude, Phase 1
+   deliverables, and how Phase 1 separates from future V2 PCB/volume work.
+2. Open `hardware/generated/VEX_Pocket_Rival_Assembly.step` in CAD: five named service
    groups, 72 components, millimetres. `parts.json` records which solids are original
-   geometry, vendor models or community references; `assembly_tree.json` records
-   ownership; `parameters.json` lists the enclosure driving dimensions.
-   `cad/Wiring_Reserves.step` is reserved space, not a part.
-4. `docs/VEX_Pocket_Rival_Mentor_Guide.pdf` is the hobbyist build guide. Read it for
-   the wiring, the bench order and the acceptance tests the prototype must pass; its
-   hand-wired perfboard and printed shell are the parts you are expected to redesign.
-5. `hardware/data/BOM.csv`, `wiring.csv`, `fasteners.csv` and `firmware/.../config.h`
-   are the electrical contract: pin ownership, exact module identities and the
-   USB-5-V-only, buffered-line-in-only architecture.
-6. `docs/DECISIONS.md` explains why things are the way they are; `docs/EXTENSIBILITY.md`
-   lists the hardware revisions already considered; `docs/BRINGUP.md` is the bench
-   plan that will produce the first measured numbers.
-7. `hardware/generated/stl/` and `drawings/` are the prototype fabrication files.
-   `hardware/data/measurements.csv` and `acceptance_log.csv` are blank until the
-   first bench session; nothing in them is measured yet.
+   geometry, vendor models (Adafruit #6178 display) or community/simplified envelopes
+   (Teensy 4.1, Audio Adapter, switches, jack); `assembly_tree.json` records
+   ownership; `parameters.json` lists driving dimensions; `docs/CAD_REVIEW.md` maps
+   every CAD file. `cad/Wiring_Reserves.step` shows reserved cable/plug zones.
+3. Order or verify parts from `docs/SHOPPING.md` and `hardware/data/BOM.csv` (live
+   SparkFun, Adafruit and Amplified Parts SKUs/links), `fasteners.csv` and `wiring.csv`.
+   Record measured physical dimensions in `hardware/data/measurements.csv`.
+4. Fabrication inputs: `hardware/generated/drawings/` has the DXFs for the 2 mm
+   aluminum foot-load plate and 1 mm clear polycarbonate window; `hardware/generated/stl/`
+   has the current print candidates; `docs/PRINTING.md` and
+   `docs/VEX_Pocket_Rival_1to1_Templates.pdf` have print and stock notes.
+5. `assets/marketing/` shows the intended charcoal, crimson and muted-gold finish
+   (renders of the actual CAD). `assets/motion/vex-motion.mp4`, `storyboard.png` and
+   `assets/screens/contact_sheet.png` show the 240 x 240 UI and character.
+6. `docs/VEX_Pocket_Rival_Mentor_Guide.pdf` (`docs/BUILD_GUIDE.md`) covers wiring,
+   staged bring-up and physical acceptance checks; `docs/DECISIONS.md` and
+   `docs/EXTENSIBILITY.md` cover rationale and future V2 scope.
 
 Nominal enclosure 86 x 146 x 45 mm; active screen 32.4 mm. USB 5 V only. Buffered dry
-audio input only. No audio output or bypass. No schematic file, no PCB, no force
-rating, no electrical or regulatory certification exists yet; see the brief.
+audio input only. No audio output or bypass. There is no PCB schematic file, force
+rating or electrical/regulatory certification yet; see `docs/STUDIO_BRIEF.md`.
 
 Source, simulator, firmware and latest status: https://github.com/ash0ts/PedalPartner
 `MANIFEST.json` hashes every included file. `docs/THIRD_PARTY.md` and
