@@ -23,12 +23,12 @@ FPS=1000//STEP
 # `fill <field> <value>` plays guitar until the reported field reaches the value (goal 5 min, level 2 at 10 active min).
 STORY=[
  ('Idle: breathe, blink every 4 s',['calibrate','wait 3400'],'wait',22,{'idle','blink'}),
- ('Footswitch: strum while playing',['press foot 100'],'audio',24,{'strum'}),
+ ('Footswitch: six-step strum',['press foot 100'],'audio',24,{'strum'}),
  ('Quest done: fragment cheer',['fill session_ms 300000'],'audio',29,{'cheer'}),
  ('Pause: session summary',['press foot 100'],'wait',14,{'idle','blink'}),
  ('Level 2: sparkle',['press foot 100','fill active_ms 600000'],'audio',29,{'levelup'}),
- ('30 s idle: sleep',['press foot 100','wait 30800'],'wait',16,{'sleep'}),
- ('MODE: tuner listens',['press mode 100'],'wait',12,{'listen'}),
+ ('30 s idle: sleep, Z rises',['press foot 100','wait 30800'],'wait',30,{'sleep'}),
+ ('MODE: tuner listens, ear tilts',['press mode 100'],'wait',20,{'listen'}),
  ('Tuner: A4 at +12 cents',['audio 300 .1 .3 443 .99'],'audio-note',12,{'listen'}),
 ]
 STEP_CMD={'wait':f'wait {STEP}','audio':f'audio {STEP} .1 .3','audio-note':f'audio {STEP} .1 .3 443 .99'}
@@ -76,9 +76,15 @@ def main():
                 (tmp/f"{index:04d}.png").write_bytes(compose(frame.read_bytes(),caption));index+=1
             shown={n for n,_ in names}
             if shown-allowed:problems.append(f'{caption}: showed {sorted(shown)}, allowed {sorted(allowed)}')
+            # Loops advance exactly one step per frame_ms: never skip a step, never go backwards, and a segment long
+            # enough to contain a step boundary must show at least one advance (step counts follow the manifest sequence).
+            advances=0
             for (a,fa),(b,fb) in zip(names,names[1:]):
-                m=MANIFEST[a]
-                if a==b and m['loop'] and m['frames']>1 and m['frame_ms']==STEP and fb!=(fa+1)%m['frames']:problems.append(f'{caption}: {a} went frame {fa} -> {fb}')
+                m=MANIFEST[a];steps=len(m.get('sequence',range(m['frames'])))
+                if a!=b or not m['loop'] or steps<2:continue
+                if fb==(fa+1)%steps:advances+=1
+                elif fb!=fa or m['frame_ms']==STEP:problems.append(f'{caption}: {a} went step {fa} -> {fb}')
+            if names and MANIFEST[names[0][0]]['loop'] and len({n for n,_ in names})==1 and count*STEP>MANIFEST[names[0][0]]['frame_ms'] and len(MANIFEST[names[0][0]].get('sequence',range(MANIFEST[names[0][0]]['frames'])))>1 and not advances:problems.append(f'{caption}: {names[0][0]} never advanced')
             seen[caption]=sorted(shown);captions.append((caption,start/FPS,index/FPS));sheet.append(start+count//2)
         p.stdin.close();p.wait(timeout=10)
         if problems:sys.exit('motion check failed:\n'+'\n'.join(problems))

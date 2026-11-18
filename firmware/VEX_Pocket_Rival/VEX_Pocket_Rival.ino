@@ -3,6 +3,13 @@
  * Device behavior lives in app.h and is shared with the desktop simulator; this
  * sketch only adapts I2S audio, GPIO, EEPROM, the SPI display and USB serial.
  * Host core tests supplied; target compile and hardware acceptance still required.
+ *
+ * Bench serial (stages 2-4, one character each; stage 4 also keeps c s p r from app.h):
+ *   f  force a full-frame flush every cadence      b  toggle the dirty-band diff (default on)
+ *   1 / 2  redraw every 1x / 2x DISPLAY_MS          l  toggle the bench link (band + state packets)
+ *   m q k  tap MODE / QUEST / FOOT (100 ms)         M Q K  hold MODE / QUEST / FOOT (1.3 s)
+ *   ?  print the current switch settings
+ * Telemetry is one JSON line per second; tools/web.py serve --device mirrors the panel from the link.
  */
 #include <Audio.h>
 #include <Wire.h>
@@ -15,6 +22,7 @@
 #include "app.h"
 #include "ui.h"
 #include "flush.h"
+#include "link.h"
 #include "analyzer.h"
 static_assert(VEX_STAGE>=1&&VEX_STAGE<=4,"VEX_STAGE must be 1..4");
 AudioInputI2S input;
@@ -35,19 +43,41 @@ public:
  void update() override{audio_block_t* block=receiveReadOnly(0);if(!block)return;analyzer.push(block->data,AUDIO_BLOCK_SAMPLES);release(block);}
 } capture;
 AudioConnection c1(input,0,capture,0);
-uint32_t analysisMicros=0,analysisMaxMicros=0;
 #endif
 AudioControlSGTL5000 codec;
 Adafruit_GC9A01A lcd(TFT_CS,TFT_DC,TFT_RST);
 GFXcanvas16 frame(240,240);
+// Panel adapter: the only place the display library is called for pixels. A DMA-capable driver can
+// replace this struct without touching the renderer, the band diff or the link.
+struct Panel{
+ void begin(){lcd.startWrite();}
+ void writeBand(uint16_t y,uint16_t h,const uint16_t* rows){lcd.setAddrWindow(0,y,vex::FRAME_W,h);lcd.writePixels(const_cast<uint16_t*>(rows),size_t(h)*vex::FRAME_W);}
+ void end(){lcd.endWrite();}
+} panel;
 // What the panel currently shows, kept in RAM2 so the 115 KB does not compete with audio in RAM1.
 // Each cadence only the rows that differ from it are sent (flush.h); the first frame is sent whole.
 DMAMEM uint16_t shadow[vex::FRAME_W*vex::FRAME_H];
-bool shadowValid=false;uint32_t txBytes=0,txMaxBytes=0;
+bool shadowValid=false;
 struct EepromStore:vex::Store{uint8_t read(int a)override{return EEPROM.read(a);}void update(int a,uint8_t v)override{EEPROM.update(a,v);}} eeprom;
 vex::App app(eeprom,VEX_STAGE);
 float rms=0,peak=0;
-uint32_t drawAt=0,printAt=0;
+uint32_t drawAt=0,printAt=0,txMaxBytes=0;
+vex::LinkTiming timing;
+// Bench switches (serial) and simulated control presses; presses go through App::controls like buttons.
+bool forceFull=false,bandDiff=true,linkOn=false;uint32_t tapUntil[3]={0,0,0};
+void benchCommand(char c,uint32_t now){
+ switch(c){
+  case 'f':forceFull=!forceFull;break;
+  case 'b':bandDiff=!bandDiff;break;
+  case '1':timing.cadence_mul=1;break;
+  case '2':timing.cadence_mul=2;break;
+  case 'l':linkOn=!linkOn;shadowValid=false;break;   // a fresh full frame so the mirror starts complete
+  case 'm':tapUntil[0]=now+100;break;case 'q':tapUntil[1]=now+100;break;case 'k':tapUntil[2]=now+100;break;
+  case 'M':tapUntil[0]=now+1300;break;case 'Q':tapUntil[1]=now+1300;break;case 'K':tapUntil[2]=now+1300;break;
+  case '?':Serial.printf("{\"switches\":1,\"full\":%d,\"diff\":%d,\"cadence_ms\":%lu,\"link\":%d}\n",forceFull,bandDiff,(unsigned long)(DISPLAY_MS*timing.cadence_mul),linkOn);break;
+  default:if(VEX_STAGE==4)app.command(c,now);
+ }
+}
 void setup(){
  Serial.begin(115200);pinMode(PIN_LED,OUTPUT);const int controlPins[]={PIN_MODE,PIN_QUEST,PIN_FOOT};for(int p:controlPins)pinMode(p,INPUT_PULLUP);
  pinMode(6,OUTPUT);digitalWrite(6,HIGH);pinMode(10,OUTPUT);digitalWrite(10,HIGH);
@@ -63,7 +93,7 @@ void setup(){
  app.begin(millis(),codecOK);
 }
 void loop(){
- uint32_t now=millis();
+ uint32_t loopStart=micros(),now=millis();
  if(VEX_STAGE==1){digitalWrite(13,(now/500)%2);if(now-printAt>=1000){printAt=now;Serial.println("VEX USB OK");}return;}
  if(VEX_STAGE>=3){
 #ifdef VEX_PITCH_PJRC
@@ -73,31 +103,39 @@ void loop(){
 #else
   if(analyzer.takeLevel(rms,peak))app.observe(rms,peak,now);
   uint32_t started=micros();
-  if(analyzer.analyze()){analysisMicros=micros()-started;if(analysisMicros>analysisMaxMicros)analysisMaxMicros=analysisMicros;app.observePitch(analyzer.hz,analyzer.probability,millis());}
+  if(analyzer.analyze()){timing.yin_us=micros()-started;if(timing.yin_us>timing.yin_max_us)timing.yin_max_us=timing.yin_us;app.observePitch(analyzer.hz,analyzer.probability,millis());}
 #endif
  }
- app.controls(digitalRead(PIN_MODE)==LOW,digitalRead(PIN_QUEST)==LOW,digitalRead(PIN_FOOT)==LOW,now);
- if(VEX_STAGE==4&&Serial.available())app.command(Serial.read(),now);
+ app.controls(digitalRead(PIN_MODE)==LOW||now<tapUntil[0],digitalRead(PIN_QUEST)==LOW||now<tapUntil[1],digitalRead(PIN_FOOT)==LOW||now<tapUntil[2],now);
+ while(Serial.available())benchCommand(char(Serial.read()),now);
  app.tick(now);
  digitalWrite(PIN_LED,app.led());
- if(now-drawAt>=DISPLAY_MS){
-  drawAt=now;vex::drawScreen(frame,app.view());const uint16_t* px=frame.getBuffer();
+ if(now-drawAt>=DISPLAY_MS*timing.cadence_mul){
+  drawAt=now;uint32_t flushStart=micros();
+  vex::drawScreen(frame,app.view());const uint16_t* px=frame.getBuffer();
   vex::Band bands[vex::FLUSH_MAX_BANDS];int n;
-  if(shadowValid)n=vex::bands(shadow,px,bands);else{bands[0].y=0;bands[0].h=vex::FRAME_H;n=1;shadowValid=true;}
+  if(shadowValid&&bandDiff&&!forceFull)n=vex::bands(shadow,px,bands);else{bands[0].y=0;bands[0].h=vex::FRAME_H;n=1;shadowValid=true;}
   if(n){
-   lcd.startWrite();
-   for(int i=0;i<n;i++){size_t at=size_t(bands[i].y)*vex::FRAME_W,count=size_t(bands[i].h)*vex::FRAME_W;lcd.setAddrWindow(0,bands[i].y,vex::FRAME_W,bands[i].h);lcd.writePixels(const_cast<uint16_t*>(px+at),count);memcpy(shadow+at,px+at,count*2);}
-   lcd.endWrite();
-   txBytes=vex::bandBytes(bands,n);if(txBytes>txMaxBytes)txMaxBytes=txBytes;
-  }else txBytes=0;
+   panel.begin();
+   for(int i=0;i<n;i++){size_t at=size_t(bands[i].y)*vex::FRAME_W,count=size_t(bands[i].h)*vex::FRAME_W;panel.writeBand(bands[i].y,bands[i].h,px+at);memcpy(shadow+at,px+at,count*2);}
+   panel.end();
+   timing.tx_bytes=vex::bandBytes(bands,n);if(timing.tx_bytes>txMaxBytes)txMaxBytes=timing.tx_bytes;
+  }else timing.tx_bytes=0;
+  timing.flush_us=micros()-flushStart;if(timing.flush_us>timing.flush_max_us)timing.flush_max_us=timing.flush_us;
+  if(linkOn){for(int i=0;i<n;i++)vex::linkBand(Serial,bands[i].y,bands[i].h,px+size_t(bands[i].y)*vex::FRAME_W);vex::linkState(Serial,vex::linkState(app,timing));}
  }
- if(VEX_STAGE>=3&&now-printAt>=1000){
-  printAt=now;const auto& p=app.progress;
-  Serial.printf("stage=%d codec=%d rms=%.5f peak=%.3f gate=%.5f active=%d running=%d session_s=%lu total_s=%lu fragments=%lu cpu=%.1f memory=%u tx_bytes=%lu tx_max_bytes=%lu",VEX_STAGE,app.codec_ok,app.rms,app.peak,p.gate,p.active,p.running,(unsigned long)(p.session_ms/1000),(unsigned long)(p.active_ms/1000),(unsigned long)p.fragments,AudioProcessorUsageMax(),AudioMemoryUsageMax(),(unsigned long)txBytes,(unsigned long)txMaxBytes);
+ if(now-printAt>=1000){
+  printAt=now;const auto& p=app.progress;timing.cpu=VEX_STAGE>=3?AudioProcessorUsageMax():0;vex::AnimFrame f=vex::chooseAnim(vex::quantised(app.view()));
+  Serial.printf("{\"stage\":%d,\"codec\":%d,\"rms\":%.5f,\"peak\":%.3f,\"gate\":%.5f,\"active\":%d,\"running\":%d,\"session_s\":%lu,\"total_s\":%lu,\"fragments\":%lu,\"level\":%lu,\"cpu\":%.1f,\"memory\":%u,"
+   "\"tx_bytes\":%lu,\"tx_max_bytes\":%lu,\"flush_us\":%lu,\"flush_max_us\":%lu,\"loop_max_us\":%lu,\"cadence_ms\":%lu,\"diff\":%d,\"full\":%d,\"link\":%d,\"anim\":%d,\"frame\":%d",
+   VEX_STAGE,app.codec_ok,app.rms,app.peak,p.gate,p.active,p.running,(unsigned long)(p.session_ms/1000),(unsigned long)(p.active_ms/1000),(unsigned long)p.fragments,(unsigned long)p.level(),timing.cpu,VEX_STAGE>=3?AudioMemoryUsageMax():0,
+   (unsigned long)timing.tx_bytes,(unsigned long)txMaxBytes,(unsigned long)timing.flush_us,(unsigned long)timing.flush_max_us,(unsigned long)timing.loop_max_us,(unsigned long)(DISPLAY_MS*timing.cadence_mul),bandDiff,forceFull,linkOn,f.anim,f.frame);
 #ifdef VEX_PITCH_PJRC
-  Serial.printf(" pitch=pjrc midi=%d cents=%.1f valid=%d\n",app.pitchNow.midi,app.pitchNow.cents,app.pitchNow.valid);
+  Serial.printf(",\"pitch\":\"pjrc\",\"midi\":%d,\"cents\":%.1f,\"valid\":%d}\n",app.pitchNow.midi,app.pitchNow.cents,app.pitchNow.valid);
 #else
-  Serial.printf(" pitch=yin hz=%.2f prob=%.2f yin_us=%lu yin_max_us=%lu\n",analyzer.hz,analyzer.probability,(unsigned long)analysisMicros,(unsigned long)analysisMaxMicros);
+  Serial.printf(",\"pitch\":\"yin\",\"hz\":%.2f,\"prob\":%.2f,\"yin_us\":%lu,\"yin_max_us\":%lu}\n",VEX_STAGE>=3?analyzer.hz:0.f,VEX_STAGE>=3?analyzer.probability:0.f,(unsigned long)timing.yin_us,(unsigned long)timing.yin_max_us);
 #endif
+  timing.loop_max_us=0;   // per-second maximum
  }
+ uint32_t loopUs=micros()-loopStart;if(loopUs>timing.loop_max_us)timing.loop_max_us=loopUs;
 }

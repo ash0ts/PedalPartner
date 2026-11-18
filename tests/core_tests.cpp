@@ -85,19 +85,29 @@ static void displayTests(){
  View v;v.stage=4;v.progress.calibrated=true;v.now=101000;v.active_at=v.now;v.fragment_at=v.levelup_at=v.summary_at=v.now-100000;v.notice_at=v.now-100000;
  // Every manifest period is a multiple of DISPLAY_MS, so one cadence step never repeats or skips a strum frame.
  v.progress.running=true;v.progress.active=true;int last=-1,steps=0;
- for(uint32_t t=0;t<4000;t+=DISPLAY_MS){View w=v;w.now=v.now+t;AnimFrame f=chooseAnim(quantised(w));assert(f.anim==ANIM_STRUM);if(last>=0){assert(f.frame==(last+1)%VEX_ANIMS[ANIM_STRUM].frames);steps++;}last=f.frame;}
+ for(uint32_t t=0;t<4000;t+=DISPLAY_MS){View w=v;w.now=v.now+t;AnimFrame f=chooseAnim(quantised(w));assert(f.anim==ANIM_STRUM);if(last>=0){assert(f.frame==(last+1)%VEX_ANIMS[ANIM_STRUM].steps);steps++;}last=f.frame;}
  assert(steps==4000/int(DISPLAY_MS)-1);
- // Idle breathes on a one-second loop and blinks as a one-shot inside each four-second window.
+ // Idle breathes through its manifest sequence (a ping-pong over the drawn frames) and blinks as a one-shot
+ // inside each four-second window. The step index is what the simulator and the bench link report.
  v.progress.active=false;v.progress.running=false;
- assert(chooseAnim(v).anim==ANIM_IDLE);View b=v;b.now=v.now+(UI_BLINK_EVERY_MS-v.now%UI_BLINK_EVERY_MS)%UI_BLINK_EVERY_MS;
- assert(chooseAnim(b).anim==ANIM_BLINK&&chooseAnim(b).frame==0);b.now+=VEX_ANIMS[ANIM_BLINK].frame_ms*VEX_ANIMS[ANIM_BLINK].frames;assert(chooseAnim(b).anim==ANIM_IDLE);
+ assert(chooseAnim(v).anim==ANIM_IDLE);
+ {const auto& a=VEX_ANIMS[ANIM_IDLE];assert(a.steps>=a.frames);int seen[16]={0};
+  uint32_t base=v.now-v.now%(a.frame_ms*a.steps)+1000;   // clear of the blink window at each 4 s boundary
+  for(int s=0;s<a.steps;s++){View w=v;w.now=base+s*a.frame_ms;AnimFrame f=chooseAnim(w);assert(f.anim==ANIM_IDLE&&f.frame==int(w.now/a.frame_ms%a.steps));int sprite=spriteIndex(f);assert(sprite>=a.first&&sprite<a.first+a.frames);seen[sprite-a.first]++;}
+  for(int f=0;f<a.frames;f++)assert(seen[f]>0);   // every drawn frame is used; the ping-pong revisits the middle one
+  // Breath budget: each idle step may redraw at most 30 % of the panel (the wings and collar, not the whole bat).
+  static DesktopCanvas f0,f1;Band out[FLUSH_MAX_BANDS];
+  for(int s=0;s<a.steps;s++){View w0=v,w1=v;w0.now=base+s*a.frame_ms;w1.now=w0.now+a.frame_ms;drawScreen(f0,w0);drawScreen(f1,w1);
+   int n=bands(f0.pixels.data(),f1.pixels.data(),out);assert(n>=1);assert(bandBytes(out,n)/(FRAME_W*2)<=FRAME_H*30/100);}}
+ View b=v;b.now=v.now+(UI_BLINK_EVERY_MS-v.now%UI_BLINK_EVERY_MS)%UI_BLINK_EVERY_MS;
+ assert(chooseAnim(b).anim==ANIM_BLINK&&chooseAnim(b).frame==0);b.now+=VEX_ANIMS[ANIM_BLINK].frame_ms*VEX_ANIMS[ANIM_BLINK].steps;assert(chooseAnim(b).anim==ANIM_IDLE);
  // Time inside the current cadence window is pulled back to its start; "long ago" sentinels stay long ago.
  View q=v;q.now=101150;q.fragment_at=101140;q=quantised(q);assert(q.now==101100&&q.fragment_at==101100&&q.now-q.levelup_at>=UI_CELEBRATE_MS);
  // Band diff: first frame is sent whole by the adapter; an unchanged screen produces no bands; the
  // second blink frame touches only the eye rows; a new caption adds a band near the bottom only.
  static DesktopCanvas a,c;drawScreen(a,v);drawScreen(c,v);Band out[FLUSH_MAX_BANDS];
  assert(bands(a.pixels.data(),c.pixels.data(),out)==0);
- b.now-=VEX_ANIMS[ANIM_BLINK].frame_ms*VEX_ANIMS[ANIM_BLINK].frames;assert(chooseAnim(b).anim==ANIM_BLINK);
+ b.now-=VEX_ANIMS[ANIM_BLINK].frame_ms*VEX_ANIMS[ANIM_BLINK].steps;assert(chooseAnim(b).anim==ANIM_BLINK);
  drawScreen(a,b);b.now+=DISPLAY_MS;drawScreen(c,b);int n=bands(a.pixels.data(),c.pixels.data(),out);assert(n>=1);uint32_t rows=bandBytes(out,n)/(FRAME_W*2);assert(rows>0&&rows<FRAME_H*15/100);
  drawScreen(a,v);
  View tick=v;tick.notice="Saved - safe to unplug";tick.notice_at=v.now;drawScreen(c,tick);n=bands(a.pixels.data(),c.pixels.data(),out);assert(n>=1&&out[0].y>=180);
@@ -107,8 +117,34 @@ static void displayTests(){
  n=bands(p0,p1,out);assert(n==FLUSH_MAX_BANDS);
  assert(out[n-1].y+out[n-1].h==FRAME_H-19);for(int i=1;i<n;i++)assert(out[i].y>=out[i-1].y+out[i-1].h);
 }
+#include "../firmware/VEX_Pocket_Rival/link.h"
+// Bench link: band and state packets round-trip through the host parser, corruption is rejected, the parser
+// resynchronises past interleaved text, and a sample stream is written for tests/link_test.py (Python decoder).
+struct ByteSink{std::vector<uint8_t> bytes;void write(const uint8_t* p,size_t n){bytes.insert(bytes.end(),p,p+n);}};
+static void linkTests(){
+ using namespace vex;
+ struct MemStore:Store{uint8_t m[128]={};uint8_t read(int a)override{return m[a];}void update(int a,uint8_t v)override{m[a]=v;}} store;
+ App app(store,4);app.begin(101000,true);app.progress.calibrated=true;app.progress.gate=.004f;app.setRunning(true);app.progress.active=true;
+ for(int i=0;i<30;i++){app.observe(.05f,.2f,app.now);app.tick(app.now+10);}
+ LinkTiming timing;timing.tx_bytes=31200;timing.flush_us=4321;timing.flush_max_us=9876;timing.yin_us=1500;timing.yin_max_us=2200;timing.loop_max_us=12000;timing.cpu=12.5f;timing.cadence_mul=1;
+ LinkState s=linkState(app,timing);assert(s.stage==4&&(s.flags&LINK_RUNNING)&&(s.flags&LINK_ACTIVE)&&(s.flags&LINK_CALIBRATED)&&s.anim==ANIM_STRUM&&s.flush_us==4321&&s.now_ms==app.now);
+ static DesktopCanvas canvas;drawScreen(canvas,app.view());
+ ByteSink out;const char* text="{\"stage\":4,\"tx_bytes\":31200}\n";out.write((const uint8_t*)text,strlen(text));
+ linkBand(out,36,100,canvas.pixels.data()+36*FRAME_W);linkState(out,s);linkBand(out,200,8,canvas.pixels.data()+200*FRAME_W);
+ // Parse: skip text byte by byte, then each packet decodes with the right geometry and payload.
+ size_t at=0;int bandsSeen=0,statesSeen=0;
+ while(at<out.bytes.size()){LinkPacket p;long used=linkParse(out.bytes.data()+at,out.bytes.size()-at,p);if(used<=0){at++;continue;}
+  if(p.type==LINK_BAND){assert(p.length==size_t(p.b)*FRAME_W*2);assert(memcmp(p.payload,canvas.pixels.data()+size_t(p.a)*FRAME_W,p.length)==0);bandsSeen++;}
+  else{assert(p.length==sizeof(LinkState));LinkState back;memcpy(&back,p.payload,sizeof back);assert(back.flush_us==4321&&back.loop_max_us==12000&&back.anim==s.anim&&back.frame==s.frame);statesSeen++;}
+  at+=size_t(used);}
+ assert(bandsSeen==2&&statesSeen==1);
+ // A flipped payload bit fails the CRC; a truncated stream asks for more bytes rather than guessing.
+ std::vector<uint8_t> bad(out.bytes.begin()+strlen(text),out.bytes.end());bad[LINK_HEADER+5]^=1;LinkPacket p;assert(linkParse(bad.data(),bad.size(),p)==-1);
+ assert(linkParse(out.bytes.data()+strlen(text),LINK_HEADER+10,p)==0);
+ FILE* f=fopen("build/link_sample.bin","wb");if(f){fwrite(out.bytes.data(),1,out.bytes.size(),f);fclose(f);}
+}
 int main(){
- appTests();analyzerTests();displayTests();
+ appTests();analyzerTests();displayTests();linkTests();
  vex::Progress p;p.tick(100,.1,.2,true);assert(p.active_ms==0);p.calibrated=true;p.running=true;
  p.tick(100,.1,.2,true);assert(p.active_ms==100);p.tick(100,0,0,true);assert(!p.active&&p.active_ms==100);
  p.tick(100,.2,.99,true);p.tick(101,.2,.2,true);p.tick(100,.2,.2,false);p.tick(100,NAN,.2,true);assert(p.active_ms==100);
@@ -121,5 +157,5 @@ int main(){
  vex::Progress restored;vex::restore(restored,r);assert(restored.active_ms==p.active_ms&&restored.fragments==p.fragments&&!restored.running&&!restored.calibrated);
  vex::Button b;assert(b.update(true,10)==0);assert(b.update(false,20)==0);assert(b.update(false,50)==0);assert(b.update(true,100)==0);assert(b.update(true,130)==0);assert(b.update(false,200)==0);assert(b.update(false,230)==1);
  assert(b.update(true,300)==0);assert(b.update(true,330)==0);assert(b.update(true,1530)==2);assert(b.update(false,1600)==0);assert(b.update(false,1630)==0);
- puts("PASS: gating, clipping, stale input, quest exactly-once, goals, pitch math, CRC corruption, record restore, sequence rollover, button debounce and hold, app calibration/notice/save, YIN analyzer on tones/harmonics/noise, level accumulation, tuner smoothing, cadence-locked animation, dirty-band flush.");
+ puts("PASS: gating, clipping, stale input, quest exactly-once, goals, pitch math, CRC corruption, record restore, sequence rollover, button debounce and hold, app calibration/notice/save, YIN analyzer on tones/harmonics/noise, level accumulation, tuner smoothing, cadence-locked animation, dirty-band flush, bench link framing.");
 }

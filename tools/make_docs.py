@@ -180,10 +180,10 @@ add('Upload 1: prove USB on your Mac','One sketch, four stages: change VEX_STAGE
  ('1 / INSTALL','Install Arduino IDE2 from arduino.cc. In Arduino IDE > Settings, add the PJRC boards URL listed in docs/LOCAL_DEVELOPMENT.md; install Teensy using Boards Manager.'),
  ('2 / LIBRARIES','Install Adafruit GC9A01A, Adafruit GFX and Adafruit BusIO using Library Manager. Audio, Wire, SPI and EEPROM come with Teensy support.'),
  ('3 / OPEN + SELECT','Open firmware/VEX_Pocket_Rival/VEX_Pocket_Rival.ino. Choose Teensy4.1, USB Type Serial, normal600MHz. Leave VEX_STAGE1 for the first upload.'),
- ('4 / VERIFY + UPLOAD','Click Verify, then Upload. Select the Teensy port. If prompted, press the physical Program button. Open Serial Monitor at115200.')],fig='04_tray',check='Onboard LED blinks and Serial says VEX USB OK. No .hex is supplied: the complete target build still needs this verification.')
+ ('4 / VERIFY + UPLOAD','Click Verify, then Upload. Select the Teensy port. If prompted, press the physical Program button. Open Serial Monitor at115200. From a terminal the same steps are make firmware STAGE=1, make upload STAGE=1, make monitor.')],fig='04_tray',check='Onboard LED blinks and Serial says VEX USB OK. No .hex is supplied: the complete target build still needs this verification.')
 add('Upload 2: screen and buttons','Disconnect USB before adding each wiring group',[
  ('1 / CONNECT','Add display wires W01-W10 and controls W11-W14. Keep SPI wires short, initially under100mm. Leave audio input disconnected.'),
- ('2 / UPLOAD','Set VEX_STAGE2, Verify and Upload. The display should show the bat and live M/Q/F button states.'),
+ ('2 / UPLOAD','Set VEX_STAGE2, Verify and Upload. The display should show the bat and live M/Q/F button states. Serial prints one JSON line a second: flush_us is the time to draw and send one cadence, tx_bytes the rows sent. Type f, b, 1 or 2 in the monitor to compare full-frame, band-diff and 100 vs 200ms redraws.'),
  ('3 / EXERCISE','Press each control ten times. One state changes from0 to1 while held, and returns to0 on release. FOOT also lights the status LED.'),
  ('IF IT FAILS','White screen: check VIN/GND, CS/DC/reset and SPI pins. Stuck input: inspect the chosen lug pair. Rotated display: change setRotation, not wiring.')],diagram='ui',check='Put the display at the real pedalboard distance. Confirm legibility before fabricating the enclosure.')
 add('Upload 3: audio and level','Begin with a known low-level line source; then test the buffered guitar feed',[
@@ -246,7 +246,7 @@ add('Troubleshoot by the failed checkpoint','Use the earliest failing stage, the
 add('What has been checked','Understand what the package proves and what the mentor will prove',[
  ('COMPUTER CHECKS','Valid CAD solids and STEP re-import; all-component overlap checks including fasteners; source-derived display mounts; host tests of counting, rewards, pitch math, saves and button logic.'),
  ('NOT YET PROVEN','Actual display/audio behavior, component revisions, wiring clearance, electrical noise, temperature, lens readability and enclosure strength.'),
- ('TARGET BUILD EVIDENCE','Run make setup-firmware and make firmware-all without hardware. GitHub Actions compiles all stages. Check the run result for this commit; local preparation downloads were blocked by HTTP403.'),
+ ('TARGET BUILD EVIDENCE','make setup-firmware and make firmware-all compile all four stages without hardware (passes locally, 17 Nov 2026). Display timing is instrumented (flush_us, tx_bytes) but unmeasured until a board is on the bench.'),
  ('MENTOR RELEASE','Review all purchased parts and the input circuit; complete the log before guitar/foot use. A successful desktop test is useful evidence, not a hardware certificate.')],fig='02_exploded',check='See hardware/generated/checks/ and GitHub Actions. Compile success and physical acceptance are separate evidence.')
 
 add('Review and edit the grouped CAD','Five service groups keep related hardware together',[
@@ -258,7 +258,8 @@ add('Try the device before hardware arrives','Shared C++ practice logic and scre
  ('RUN','From the repo: make test, then make sim. Open http://127.0.0.1:8765. No Arduino toolchain or third-party Python packages are required for the simulator.'),
  ('EXERCISE','Calibrate, start, choose Playing and advance five active minutes. Try silence, clipping, stale samples, tuner, Save, Reboot and corrupt-record fallback.'),
  ('COMPILE','Install Arduino CLI; make setup-firmware; make firmware-all. This compiles all four stages with pinned dependencies and never uploads.'),
- ('UNDERSTAND THE LIMIT','The simulator injects RMS/peak/Hz; it does not emulate the ADC, pitch detector, USB noise, switches or physical screen optics.')],diagram='ui',check='See docs/LOCAL_DEVELOPMENT.md for Mac setup, dependencies and staged Verify/Upload instructions.')
+ ('UNDERSTAND THE LIMIT','The simulator injects RMS/peak/Hz; it does not emulate the ADC, pitch detector, USB noise, switches or physical screen optics.'),
+ ('WITH A TEENSY ATTACHED','make sim DEVICE=auto opens the Device tab: the real panel mirrored over USB beside the simulator frame, a pixel diff, the serial switches and telemetry sparklines.')],diagram='ui',check='See docs/LOCAL_DEVELOPMENT.md for Mac setup, dependencies, staged Verify/Upload instructions and the bench loop.')
 
 for start in [0,9]:
  rows=[['ID','Primary source / purpose','Link']]

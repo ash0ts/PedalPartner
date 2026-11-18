@@ -3,10 +3,13 @@ PYTHON ?= python3
 CXXFLAGS ?= -std=c++17 -O2 -Wall -Wextra -Werror
 STAGE ?= 4
 PORT ?= 8765
+# Bench loop: DEVICE is a serial port (/dev/cu.usbmodem*) or `auto` (exactly one Teensy); empty = no device.
+DEVICE ?=
+SERIAL ?=
 HEADERS := $(wildcard firmware/VEX_Pocket_Rival/*.h)
 ART := $(wildcard art/*.json art/*/*.json art/*/*.png)
 
-.PHONY: test sim sim-build art art-check motion web web-check firmware firmware-all setup-firmware cad cad-check render render-meshes hero pack-mentor docs check clean
+.PHONY: test sim sim-build art art-check motion web web-check firmware firmware-all setup-firmware upload monitor ports cad cad-check render render-meshes hero pack-mentor docs check clean
 build:
 	mkdir -p build
 build/core-tests: tests/core_tests.cpp $(HEADERS) | build
@@ -18,6 +21,7 @@ test: build/core-tests build/vex-sim
 	$(PYTHON) tests/simulator_test.py
 	$(PYTHON) tests/pack_test.py
 	$(PYTHON) tests/art_test.py
+	$(PYTHON) tests/link_test.py
 	$(PYTHON) tools/check_project.py
 	$(PYTHON) tools/web.py check
 sim-build: build/vex-sim
@@ -35,13 +39,20 @@ web:
 web-check:
 	$(PYTHON) tools/web.py check
 sim:
-	$(PYTHON) tools/web.py serve --port $(PORT)
+	$(PYTHON) tools/web.py serve --port $(PORT) $(if $(DEVICE),--device $(DEVICE),)
 setup-firmware:
 	$(PYTHON) tools/firmware.py setup
 firmware:
 	$(PYTHON) tools/firmware.py build --stage $(STAGE)
 firmware-all:
 	$(PYTHON) tools/firmware.py build --all
+# The only targets that touch a Teensy. upload needs a compiled stage and an explicit or unique port.
+upload:
+	$(PYTHON) tools/firmware.py upload --stage $(STAGE) $(if $(SERIAL),--port $(SERIAL),)
+monitor:
+	$(PYTHON) tools/firmware.py monitor $(if $(SERIAL),--port $(SERIAL),)
+ports:
+	$(PYTHON) tools/firmware.py ports
 cad:
 	$(PYTHON) hardware/cad/build_cad.py
 	$(PYTHON) hardware/cad/make_cut_profiles.py

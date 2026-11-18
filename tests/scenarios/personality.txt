@@ -2,7 +2,8 @@
 calibrate
 press foot 100
 audio 3000 .1 .3
-# Four-frame strum loop keyed to the clock, one frame per display cadence (frame 2 at this instant).
+# Six-step strum loop (anticipation, down, contact, release, follow-through, rest) keyed to the clock, one
+# step per display cadence; step 2 (contact, first note) at this instant. `frame` is the step index.
 # anim indices follow art/vex/manifest.json: 0 idle, 1 blink, 2 strum, 3 cheer, 4 levelup, 5 listen, 6 sleep.
 expect anim=2 frame=2
 golden strum_frame_a
@@ -10,11 +11,17 @@ audio 100 .1 .3
 expect anim=2 frame=3
 golden strum_frame_b
 audio 100 .1 .3
-expect anim=2 frame=0
+expect anim=2 frame=4
 golden strum_frame_c
 audio 100 .1 .3
-expect anim=2 frame=1
+expect anim=2 frame=5
 golden strum_frame_d
+audio 100 .1 .3
+expect anim=2 frame=0
+golden strum_frame_e
+audio 100 .1 .3
+expect anim=2 frame=1
+golden strum_frame_f
 # Fragment banner appears for three seconds after the claim, then the pet keeps riffing.
 audio 297000 .1 .3
 expect fragments=1 anim=3
@@ -27,6 +34,14 @@ expect running=false
 golden session_summary
 wait 4500
 golden paused_after_summary
+# Idle plays its manifest sequence (drawn frames 0,1,2,1 at 500 ms): a breath over the wings and collar,
+# then an ear twitch. The step index advances one per 500 ms.
+expect anim=0 frame=3
+wait 500
+expect anim=0 frame=0
+golden idle_breath
+wait 500
+expect anim=0 frame=1
 # Level 2 arrives at ten active minutes and shows its own banner.
 press foot 100
 audio 297000 .1 .3

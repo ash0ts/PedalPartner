@@ -1,12 +1,18 @@
 {
- "_comment": "Order defines the firmware enum. frames are 32x32 cells left to right in <pose>.png; frame_ms must be a multiple of DISPLAY_MS (config.h). loop=false plays once from the event that triggered it.",
+ "_comment": "Order defines the firmware enum. frames are 32x32 cells left to right in <pose>.png; frame_ms must be a multiple of DISPLAY_MS (config.h). loop=false plays once from the event that triggered it. Optional sequence lists the play order over the drawn frames (e.g. [0,1,2,1] for a ping-pong) so a breath or bounce needs fewer drawn frames.",
  "size": 32,
  "animations": [
   {
    "name": "idle",
-   "frames": 2,
-   "frame_ms": 1000,
-   "loop": true
+   "frames": 3,
+   "frame_ms": 500,
+   "loop": true,
+   "sequence": [
+    0,
+    1,
+    2,
+    1
+   ]
   },
   {
    "name": "blink",
@@ -16,32 +22,32 @@
   },
   {
    "name": "strum",
-   "frames": 4,
+   "frames": 6,
    "frame_ms": 100,
    "loop": true
   },
   {
    "name": "cheer",
-   "frames": 2,
+   "frames": 4,
    "frame_ms": 200,
    "loop": true
   },
   {
    "name": "levelup",
-   "frames": 2,
+   "frames": 4,
    "frame_ms": 200,
    "loop": true
   },
   {
    "name": "listen",
-   "frames": 1,
-   "frame_ms": 1000,
+   "frames": 2,
+   "frame_ms": 500,
    "loop": true
   },
   {
    "name": "sleep",
-   "frames": 2,
-   "frame_ms": 1000,
+   "frames": 3,
+   "frame_ms": 500,
    "loop": true
   }
  ]
