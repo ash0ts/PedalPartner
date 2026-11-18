@@ -182,6 +182,7 @@ function updatePanels(){
  if($('tab-eeprom').classList.contains('sel')){const sig=Array.from(storeBytes).join(',')+s.saved_slot;if(sig!==lastStoreSig){lastStoreSig=sig;$('slot0').innerHTML=slotHtml(0,s);$('slot1').innerHTML=slotHtml(1,s);$('slot0').classList.toggle('live',s.saved_slot===0);$('slot1').classList.toggle('live',s.saved_slot===1);}}
  if(sim.logDirty){sim.logDirty=false;const pre=$('telemetry');pre.textContent=sim.telemetry.slice(-200).join('\n');pre.scrollTop=pre.scrollHeight;}
  if(sim.recDirty&&$('tab-scenario').classList.contains('sel')){sim.recDirty=false;$('rec-out').textContent=scenarioText();$('rec-count').textContent=`${sim.record.length} segments`;}
+ if(dev.wctx&&$('tab-device').classList.contains('sel')){dev.wctx.putImageData(image,0,0);devDiff();}
 }
 let storeSig=0;
 function persistIfChanged(){let h=0;for(let i=0;i<128;i++)h=(h*31+storeBytes[i])>>>0;if(h!==storeSig){storeSig=h;persist();}}
@@ -220,6 +221,52 @@ function wire(){
  $('rec-copy').onclick=async()=>{const t=scenarioText();try{await navigator.clipboard.writeText(t);$('rec-count').textContent='copied';}catch(e){$('rec-out').textContent=t;}};
  $('rec-clear').onclick=()=>{sim.record=[];sim.span=null;closeSpan();sim.recDirty=true;};
  $('scn-run').onclick=async()=>{$('scn-out').textContent='running…';$('scn-out').textContent=await runScenario($('scn-in').value,$('scn-fresh').checked);};
+ for(const b of document.querySelectorAll('[data-send]'))b.onclick=()=>devSend(b.dataset.send);
+ $('dev-adopt').onclick=devAdopt;
+}
+// Device tab: mirror of a plugged-in Teensy through the tools/web.py bridge ------------------------------
+// The page long-polls /device for state + telemetry, fetches the raw RGB565 frame when a band arrived,
+// draws it next to this page's frame and counts differing pixels. Buttons send one serial character.
+const dev={gen:-1,frameGen:-1,status:'off',state:null,telemetry:[],image:null,ctx:null,wctx:null,rgb:null,backoff:0,busy:false};
+function devCanvas(){if(dev.ctx)return;dev.ctx=$('dev-screen').getContext('2d');dev.wctx=$('dev-wasm').getContext('2d');dev.image=dev.ctx.createImageData(240,240);}
+function devRgb565(bytes){const d=dev.image.data;for(let i=0;i<240*240;i++){const v=bytes[2*i]|bytes[2*i+1]<<8;d[4*i]=((v>>11)&31)*255/31|0;d[4*i+1]=((v>>5)&63)*255/63|0;d[4*i+2]=(v&31)*255/31|0;d[4*i+3]=255;}}
+function devDiff(){if(!dev.image||dev.frameGen<0)return;const a=dev.image.data,b=image.data;let n=0;for(let i=0;i<240*240*4;i+=4){if(a[i]!==b[i]||a[i+1]!==b[i+1]||a[i+2]!==b[i+2])n++;}
+ $('dev-diff').textContent=n?`${n} px differ from the real panel`:'identical to the real panel';return n;}
+async function devFrame(){const r=await fetch('/device/frame');const buf=new Uint8Array(await r.arrayBuffer());if(buf.length!==240*240*2)return;dev.frameGen=Number(r.headers.get('X-Frame-Generation'));devRgb565(buf);dev.ctx.putImageData(dev.image,0,0);}
+function spark(id,rows,key,fmt){const c=$(id),g=c.getContext('2d');g.clearRect(0,0,c.width,c.height);const v=rows.map(r=>Number(r[key])||0);if(!v.length){$(id+'-v').textContent='';return;}
+ const max=Math.max(1,...v);g.strokeStyle='#c9a24a';g.lineWidth=1.5;g.beginPath();v.forEach((x,i)=>{const px=i/(Math.max(1,v.length-1))*(c.width-2)+1,py=c.height-1-(x/max)*(c.height-4);i?g.lineTo(px,py):g.moveTo(px,py);});g.stroke();
+ g.fillStyle='#9a9199';g.font='10px ui-monospace,monospace';g.fillText(fmt(max),2,10);$(id+'-v').textContent=fmt(v[v.length-1]);}
+function devRender(j){
+ const st=$('dev-status');st.className='sub mono '+(j.status==='connected'?'ok':j.status==='off'?'':'bad');
+ st.textContent=j.status==='off'?'bridge off · run make sim DEVICE=auto':j.status==='connected'?`${j.port} · live`:j.status==='waiting'?`waiting for a Teensy (${j.error||'none on USB'})`:`error · ${j.error}`;
+ const s=j.state;dev.state=s;
+ if(s){const flags=['running','calibrated','active','tuning','calibrating','claimed','codec','pitch_valid'].filter(k=>s[k]).join(' ')||'idle';
+  $('dev-state').innerHTML=`stage ${s.stage} · <b>${s.anim_name}</b>/${s.frame} · level ${s.level} · fragments ${s.fragments} · session ${Math.floor(s.session_ms/1000)} s · total ${Math.floor(s.active_ms/1000)} s · goal ${s.goal_minutes} min · slot ${s.saved_slot}<br>`+
+   `flush ${s.flush_us} µs (max ${s.flush_max_us}) · loop max ${s.loop_max_us} µs · tx ${s.tx_bytes} B · yin ${s.yin_us} µs (max ${s.yin_max_us}) · audio cpu ${s.cpu.toFixed(1)} % · cadence ${s.cadence_mul}× · ${flags}`;
+  $('dev-frame-info').textContent=j.frame_complete?`device ${fmtClock(s.now_ms)}`:'waiting for a full frame (press Link)';}
+ else{$('dev-state').textContent=j.status==='connected'?'telemetry only so far; press Link to stream the panel':'';$('dev-frame-info').textContent='';}
+ const rows=j.telemetry||[];spark('sp-tx',rows,'tx_bytes',v=>`${v} B`);spark('sp-flush',rows,'flush_us',v=>`${v} µs`);spark('sp-yin',rows,'yin_us',v=>`${v} µs`);spark('sp-cpu',rows,'cpu',v=>`${Number(v).toFixed(1)} %`);
+ if(j.log)$('dev-log').textContent=j.log.join('\n');
+ if(M&&image){dev.wctx.putImageData(image,0,0);devDiff();}
+}
+function devPoll(){
+ devCanvas();
+ const loop=()=>fetch(`/device?gen=${dev.gen}`).then(r=>r.json()).then(async j=>{dev.status=j.status;dev.gen=j.generation===undefined?-1:j.generation;
+  if(j.frame_generation!==undefined&&j.frame_generation!==dev.frameGen)await devFrame();devRender(j);
+  setTimeout(loop,j.status==='off'?5000:j.status==='connected'?0:1000);}).catch(()=>{devRender({status:'error',error:'bridge unreachable (static page?)'});setTimeout(loop,5000);});
+ loop();
+}
+function devSend(c){fetch(`/device/send?c=${encodeURIComponent(c)}`).then(r=>r.json()).then(j=>{note(`device ← '${c}' ${j.sent?'sent':'not sent (no device)'}`);}).catch(()=>{});
+ const taps={m:['mode',100],q:['quest',100],k:['foot',100],M:['mode',1300],Q:['quest',1300],K:['foot',1300]};
+ if(taps[c]&&$('dev-mirror-taps').checked){const [name,ms]=taps[c];pressSync(name,ms);}
+ if('cspr'.includes(c)&&$('dev-mirror-taps').checked){M._vex_serial(c.charCodeAt(0),sim.now);sim.dirty=true;}}
+function devAdopt(){
+ const s=dev.state;if(!s){note('adopt: no device state yet');return;}
+ // Record v1 (core.h): magic, version, sequence, fragments, goal_index, claimed, active_ms, session_ms, checksum, padding; slot 0.
+ const b=storeBytes.subarray(0,64),dv=new DataView(b.buffer,b.byteOffset,64);b.fill(0);
+ dv.setUint32(0,0x56455831,true);dv.setUint32(4,1,true);dv.setUint32(8,s.sequence+1,true);dv.setUint32(12,s.fragments,true);dv.setUint32(16,{5:0,10:1,20:2}[s.goal_minutes]||0,true);dv.setUint32(20,s.claimed?1:0,true);
+ dv.setBigUint64(24,BigInt(s.active_ms),true);dv.setBigUint64(32,BigInt(s.session_ms),true);dv.setUint32(40,crc32(b,40),true);
+ storeBytes.fill(0,64);M._vex_store_load();persist();recordComment(`adopted Teensy record: fragments ${s.fragments}, total ${Math.floor(s.active_ms/1000)} s`);boot();lastStoreSig='';
 }
 function liveReload(){
  let gen=-1;const el=$('reload');
@@ -236,5 +283,5 @@ VexModule().then(mod=>{
  sim.speed=Number(localStorage.getItem('vex.speed')||'1');$('speed').value=String(sim.speed);
  if(localStorage.getItem('vex.cadence')==='0')$('cadence').checked=false;
  restoreStore();storeSig=-1;boot();wire();closeSpan();
- $('loading').hidden=true;$('main').hidden=false;if(!/noreload/.test(location.search))liveReload();requestAnimationFrame(frame);
+ $('loading').hidden=true;$('main').hidden=false;if(!/noreload/.test(location.search))liveReload();devPoll();requestAnimationFrame(frame);
 }).catch(e=>{$('loading').textContent='vex.wasm failed to load: '+e.message;});
