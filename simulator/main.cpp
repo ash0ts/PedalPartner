@@ -29,6 +29,24 @@ struct FileStore:vex::Store{
  void wipe(){std::memset(bytes,0,sizeof bytes);dirty=true;cut=-1;powered=true;flush();}
 };
 
+// Synthesise a guitar-like harmonic tone or repeated plucks at 44.1 kHz for `tone`.
+static std::vector<int16_t> synthTone(uint32_t ms,float hz,float dbfs,float decay_ms,float gap_ms){
+ constexpr double PI=3.14159265358979323846;
+ size_t n=size_t(uint64_t(ms)*vex::Analyzer::RATE/1000);std::vector<int16_t> pcm(n,0);
+ if(hz<=0||!n)return pcm;
+ float amp=std::pow(10.f,dbfs/20.f),ring_ms=decay_ms>0?decay_ms:(gap_ms>0?200.f:0.f),period_ms=gap_ms>0?ring_ms+gap_ms:0.f;
+ double phase=0,step=2.0*PI*hz/vex::Analyzer::RATE;
+ for(size_t i=0;i<n;i++){
+  float t_ms=float(i)*1000.f/vex::Analyzer::RATE,in_ms=period_ms>0?std::fmod(t_ms,period_ms):t_ms;
+  if(gap_ms>0&&in_ms>=ring_ms){phase=0;continue;}
+  float env=decay_ms>0?std::exp(-(gap_ms>0?1.5f:1.f)*in_ms/decay_ms):1.f;
+  phase+=step;if(phase>2.0*PI)phase-=2.0*PI;
+  float v=std::clamp(amp*env*(std::sin(float(phase))+.45f*std::sin(float(2*phase))+.15f*std::sin(float(3*phase)))/1.6f,-1.f,1.f);
+  pcm[i]=int16_t(std::lround(v*32767.f));
+ }
+ return pcm;
+}
+
 struct Sim{
  FileStore store;int stage=4;std::unique_ptr<vex::App> app;std::unique_ptr<vex::Analyzer> analyzer=std::make_unique<vex::Analyzer>();DesktopCanvas canvas;
  bool raw_mode=false,raw_quest=false,raw_foot=false,test=false;   // `test on` renders ui.h drawTestPattern as the sketch does for serial `t`
@@ -39,7 +57,8 @@ struct Sim{
  void boot(){store.powered=true;store.cut=-1;app=std::make_unique<vex::App>(store,stage);app->begin(0,true);analyzer=std::make_unique<vex::Analyzer>();sample_ms=0;}
  void poll(){// foreground audio handling, as the sketch's loop() does it
   float r,p;if(analyzer->takeLevel(r,p))app->observe(r,p,app->now);
-  if(analyzer->analyze()){analyses++;app->observePitch(analyzer->hz,analyzer->probability,app->now);}
+  if(app->wantsPitch()){if(analyzer->analyze()){analyses++;app->observePitch(analyzer->hz,analyzer->probability,app->now);}}
+  else analyzer->skip();
  }
  void step(){// one millisecond, in the sketch's loop order
   uint32_t now=app->now+1;
@@ -69,7 +88,8 @@ struct Sim{
   o<<"{\"active_ms\":"<<p.active_ms<<",\"session_ms\":"<<p.session_ms<<",\"xp\":"<<p.xp()<<",\"level\":"<<p.level()<<",\"fragments\":"<<p.fragments
    <<",\"goal_minutes\":"<<p.goalMs()/60000<<",\"running\":"<<(p.running?"true":"false")<<",\"calibrated\":"<<(p.calibrated?"true":"false")
    <<",\"active\":"<<(p.active?"true":"false")<<",\"tuning\":"<<(app->tuning?"true":"false")<<",\"calibrating\":"<<(app->calibrating?"true":"false")
-   <<",\"gate\":"<<p.gate<<",\"rms\":"<<app->rms<<",\"peak\":"<<app->peak<<",\"stage\":"<<app->stage<<",\"notice\":\""<<app->notice<<"\""
+   <<",\"gate\":"<<p.gate<<",\"rms\":"<<app->rms<<",\"env\":"<<app->env<<",\"peak\":"<<app->peak<<",\"hold_ms\":"<<p.hold_ms<<",\"credit_drops\":"<<p.credit_drops
+   <<",\"stage\":"<<app->stage<<",\"notice\":\""<<app->notice<<"\""
    <<",\"saved_slot\":"<<app->saved_slot<<",\"sequence\":"<<app->sequence<<",\"power\":"<<(store.powered?"true":"false")
    <<",\"pitch_midi\":"<<app->pitchNow.midi<<",\"pitch_cents\":"<<app->pitchNow.cents<<",\"pitch_valid\":"<<(app->pitchNow.valid?"true":"false")<<",\"uncertain\":"<<(app->uncertain?"true":"false")
    <<",\"hz\":"<<analyzer->hz<<",\"probability\":"<<analyzer->probability<<",\"analyses\":"<<analyses<<",\"now_ms\":"<<app->now;
@@ -94,6 +114,11 @@ int main(int argc,char** argv){
    if(!(cmd=="wav"?readWav(path,pcm,error):readRaw(path,pcm,error))){std::cerr<<error<<std::endl;return 4;}
    size_t a=std::min(pcm.size(),size_t(start*44.1)),b=length<0?pcm.size():std::min(pcm.size(),a+size_t(length*44.1));
    sim.feed(std::vector<int16_t>(pcm.begin()+a,pcm.begin()+b));
+  }
+  else if(cmd=="tone"){
+   uint32_t ms=0;float hz=0,dbfs=-20,decay=0,gap=0;in>>ms>>hz>>dbfs>>decay>>gap;
+   if(ms>3600000||!std::isfinite(hz)||!std::isfinite(dbfs)||!std::isfinite(decay)||!std::isfinite(gap)||decay<0||gap<0)return 2;
+   sim.feed(synthTone(ms,hz,dbfs,decay,gap));
   }
   else if(cmd=="serial"){char c=0;in>>c;sim.app->command(c,sim.app->now);}
   else if(cmd=="save"){sim.app->command('s',sim.app->now);}

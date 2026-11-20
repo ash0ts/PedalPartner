@@ -51,6 +51,7 @@ EMSCRIPTEN_KEEPALIVE int vex_audio_capacity(){return int(sizeof(audio)/sizeof(au
 EMSCRIPTEN_KEEPALIVE int vex_audio_push(int n,uint32_t now){
  for(int i=0;i+vex::Analyzer::BLOCK<=n;i+=vex::Analyzer::BLOCK)analyzer.push(audio+i,vex::Analyzer::BLOCK);
  float r,p;if(analyzer.takeLevel(r,p))app->observe(r,p,now);
+ if(!app->wantsPitch()){analyzer.skip();lastAnalysisUs=0;return 0;}
  double started=emscripten_get_now();
  int analyzed=analyzer.analyze();
  if(analyzed){lastAnalysisUs=uint32_t((emscripten_get_now()-started)*1000);app->observePitch(analyzer.hz,analyzer.probability,now);}
@@ -83,6 +84,7 @@ EMSCRIPTEN_KEEPALIVE double* vex_state(){
  state[i++]=p.gate;state[i++]=app->rms;state[i++]=app->peak;state[i++]=app->stage;state[i++]=app->saved_slot;state[i++]=app->sequence;
  state[i++]=store.powered;state[i++]=app->pitchNow.midi;state[i++]=app->pitchNow.cents;state[i++]=app->pitchNow.valid;state[i++]=app->uncertain;
  state[i++]=analyzer.hz;state[i++]=analyzer.probability;state[i++]=app->now;
+ state[i++]=app->env;state[i++]=p.hold_ms;state[i++]=p.credit_drops;
  return state;
 }
 }

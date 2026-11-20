@@ -4,16 +4,21 @@
 namespace vex {
 // Byte storage adapter. Teensy wraps EEPROM; the simulator wraps a file and can cut power mid-write.
 struct Store {virtual uint8_t read(int address)=0;virtual void update(int address,uint8_t value)=0;virtual ~Store(){}};
+// Mean-square level window: spans more than three periods of low E2 (82.4 Hz) so block-to-block
+// harmonic troughs do not drop activity mid-note, and settles with no infinite tail when playing stops.
+constexpr uint32_t LEVEL_SMOOTH_MS=40;
+struct LevelObs{uint16_t dt;float ms;};
 // Device state machine shared by the sketch and the desktop simulator. Adapters feed control
 // levels, audio observations and a millisecond clock; nothing here touches hardware or draws.
 struct App {
  Store& store;int stage;
  Progress progress;Button mode,quest,foot;Pitch pitchNow;
- bool codec_ok=false,tuning=false,calibrating=false,raw_mode=false,raw_quest=false,raw_foot=false;
+ bool codec_ok=false,tuning=false,calibrating=false,raw_mode=false,raw_quest=false,raw_foot=false,obs_seen=false;
  // Tuner presentation facts: a periodic candidate below the confidence threshold (uncertain), and the last
  // confident reading so the display can fade it instead of blanking the moment a string decays.
  bool uncertain=false;Pitch last_pitch;uint32_t last_pitch_at=0;
- float rms=0,peak=0,noise[300],hz_hist[3]={0,0,0};uint16_t noise_count=0;uint8_t hz_count=0;
+ float rms=0,peak=0,env=0,noise[300],hz_hist[3]={0,0,0};uint16_t noise_count=0;uint8_t hz_count=0,obs_head=0,obs_count=0;
+ LevelObs obs[LEVEL_SMOOTH_MS]{};
  uint32_t now=0,rms_at=0,peak_at=0,pitch_at=0,tick_at=0,save_at=0,active_at=0,cal_at=0,sample_at=0,notice_at=0,sequence=0,saved_hash=0;
  // Presentation-only session facts (never saved): when the fragment/level-up happened, what the last
  // session earned, and when it was paused so the summary card can show for a few seconds.
@@ -21,10 +26,10 @@ struct App {
  int saved_slot=-1;const char* notice="Hold QUEST: calibrate";
  App(Store& s,int stage_):store(s),stage(stage_){}
  void message(const char* s){notice=s;notice_at=now;}
- void begin(uint32_t t,bool codec){now=t;codec_ok=codec;if(stage==4)load();tick_at=save_at=active_at=t;last_level=progress.level();session_xp_start=progress.xp();fragment_at=levelup_at=summary_at=t-100000;message("Hold QUEST: calibrate");}
+ void begin(uint32_t t,bool codec){now=t;codec_ok=codec;obs_seen=false;obs_head=obs_count=0;env=0;if(stage==4)load();tick_at=save_at=active_at=t;last_level=progress.level();session_xp_start=progress.xp();fragment_at=levelup_at=summary_at=t-100000;message("Hold QUEST: calibrate");}
  // Session bookkeeping around running transitions. Called after any change to progress.running or newSession().
  void startSession(){session_xp_start=progress.xp();}
- void pauseSession(){summary_ms=uint32_t(progress.session_ms);summary_xp=uint32_t(progress.xp()-session_xp_start);summary_at=now;}
+ void pauseSession(){progress.active=false;progress.hold_ms=0;summary_ms=uint32_t(progress.session_ms);summary_xp=uint32_t(progress.xp()-session_xp_start);summary_at=now;}
  void setRunning(bool on){if(on==progress.running)return;progress.running=on;if(on)startSession();else pauseSession();}
  Record readRecord(int address){Record r{};uint8_t* p=(uint8_t*)&r;for(size_t i=0;i<sizeof r;i++)p[i]=store.read(address+i);return r;}
  void load(){
@@ -45,7 +50,7 @@ struct App {
  }
  void calibrate(){
   if(!codec_ok){message("Check audio board");return;}
-  setRunning(false);summary_at=now-100000;progress.calibrated=false;progress.active=false;calibrating=true;noise_count=0;cal_at=now;sample_at=0;message("Mute strings 3 seconds");
+  setRunning(false);summary_at=now-100000;progress.calibrated=false;progress.active=false;progress.hold_ms=0;calibrating=true;noise_count=0;cal_at=now;sample_at=0;message("Mute strings 3 seconds");
  }
  void finishCalibration(){
   calibrating=false;if(noise_count<50){message("No audio samples");return;}
@@ -56,7 +61,7 @@ struct App {
  void controls(bool m,bool q,bool f,uint32_t t){
   now=t;raw_mode=m;raw_quest=q;raw_foot=f;int em=mode.update(m,t),eq=quest.update(q,t),ef=foot.update(f,t);
   if(stage!=4)return;
-  if(em==1){tuning=!tuning;setRunning(false);progress.active=false;message(tuning?"Rig handles muting":"Tap footswitch to start");}
+  if(em==1){tuning=!tuning;setRunning(false);progress.active=false;progress.hold_ms=0;message(tuning?"Rig handles muting":"Tap footswitch to start");}
   if(em==2)save();
   if(eq==1){if(progress.setGoal((progress.goal_index+1)%3))message("Goal set; session reset");else message("Pause to change goal");}
   if(eq==2)calibrate();
@@ -64,7 +69,29 @@ struct App {
   if(ef==2){setRunning(false);progress.newSession();summary_at=now-100000;message("New session / paused");}
  }
  void command(char c,uint32_t t){now=t;if(stage!=4)return;if(c=='c')calibrate();if(c=='s')save();if(c=='p')setRunning(false);if(c=='r'){setRunning(false);progress.newSession();summary_at=now-100000;}}
- void observe(float r,float p,uint32_t t){now=t;rms=r;peak=p;rms_at=peak_at=t;}
+ bool wantsPitch()const{return stage==3||tuning;}
+ void observe(float r,float p,uint32_t t){
+  now=t;rms=r;peak=p;
+  if(!isfinite(r)||!isfinite(p)||r<0||p<0){env=r;obs_head=obs_count=0;obs_seen=false;rms_at=peak_at=t;return;}
+  if(p>=.98f){env=0;obs_head=obs_count=0;obs_seen=true;rms_at=peak_at=t;return;}
+  uint32_t gap=obs_seen?t-rms_at:100;rms_at=peak_at=t;obs_seen=true;
+  float ms=r*r;
+  if(gap>=100||obs_count==0){obs_head=0;obs_count=1;obs[0]={1,ms};env=r;return;}
+  if(gap==0){obs[(obs_head+obs_count-1)%LEVEL_SMOOTH_MS].ms=ms;}
+  else{
+   uint16_t w=gap>LEVEL_SMOOTH_MS?uint16_t(LEVEL_SMOOTH_MS):uint16_t(gap);
+   uint32_t total=0;for(uint8_t i=0;i<obs_count;i++)total+=obs[(obs_head+i)%LEVEL_SMOOTH_MS].dt;
+   while(obs_count>0&&total+w>LEVEL_SMOOTH_MS){
+    LevelObs& old=obs[obs_head];uint32_t excess=total+w-LEVEL_SMOOTH_MS;
+    if(old.dt<=excess){total-=old.dt;obs_head=(obs_head+1)%LEVEL_SMOOTH_MS;obs_count--;}
+    else{old.dt=uint16_t(old.dt-excess);total-=excess;}
+   }
+   obs[(obs_head+obs_count)%LEVEL_SMOOTH_MS]={w,ms};obs_count++;
+  }
+  float sum=0;uint32_t dur=0;
+  for(uint8_t i=0;i<obs_count;i++){const LevelObs& o=obs[(obs_head+i)%LEVEL_SMOOTH_MS];sum+=o.ms*o.dt;dur+=o.dt;}
+  env=dur?sqrtf(sum/dur):r;
+ }
  // Tuner smoothing: a three-sample median over valid estimates removes single-window glitches, and the
  // displayed note only changes once the estimate is more than 60 cents from the current note's centre.
  void observePitch(float hz,float probability,uint32_t t){
@@ -80,11 +107,11 @@ struct App {
  bool fresh()const{return codec_ok&&now-rms_at<100&&now-peak_at<100;}
  void tick(uint32_t t){
   now=t;if(stage!=4)return;
-  if(calibrating&&now-sample_at>=10&&now-rms_at<50){if(noise_count<300)noise[noise_count++]=rms;sample_at=now;}
+  if(calibrating&&now-sample_at>=10&&now-rms_at<50){if(noise_count<300)noise[noise_count++]=env;sample_at=now;}
   if(calibrating&&now-cal_at>=3000)finishCalibration();
   if(now-tick_at>=10){
    uint32_t dt=now-tick_at;tick_at=now;bool was_claimed=progress.claimed;
-   progress.tick(dt,rms,peak,fresh()&&!tuning&&!calibrating);if(progress.active)active_at=now;
+   progress.tick(dt,env,peak,fresh()&&!tuning&&!calibrating,rms>progress.gate);if(progress.active)active_at=now;
    if(progress.claimed&&!was_claimed)fragment_at=now;
    if(progress.level()>last_level){last_level=progress.level();levelup_at=now;}
   }
