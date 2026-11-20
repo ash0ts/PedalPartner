@@ -23,6 +23,9 @@ static void appTests(){
  app.progress.active_ms=6000;assert(app.save()&&app.saved_slot==0&&app.sequence==1);assert(!app.save()&&std::strcmp(app.notice,"Already saved")==0);
  vex::App again(store,4);again.begin(0,true);assert(again.progress.active_ms==6000&&again.sequence==1&&!again.progress.running);
 }
+static int audioLockDepth=0,audioLocks=0;
+#define VEX_AUDIO_LOCK() do{assert(audioLockDepth==0);audioLockDepth++;audioLocks++;}while(0)
+#define VEX_AUDIO_UNLOCK() do{assert(audioLockDepth==1);audioLockDepth--;}while(0)
 #include "../firmware/VEX_Pocket_Rival/analyzer.h"
 #include <cstdlib>
 #include <vector>
@@ -76,6 +79,38 @@ static void analyzerTests(){
  app.observePitch(30,.95f,15);assert(!app.uncertain&&!app.pitchNow.valid);
  app.observePitch(440,.95f,16);assert(!app.uncertain&&app.pitchNow.valid&&app.last_pitch_at==16);
  vex::View tv=app.view();assert(tv.last_pitch.midi==69&&!tv.uncertain);
+ assert(!app.wantsPitch());app.tuning=true;assert(app.wantsPitch());app.tuning=false;
+ vex::App s3(store,3);s3.begin(0,true);assert(s3.wantsPitch());
+ // Smoothed level + activity hold through the real block analyzer: sustained low E2 near the gate
+ // credits >= 95% of its duration, and 300 ms chord-change gaps never drop active mid-phrase.
+ {vex::App holdApp(store,4);holdApp.begin(0,true);holdApp.progress.calibrated=true;holdApp.progress.gate=.004f;holdApp.setRunning(true);
+  auto az=std::make_unique<vex::Analyzer>();int16_t blk[vex::Analyzer::BLOCK];double clk=0,ph=0;
+  const float amp=powf(10.f,-41.f/20.f);
+  for(int b=0;b<int(5.0f*SR/vex::Analyzer::BLOCK);b++){
+   for(int j=0;j<vex::Analyzer::BLOCK;j++){ph+=2*M_PI*82.4069/SR;float v=amp*(sinf(float(ph))+.45f*sinf(float(2*ph))+.15f*sinf(float(3*ph)))/1.6f;blk[j]=int16_t(v*32767);}
+   az->push(blk,vex::Analyzer::BLOCK);clk+=1000.0*vex::Analyzer::BLOCK/SR;
+   float br,bp;if(az->takeLevel(br,bp))holdApp.observe(br,bp,holdApp.now);
+   while(holdApp.now+1<=uint32_t(clk))holdApp.tick(holdApp.now+1);
+  }
+  assert(holdApp.progress.active_ms>=4750&&holdApp.progress.active);
+  // Now 6 s of 300 ms decaying strums separated by 300 ms silent gaps: active never drops on any tick.
+  uint64_t before=holdApp.progress.active_ms;double startClk=clk;ph=0;
+  for(int b=0;b<int(6.0f*SR/vex::Analyzer::BLOCK);b++){
+   for(int j=0;j<vex::Analyzer::BLOCK;j++){
+    double t_ms=(clk-startClk)+j*1000.0/SR,in_ms=fmod(t_ms,600.0);
+    float v=0;if(in_ms<300.0){ph+=2*M_PI*110.0/SR;v=.1f*expf(-1.5f*float(in_ms)/300.f)*(sinf(float(ph))+.45f*sinf(float(2*ph))+.15f*sinf(float(3*ph)))/1.6f;}else ph=0;
+    blk[j]=int16_t(v*32767);
+   }
+   az->push(blk,vex::Analyzer::BLOCK);clk+=1000.0*vex::Analyzer::BLOCK/SR;
+   float br,bp;if(az->takeLevel(br,bp))holdApp.observe(br,bp,holdApp.now);
+   while(holdApp.now+1<=uint32_t(clk)){holdApp.tick(holdApp.now+1);assert(holdApp.progress.active);}
+  }
+  assert(holdApp.progress.active_ms-before>=5900);
+  // And 2 s of silence credits at most ACTIVITY_HOLD_MS, then stops.
+  uint64_t atStop=holdApp.progress.active_ms;uint32_t t0=holdApp.now;
+  for(uint32_t d=1;d<=2000;d++){holdApp.observe(0,0,t0+d);holdApp.tick(t0+d);}
+  assert(!holdApp.progress.active&&holdApp.progress.hold_ms==0&&holdApp.progress.active_ms-atStop<=vex::ACTIVITY_HOLD_MS);}
+ a->skip();assert(a->hz==0&&a->probability==0&&!a->analyze()&&audioLockDepth==0&&audioLocks>0);
 }
 #include "../firmware/VEX_Pocket_Rival/flush.h"
 #include "../simulator/canvas.h"
@@ -151,8 +186,19 @@ static void linkTests(){
 int main(){
  appTests();analyzerTests();displayTests();linkTests();
  vex::Progress p;p.tick(100,.1,.2,true);assert(p.active_ms==0);p.calibrated=true;p.running=true;
- p.tick(100,.1,.2,true);assert(p.active_ms==100);p.tick(100,0,0,true);assert(!p.active&&p.active_ms==100);
- p.tick(100,.2,.99,true);p.tick(101,.2,.2,true);p.tick(100,.2,.2,false);p.tick(100,NAN,.2,true);assert(p.active_ms==100);
+ p.tick(100,.1,.2,true);assert(p.active_ms==100&&p.hold_ms==vex::ACTIVITY_HOLD_MS);
+ // Silence holds up to ACTIVITY_HOLD_MS (including partial final ticks), then stops.
+ for(int i=0;i<4;i++)p.tick(100,0,0,true);
+ assert(p.active&&p.hold_ms==100&&p.active_ms==500);
+ p.tick(70,0,0,true);assert(p.active&&p.hold_ms==30&&p.active_ms==570);
+ p.tick(100,0,0,true);assert(!p.active&&p.hold_ms==0&&p.active_ms==600);
+ p.tick(100,0,0,true);assert(!p.active&&p.active_ms==600);
+ // Clipping, >100 ms loop stalls (counted in credit_drops), stale and NaN cut an active hold immediately.
+ p.tick(100,.1,.2,true);assert(p.hold_ms==vex::ACTIVITY_HOLD_MS&&p.active_ms==700);
+ p.tick(100,.2,.99,true);assert(!p.active&&p.hold_ms==0&&p.active_ms==700);
+ p.tick(100,.1,.2,true);p.tick(101,.2,.2,true);assert(!p.active&&p.hold_ms==0&&p.credit_drops==1&&p.active_ms==800);
+ p.tick(100,.1,.2,true);p.tick(100,.2,.2,false);assert(!p.active&&p.hold_ms==0&&p.active_ms==900);
+ p.tick(100,.1,.2,true);p.tick(100,NAN,.2,true);assert(!p.active&&p.hold_ms==0&&p.active_ms==1000);
  p.session_ms=p.goalMs()-100;p.tick(100,.2,.3,true);assert(p.fragments==1&&p.claimed);for(int i=0;i<20;i++)p.tick(100,.2,.3,true);assert(p.fragments==1);
  assert(!p.setGoal(1));p.running=false;assert(p.setGoal(1));assert(p.session_ms==0&&!p.claimed&&p.active_ms>0);assert(!p.setGoal(3));
  auto a=vex::pitch(440,.99f);assert(a.valid&&a.midi==69&&fabs(a.cents)<.001);assert(!vex::pitch(440,.2).valid);assert(!vex::pitch(0,.99).valid);assert(!vex::pitch(INFINITY,1).valid);auto e=vex::pitch(82.40689,.99);assert(e.valid&&e.midi==40&&fabs(e.cents)<.01);

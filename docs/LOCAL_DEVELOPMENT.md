@@ -59,6 +59,7 @@ The browser keeps its two slots in `localStorage` (**Factory reset** clears them
 | `audio <ms> <rms> <peak> [hz prob]` | Inject fresh level (and optional pitch) observations for `ms` |
 | `wait <ms>` | Advance time with no fresh samples (they go stale) |
 | `wav <path> [start_ms length_ms]`, `raw <path>` | Feed PCM through the shared analyzer |
+| `tone <ms> <hz> <dbfs> [decay_ms] [gap_ms]` | Synthesise a harmonic tone or gapped plucks at 44.1 kHz through the shared analyzer |
 | `serial <c, s, p or r>` | The sketch's USB debug commands |
 | `calibrate [rms]` | Serial `c` plus 3.1 s of a quiet floor (default 0.001) |
 | `stage <2, 3 or 4>`, `reboot`, `reset`, `corrupt`, `powercut <bytes>`, `save`, `state` | Device lifecycle; `powercut` kills storage after N byte writes |
@@ -121,19 +122,21 @@ The firmware is instrumented so the questions the desktop cannot answer (how lon
 From stage 2 up, the sketch prints **one JSON line per second**, for example:
 
 ```json
-{"stage":4,"up_ms":42310,"codec":1,"rms":0.05012,"peak":0.201,"gate":0.00400,"active":1,"running":1,"session_s":42,"total_s":642,"fragments":2,"level":2,"cpu":11.3,"memory":12,"tx_bytes":28800,"tx_max_bytes":115200,"flush_us":4120,"flush_max_us":17890,"loop_max_us":18240,"cadence_ms":100,"diff":1,"full":0,"link":0,"test":0,"spi_hz":16000000,"in_level":0,"anim":2,"frame":3,"pitch":"yin","hz":110.02,"prob":0.93,"yin_us":1480,"yin_max_us":2210}
+{"stage":4,"up_ms":42310,"codec":1,"rms":0.05012,"peak":0.201,"gate":0.00400,"active":1,"running":1,"session_s":42,"total_s":642,"fragments":2,"level":2,"credit_drops":0,"cpu":11.3,"memory":12,"tx_bytes":28800,"tx_max_bytes":115200,"draw_us":720,"draw_max_us":910,"flush_us":3400,"flush_max_us":17100,"loop_max_us":18240,"cadence_ms":100,"diff":1,"full":0,"link":0,"test":0,"spi_hz":16000000,"in_level":0,"anim":2,"frame":3,"pitch":"yin","hz":0.00,"prob":0.00,"yin_us":0,"yin_max_us":2210}
 ```
 
 | Field | Meaning |
 |---|---|
-| `flush_us`, `flush_max_us` | `micros()` around draw + band transfer for the last cadence, and the maximum since boot. Must stay well under `cadence_ms × 1000`; if `flush_max_us` approaches it, motion will stutter. |
-| `loop_max_us` | Longest pass through `loop()` in the last second (includes YIN and the flush). |
+| `draw_us`, `draw_max_us` | `micros()` around rendering into the RAM canvas plus the dirty-band row diff (`vex::bands`), before SPI begins. |
+| `flush_us`, `flush_max_us` | `micros()` around the SPI band transfer (`Panel::begin/writeBand/end` + shadow copy) for the last cadence (`0` if no rows changed), and the maximum since boot. Must stay well under `cadence_ms × 1000`; the DMA gate compares `flush_max_us` directly against SPI budget. |
+| `credit_drops` | Practice ticks rejected since boot because a loop pass exceeded 100 ms (`dt > 100` while running with fresh unclipped audio). Should stay `0`. |
+| `loop_max_us` | Longest pass through `loop()` in the last second (includes YIN when active, draw and SPI flush). |
 | `tx_bytes`, `tx_max_bytes` | Bytes sent to the panel this cadence (dirty bands) and the largest so far. 115200 is a full frame. |
 | `up_ms` | Milliseconds since boot; `tools/bench_report.py` counts reboots when it goes backwards and reports run time for acceptance row 18. |
 | `cadence_ms`, `diff`, `full`, `link`, `test` | Current switch settings (below). |
 | `spi_hz`, `in_level` | The two live knobs: panel SPI clock and codec line-in level. Boot values are `TFT_HZ` and `INPUT_LEVEL` in `config.h`; serial steps are not remembered across a reset. |
 | `anim`, `frame` | The animation and step the renderer chose, in `art/vex/manifest.json` order — the same numbers the native simulator and scenarios use. |
-| `yin_us`, `yin_max_us`, `cpu`, `memory` | Pitch-analysis time and PJRC audio-library CPU/memory maxima (stage 3+). |
+| `yin_us`, `yin_max_us`, `cpu`, `memory` | Pitch-analysis time (`App::wantsPitch()` runs YIN only in stage 3 and in tuner mode; `yin_us` is `0` during stage-4 practice) and PJRC audio-library CPU/memory maxima (stage 3+). |
 
 `?` prints the switch settings as a one-line JSON object. Numbers in this document are examples of shape, not measurements; record real values in `docs/HANDOFF.md`.
 

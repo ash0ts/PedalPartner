@@ -2,13 +2,19 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <math.h>
+#ifndef VEX_AUDIO_LOCK
+#define VEX_AUDIO_LOCK() ((void)0)
+#endif
+#ifndef VEX_AUDIO_UNLOCK
+#define VEX_AUDIO_UNLOCK() ((void)0)
+#endif
 namespace vex {
 // Shared level meter and pitch estimator for 44.1 kHz 16-bit mono blocks.
 // push() is the only call allowed from the audio interrupt: it accumulates level and copies samples
 // into a double-buffered window. No allocation, logging or display work happens here.
-// analyze() runs YIN (difference function, cumulative mean normalised difference, absolute threshold,
-// parabolic refinement) in the foreground on the last completed window. Levels use the same 0..1
-// scale as the PJRC RMS/peak analyzers so calibration and clipping thresholds are unchanged.
+// Foreground calls guard the slot swap and window copy with VEX_AUDIO_LOCK/UNLOCK (AudioNoInterrupts
+// on the Teensy, no-op on single-threaded hosts). analyze() runs YIN in the foreground on the last
+// completed window. Levels use the same 0..1 scale as the PJRC RMS/peak analyzers.
 struct Analyzer {
  static constexpr int RATE=44100,BLOCK=128,WINDOW=2048;
  static constexpr int TAU_MIN=RATE/1400,TAU_MAX=RATE/55+1,SPAN=WINDOW-TAU_MAX; // 31, 802, 1246
@@ -28,16 +34,24 @@ struct Analyzer {
  // Foreground. True when at least one block arrived since the previous call; returns RMS and peak
  // accumulated over those blocks so a slow loop (display transfer) cannot hide a clipped block.
  bool takeLevel(float& rms,float& peak){
-  uint8_t s=level_slot;level_slot=s^1;Level& l=level[s];
-  if(!l.count)return false;
-  rms=sqrtf(l.sum_sq/l.count);peak=l.peak;l=Level{};return true;
+  VEX_AUDIO_LOCK();
+  uint8_t s=level_slot;Level snap=level[s];
+  if(snap.count){level[s]=Level{};level_slot=s^1;}
+  VEX_AUDIO_UNLOCK();
+  if(!snap.count)return false;
+  rms=sqrtf(snap.sum_sq/snap.count);peak=snap.peak;return true;
  }
+ // Foreground when pitch is not displayed: mark completed windows seen so stale readings do not linger.
+ void skip(){VEX_AUDIO_LOCK();analyzed=windows;VEX_AUDIO_UNLOCK();hz=0;probability=0;}
  // Foreground. True when a newly completed window was analysed; hz/probability then hold the result
  // (hz=0, probability=0 for silence or no periodic candidate).
  bool analyze(){
-  if(analyzed==windows)return false;
+  VEX_AUDIO_LOCK();
+  if(analyzed==windows){VEX_AUDIO_UNLOCK();return false;}
   analyzed=windows;const int16_t* src=buffer[fill_slot^1];
-  float energy=0;for(int i=0;i<WINDOW;i++){work[i]=src[i]*(1.f/32768.f);energy+=work[i]*work[i];}
+  for(int i=0;i<WINDOW;i++)work[i]=src[i]*(1.f/32768.f);
+  VEX_AUDIO_UNLOCK();
+  float energy=0;for(int i=0;i<WINDOW;i++)energy+=work[i]*work[i];
   window_rms=sqrtf(energy/WINDOW);
   if(window_rms<SILENCE_RMS){hz=0;probability=0;return true;}
   for(int tau=1;tau<=TAU_MAX;tau++){float s=0;const float* a=work;const float* b=work+tau;for(int j=0;j<SPAN;j++){float d=a[j]-b[j];s+=d*d;}diff[tau]=s;}

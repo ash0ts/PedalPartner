@@ -27,7 +27,7 @@ static_assert(sizeof(LinkState)==76,"LinkState layout is part of the bench proto
 // flags bits
 constexpr uint8_t LINK_RUNNING=1,LINK_CALIBRATED=2,LINK_ACTIVE=4,LINK_TUNING=8,LINK_CALIBRATING=16,LINK_CLAIMED=32,LINK_CODEC=64,LINK_PITCH_VALID=128;
 // Measurements the adapter owns (display timing, analysis cost, audio CPU); App knows nothing about them.
-struct LinkTiming{uint32_t tx_bytes=0,flush_us=0,flush_max_us=0,yin_us=0,yin_max_us=0,loop_max_us=0;float cpu=0;uint8_t cadence_mul=1;};
+struct LinkTiming{uint32_t tx_bytes=0,draw_us=0,draw_max_us=0,flush_us=0,flush_max_us=0,yin_us=0,yin_max_us=0,loop_max_us=0;float cpu=0;uint8_t cadence_mul=1;};
 inline LinkState linkState(const App& app,const LinkTiming& t){
  LinkState s{};const Progress& p=app.progress;View v=quantised(app.view());AnimFrame f=chooseAnim(v);
  s.now_ms=app.now;s.active_ms=uint32_t(p.active_ms);s.session_ms=uint32_t(p.session_ms);s.fragments=p.fragments;s.sequence=app.sequence;

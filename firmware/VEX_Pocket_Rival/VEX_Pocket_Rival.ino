@@ -2,7 +2,7 @@
  * USB-powered sensing companion; no audio through-path or output/mute relay.
  * Device behavior lives in app.h and is shared with the desktop simulator; this
  * sketch only adapts I2S audio, GPIO, EEPROM, the SPI display and USB serial.
- * Host core tests supplied; target compile and hardware acceptance still required.
+ * Host core tests and Teensy target builds supplied; hardware acceptance still required.
  *
  * Bench serial (stages 2-4, one character each; stage 4 also keeps c s p r from app.h):
  *   f  force a full-frame flush every cadence      b  toggle the dirty-band diff (default on)
@@ -12,10 +12,13 @@
  *   g / G  codec line-in level down / up (0..15; boots at INPUT_LEVEL; stage 3-4 with a codec)
  *   t  toggle the display test pattern (ui.h drawTestPattern; full flush while on)
  *   ?  print the current switch settings
- * Telemetry is one JSON line per second; tools/web.py serve --device mirrors the panel from the link.
+ * Telemetry is one JSON line per second (draw_us vs SPI flush_us, credit_drops, pitch gated by
+ * App::wantsPitch); tools/web.py serve --device mirrors the panel from the link.
  * Every knob boots at its config.h value; nothing typed here is remembered across a reset.
  */
 #include <Audio.h>
+#define VEX_AUDIO_LOCK() AudioNoInterrupts()
+#define VEX_AUDIO_UNLOCK() AudioInterrupts()
 #include <Wire.h>
 #include <SPI.h>
 #include <EEPROM.h>
@@ -113,11 +116,13 @@ void loop(){
 #ifdef VEX_PITCH_PJRC
   bool fresh=false;if(rmsNode.available()){rms=rmsNode.read();fresh=true;}if(peakNode.available()){peak=peakNode.read();fresh=true;}
   if(fresh)app.observe(rms,peak,now);
-  if(noteNode.available())app.observePitch(noteNode.read(),noteNode.probability(),now);
+  if(app.wantsPitch()&&noteNode.available())app.observePitch(noteNode.read(),noteNode.probability(),now);
 #else
   if(analyzer.takeLevel(rms,peak))app.observe(rms,peak,now);
-  uint32_t started=micros();
-  if(analyzer.analyze()){timing.yin_us=micros()-started;if(timing.yin_us>timing.yin_max_us)timing.yin_max_us=timing.yin_us;app.observePitch(analyzer.hz,analyzer.probability,millis());}
+  if(app.wantsPitch()){
+   uint32_t started=micros();
+   if(analyzer.analyze()){timing.yin_us=micros()-started;if(timing.yin_us>timing.yin_max_us)timing.yin_max_us=timing.yin_us;app.observePitch(analyzer.hz,analyzer.probability,millis());}
+  }else{analyzer.skip();timing.yin_us=0;}
 #endif
  }
  app.controls(digitalRead(PIN_MODE)==LOW||now<tapUntil[0],digitalRead(PIN_QUEST)==LOW||now<tapUntil[1],digitalRead(PIN_FOOT)==LOW||now<tapUntil[2],now);
@@ -125,26 +130,29 @@ void loop(){
  app.tick(now);
  digitalWrite(PIN_LED,app.led());
  if(now-drawAt>=DISPLAY_MS*timing.cadence_mul){
-  drawAt=now;uint32_t flushStart=micros();
+  drawAt=now;uint32_t drawStart=micros();
   if(testOn)vex::drawTestPattern(frame,now);else vex::drawScreen(frame,app.view());
   const uint16_t* px=frame.getBuffer();
   vex::Band bands[vex::FLUSH_MAX_BANDS];int n;
   if(shadowValid&&bandDiff&&!forceFull&&!testOn)n=vex::bands(shadow,px,bands);else{bands[0].y=0;bands[0].h=vex::FRAME_H;n=1;shadowValid=true;}
+  timing.draw_us=micros()-drawStart;if(timing.draw_us>timing.draw_max_us)timing.draw_max_us=timing.draw_us;
+  uint32_t flushStart=micros();
   if(n){
    panel.begin();
    for(int i=0;i<n;i++){size_t at=size_t(bands[i].y)*vex::FRAME_W,count=size_t(bands[i].h)*vex::FRAME_W;panel.writeBand(bands[i].y,bands[i].h,px+at);memcpy(shadow+at,px+at,count*2);}
    panel.end();
    timing.tx_bytes=vex::bandBytes(bands,n);if(timing.tx_bytes>txMaxBytes)txMaxBytes=timing.tx_bytes;
-  }else timing.tx_bytes=0;
-  timing.flush_us=micros()-flushStart;if(timing.flush_us>timing.flush_max_us)timing.flush_max_us=timing.flush_us;
+   timing.flush_us=micros()-flushStart;
+  }else{timing.tx_bytes=0;timing.flush_us=0;}
+  if(timing.flush_us>timing.flush_max_us)timing.flush_max_us=timing.flush_us;
   if(linkOn){for(int i=0;i<n;i++)vex::linkBand(Serial,bands[i].y,bands[i].h,px+size_t(bands[i].y)*vex::FRAME_W);vex::linkState(Serial,vex::linkState(app,timing));}
  }
  if(now-printAt>=1000){
   printAt=now;const auto& p=app.progress;timing.cpu=VEX_STAGE>=3?AudioProcessorUsageMax():0;vex::AnimFrame f=vex::chooseAnim(vex::quantised(app.view()));
-  Serial.printf("{\"stage\":%d,\"up_ms\":%lu,\"codec\":%d,\"rms\":%.5f,\"peak\":%.3f,\"gate\":%.5f,\"active\":%d,\"running\":%d,\"session_s\":%lu,\"total_s\":%lu,\"fragments\":%lu,\"level\":%lu,\"cpu\":%.1f,\"memory\":%u,"
-   "\"tx_bytes\":%lu,\"tx_max_bytes\":%lu,\"flush_us\":%lu,\"flush_max_us\":%lu,\"loop_max_us\":%lu,\"cadence_ms\":%lu,\"diff\":%d,\"full\":%d,\"link\":%d,\"test\":%d,\"spi_hz\":%lu,\"in_level\":%u,\"anim\":%d,\"frame\":%d",
-   VEX_STAGE,(unsigned long)now,app.codec_ok,app.rms,app.peak,p.gate,p.active,p.running,(unsigned long)(p.session_ms/1000),(unsigned long)(p.active_ms/1000),(unsigned long)p.fragments,(unsigned long)p.level(),timing.cpu,VEX_STAGE>=3?AudioMemoryUsageMax():0,
-   (unsigned long)timing.tx_bytes,(unsigned long)txMaxBytes,(unsigned long)timing.flush_us,(unsigned long)timing.flush_max_us,(unsigned long)timing.loop_max_us,(unsigned long)(DISPLAY_MS*timing.cadence_mul),bandDiff,forceFull,linkOn,testOn,(unsigned long)spiHz,inLevel,f.anim,f.frame);
+  Serial.printf("{\"stage\":%d,\"up_ms\":%lu,\"codec\":%d,\"rms\":%.5f,\"peak\":%.3f,\"gate\":%.5f,\"active\":%d,\"running\":%d,\"session_s\":%lu,\"total_s\":%lu,\"fragments\":%lu,\"level\":%lu,\"credit_drops\":%lu,\"cpu\":%.1f,\"memory\":%u,"
+   "\"tx_bytes\":%lu,\"tx_max_bytes\":%lu,\"draw_us\":%lu,\"draw_max_us\":%lu,\"flush_us\":%lu,\"flush_max_us\":%lu,\"loop_max_us\":%lu,\"cadence_ms\":%lu,\"diff\":%d,\"full\":%d,\"link\":%d,\"test\":%d,\"spi_hz\":%lu,\"in_level\":%u,\"anim\":%d,\"frame\":%d",
+   VEX_STAGE,(unsigned long)now,app.codec_ok,app.rms,app.peak,p.gate,p.active,p.running,(unsigned long)(p.session_ms/1000),(unsigned long)(p.active_ms/1000),(unsigned long)p.fragments,(unsigned long)p.level(),(unsigned long)p.credit_drops,timing.cpu,VEX_STAGE>=3?AudioMemoryUsageMax():0,
+   (unsigned long)timing.tx_bytes,(unsigned long)txMaxBytes,(unsigned long)timing.draw_us,(unsigned long)timing.draw_max_us,(unsigned long)timing.flush_us,(unsigned long)timing.flush_max_us,(unsigned long)timing.loop_max_us,(unsigned long)(DISPLAY_MS*timing.cadence_mul),bandDiff,forceFull,linkOn,testOn,(unsigned long)spiHz,inLevel,f.anim,f.frame);
 #ifdef VEX_PITCH_PJRC
   Serial.printf(",\"pitch\":\"pjrc\",\"midi\":%d,\"cents\":%.1f,\"valid\":%d}\n",app.pitchNow.midi,app.pitchNow.cents,app.pitchNow.valid);
 #else

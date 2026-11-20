@@ -48,7 +48,7 @@ Python 3.10+ and C++17 suffice for host tests. CAD uses build123d 0.10.0. Target
 - USB 5 V only. Teensy GPIO is 3.3 V. No direct 9 V connection.
 - Buffered dry signal through the documented attenuator to Audio Adapter LINE IN L. No passive-pickup loading, MIC substitution, speaker input, audio output or bypass claims.
 - Preserve pin ownership. No SD cards; unused selects stay high.
-- Boot paused and uncalibrated. Silence, stale samples, clipping and tuner mode earn no practice time. One fragment per completed session.
+- Boot paused and uncalibrated. Silence longer than the activity hold, stale samples, clipping and tuner mode earn no practice time. One fragment per completed session.
 - Save-record changes require explicit versioning/migration and corruption/reboot tests. Avoid EEPROM writes in the audio callback.
 - No display rendering, allocation or logging in the audio callback. Keep the shared renderer usable by both targets.
 - A valid STEP is not a fit, strength or electrical certification. Never fill measured acceptance fields with inferred values.

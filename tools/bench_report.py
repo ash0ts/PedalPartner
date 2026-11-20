@@ -60,13 +60,16 @@ def summarise(events):
     def seen(key):return sorted({r[key] for r in tel if key in r},key=lambda v:(str(type(v)),v))
     s['knobs']={k:seen(k) for k in ('spi_hz','in_level','cadence_ms','diff','full','link','test')}
     cadence=seen('cadence_ms');s['cadence_ms']=max(cadence) if cadence else None
+    draw=[r['draw_us'] for r in tel if r.get('draw_us')];dmax=[r['draw_max_us'] for r in tel if 'draw_max_us' in r]
+    s['draw_us']={'median':pct(draw,.5),'max':max(dmax) if dmax else (max(draw) if draw else None)}
     flush=[r['flush_us'] for r in tel if 'flush_us' in r]+[st['flush_us'] for st in states if 'flush_us' in st]
-    flush=[f for f in flush if f]   # zero means no draw in that second
+    flush=[f for f in flush if f]   # zero means no SPI band transfer in that second
     s['flush_us']={'median':pct(flush,.5),'p95':pct(flush,.95),'max':max(flush) if flush else None,'samples':len(flush)}
     fmax=[r['flush_max_us'] for r in tel if 'flush_max_us' in r];s['flush_max_us']=max(fmax) if fmax else (s['flush_us']['max'])
     tx=[r['tx_bytes'] for r in tel if 'tx_bytes' in r];txm=[r['tx_max_bytes'] for r in tel if 'tx_max_bytes' in r]
     s['tx_bytes_max']=max(txm) if txm else (max(tx) if tx else None)
     loop=[r['loop_max_us'] for r in tel if 'loop_max_us' in r];s['loop_max_us']=max(loop) if loop else None
+    drops=[r['credit_drops'] for r in tel if 'credit_drops' in r];s['credit_drops']=max(drops) if drops else 0
     cpu=[r['cpu'] for r in tel if 'cpu' in r];s['cpu_max']=max(cpu) if cpu else None
     mem=[r['memory'] for r in tel if 'memory' in r];s['memory_max']=max(mem) if mem else None
     yin=[r['yin_us'] for r in tel if r.get('yin_us')];ymax=[r['yin_max_us'] for r in tel if 'yin_max_us' in r]
@@ -100,11 +103,11 @@ def render(s):
     out.append(f"  stages seen {s['stages'] or 'none'} · uptime max {fmt(s['uptime_max_s'],' s')} · reboots {s['reboots']} · 'VEX USB OK' lines {s['usb_ok_lines']}")
     k=s['knobs']
     out.append(f"  knobs: spi_hz {k['spi_hz'] or 'n/a'} · in_level {k['in_level'] or 'n/a'} · cadence_ms {k['cadence_ms'] or 'n/a'} · diff {k['diff']} full {k['full']} link {k['link']} test {k['test']}")
-    f=s['flush_us']
-    out.append(f"  display: flush_us median {fmt(f['median'])} p95 {fmt(f['p95'])} max {fmt(f['max'])} ({f['samples']} samples) · flush_max_us {fmt(s['flush_max_us'])} · tx_max_bytes {fmt(s['tx_bytes_max'])}")
+    f=s['flush_us'];d=s['draw_us']
+    out.append(f"  display: draw_us median {fmt(d['median'])} max {fmt(d['max'])} · flush_us median {fmt(f['median'])} p95 {fmt(f['p95'])} max {fmt(f['max'])} ({f['samples']} samples) · flush_max_us {fmt(s['flush_max_us'])} · tx_max_bytes {fmt(s['tx_bytes_max'])}")
     out.append(f"  loop_max_us {fmt(s['loop_max_us'])} · audio cpu max {fmt(s['cpu_max'],' %')} · audio memory max {fmt(s['memory_max'])} · yin_us median {fmt(s['yin_us']['median'])} max {fmt(s['yin_us']['max'])} · pitch rows {s['pitch_rows']}")
     out.append(f"  level: rms {fmt(s['rms']['min'])}..{fmt(s['rms']['max'])} · peak {fmt(s['peak']['min'])}..{fmt(s['peak']['max'])} · seconds at/above {CLIP} {s['clip_seconds']} · codec ok {s['codec']['ok']}/{s['codec']['seen']}")
-    out.append(f"  practice: gate {fmt(s['gate'])} · running {s['running_seconds']} s · active {s['active_seconds']} s · total_s {fmt(s['total_s']['first'])} -> {fmt(s['total_s']['last'])} · fragments {fmt(s['fragments']['first'])} -> {fmt(s['fragments']['last'])} · level {fmt(s['level_last'])}")
+    out.append(f"  practice: gate {fmt(s['gate'])} · running {s['running_seconds']} s · active {s['active_seconds']} s · credit_drops {s['credit_drops']} · total_s {fmt(s['total_s']['first'])} -> {fmt(s['total_s']['last'])} · fragments {fmt(s['fragments']['first'])} -> {fmt(s['fragments']['last'])} · level {fmt(s['level_last'])}")
     out.append('')
     out.append('Informs acceptance rows (hardware/data/acceptance_log.csv; enter the measured fields yourself):')
     rows=[]
