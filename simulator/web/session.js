@@ -1,14 +1,30 @@
-// Multi-track guided walkthrough (MakeCode-style self-ticking steps).
-// Covers the full Quest + Drills pedal flow AND dedicated step-by-step walkthroughs for each
-// of the five drills (PULSE, HUNT, BEND, RUN, TOUCH) plus Classic Pet & Tuner.
-// Every step watches real vex::App state so it ticks whether performed by hand on the pedal
-// (mouse or keys M, Q, Space) or via "Do it for me".
+// Progressive step-by-step guide + inline drill test bench.
+// Shows ONE expanded step at a time (completed & upcoming steps stay compact), highlights the
+// exact physical control on the pedal (MODE, QUEST, FOOTSWITCH), updates pedal button captions
+// to match the current screen, and turns the final step of each drill into a clean test playground.
 (function(root){
  'use strict';
 
  const PC=['C','C#','D','D#','E','F','F#','G','G#','A','Bb','B'];
- const STR_NAMES=['E6 STR','A STR','D STR','G STR','B STR','E1 STR'];
+ const STR_STARTS=[40,45,50,55,59,64];
+ const STR_LABELS=['low E string','A string','D string','G string','B string','high E string'];
+ const PRESET_ORDER=[
+  'pulse-qtr','pulse-8th','pulse-free',
+  'hunt-any','hunt-str',
+  'bend-half','bend-whole',
+  'run-penta','run-major','run-minor',
+  'touch-even','touch-acc3','touch-acc4'
+ ];
+ const PRESET_SCREEN={
+  'pulse-qtr':'PULSE QTR','pulse-8th':'PULSE 8TH','pulse-free':'PULSE FREE',
+  'hunt-any':'HUNT ANY','hunt-str':'HUNT STR',
+  'bend-half':'BEND 1/2','bend-whole':'BEND FULL',
+  'run-penta':'RUN PENTA','run-major':'RUN MAJOR','run-minor':'RUN MINOR',
+  'touch-even':'TOUCH EVEN','touch-acc3':'TOUCH ACC3','touch-acc4':'TOUCH ACC4'
+ };
+
  function isDrill(act){return !!act&&act!=='pet'&&act!=='tuner';}
+
  function fmtBest(act,v){
   if(!v)return 'none yet';
   if(act.startsWith('pulse')||act.startsWith('run'))return `${v} BPM`;
@@ -18,298 +34,330 @@
   return String(v);
  }
 
+ function fmtClock(ms){
+  const sec=Math.max(0,Math.floor(ms/1000));
+  return `${Math.floor(sec/60)}:${String(sec%60).padStart(2,'0')}`;
+ }
+
+ function questTapsTo(curSlug,slugs){
+  const ci=PRESET_ORDER.indexOf(curSlug);
+  if(ci<0)return null;
+  let best=99,bestSlug=slugs[0];
+  for(const sl of slugs){
+   const ti=PRESET_ORDER.indexOf(sl);
+   if(ti<0)continue;
+   const d=(ti-ci+PRESET_ORDER.length)%PRESET_ORDER.length;
+   if(d<best){best=d;bestSlug=sl;}
+  }
+  return {taps:best,slug:bestSlug,screen:PRESET_SCREEN[bestSlug]||bestSlug.toUpperCase()};
+ }
+
+ function huntPromptText(s){
+  const note=PC[s.hunt_pc]||'?';
+  if(s.hunt_midi>0){
+   let si=0;
+   for(let i=0;i<STR_STARTS.length;i++){
+    if(s.hunt_midi>=STR_STARTS[i]&&s.hunt_midi<=STR_STARTS[i]+12)si=i;
+   }
+   const fret=s.hunt_midi-STR_STARTS[si];
+   return `${note} on ${STR_LABELS[si]} (fret ${fret})`;
+  }
+  return `Any ${note} on the neck`;
+ }
+
+ const DRILL_GUIDES={
+  pulse:{
+   id:'pulse',
+   label:'Timing',
+   prefix:'pulse',
+   defaultSlug:'pulse-qtr',
+   slugs:['pulse-qtr','pulse-8th','pulse-free'],
+   modes:[
+    {slug:'pulse-qtr',label:'Quarter notes'},
+    {slug:'pulse-8th',label:'Eighth notes'},
+    {slug:'pulse-free',label:'Your own tempo'}
+   ],
+   playDesc:'Pick steady notes with the flashing red LED beat. Four clean bars within ±30 ms raises the tempo by +4 BPM.',
+   takes:()=>[
+    {kind:'steady',label:'▶ Play 4 clean bars (+4 BPM)',primary:true},
+    {kind:'rushing',label:'▶ Rush ahead of the beat'},
+    {kind:'uneven',label:'▶ Play sloppy / uneven'}
+   ],
+   scores:(s)=>[
+    {k:'Tempo',v:s.bpm?`${s.bpm} BPM`:'your pace'},
+    {k:'Personal best',v:fmtBest('pulse',s.drill_best),hi:s.drill_best>0},
+    {k:'Rounds',v:String(s.drill_rounds)},
+    {k:'5:00 Quest',v:`${fmtClock(s.session_ms)} / ${s.goal_minutes}:00`}
+   ]
+  },
+  hunt:{
+   id:'hunt',
+   label:'Note Finder',
+   prefix:'hunt',
+   defaultSlug:'hunt-str',
+   slugs:['hunt-any','hunt-str'],
+   modes:[
+    {slug:'hunt-str',label:'Specific string + note'},
+    {slug:'hunt-any',label:'Any string / octave'}
+   ],
+   playDesc:'Play the note shown on the screen. Ten notes finish a round; your slowest note comes back twice next round.',
+   takes:()=>[
+    {kind:'steady',label:'▶ Find all 10 notes cleanly',primary:true},
+    {kind:'wrong',label:'▶ Play wrong string / note (red flash)'},
+    {kind:'uneven',label:'▶ Hesitate on slow notes'}
+   ],
+   scores:(s)=>[
+    {k:'Find now',v:huntPromptText(s),hi:true},
+    {k:'Personal best',v:fmtBest('hunt',s.drill_best),hi:s.drill_best>0},
+    {k:'Rounds',v:String(s.drill_rounds)},
+    {k:'5:00 Quest',v:`${fmtClock(s.session_ms)} / ${s.goal_minutes}:00`}
+   ]
+  },
+  bend:{
+   id:'bend',
+   label:'Bend & Vibrato',
+   prefix:'bend',
+   defaultSlug:'bend-half',
+   slugs:['bend-half','bend-whole'],
+   modes:[
+    {slug:'bend-half',label:'Half-step (+100c)'},
+    {slug:'bend-whole',label:'Whole-step (+200c)'}
+   ],
+   playDesc:'Strike a note and bend up to the gold target line, or hold an unbent note with steady vibrato (5–7 Hz).',
+   takes:()=>[
+    {kind:'steady',label:'▶ Play 8 clean target bends',primary:true},
+    {kind:'rushing',label:'▶ Hold steady vibrato'},
+    {kind:'wrong',label:'▶ Under-bend (flat)'},
+    {kind:'uneven',label:'▶ Over-bend (sharp)'}
+   ],
+   scores:(s)=>[
+    {k:'Bends',v:`${s.bend_count} / 8`},
+    {k:'Last bend',v:`${s.bend_err>=0?'+':''}${s.bend_err} c`},
+    {k:'Vibrato',v:s.vib_rate_x10>0?`${(s.vib_rate_x10/10).toFixed(1)} Hz · ${s.vib_width} c`:'—'},
+    {k:'Personal best',v:fmtBest('bend',s.drill_best),hi:s.drill_best>0}
+   ]
+  },
+  run:{
+   id:'run',
+   label:'Scale Run',
+   prefix:'run',
+   defaultSlug:'run-penta',
+   slugs:['run-penta','run-major','run-minor'],
+   modes:[
+    {slug:'run-penta',label:'Minor Pentatonic'},
+    {slug:'run-major',label:'Major Scale'},
+    {slug:'run-minor',label:'Natural Minor'}
+   ],
+   playDesc:'Your first note sets the key root. Play a smooth 16-note run in key — outside notes flash red and block a new BPM best.',
+   takes:()=>[
+    {kind:'steady',label:'▶ Play clean 16-note run',primary:true},
+    {kind:'wrong',label:'▶ Play out-of-key notes (red flash)'},
+    {kind:'uneven',label:'▶ Play uneven rhythm'}
+   ],
+   scores:(s)=>[
+    {k:'Key root',v:s.run_root>=0?PC[s.run_root]:'first note sets root'},
+    {k:'Outside notes',v:String(s.run_outside)},
+    {k:'Personal best',v:fmtBest('run',s.drill_best),hi:s.drill_best>0},
+    {k:'5:00 Quest',v:`${fmtClock(s.session_ms)} / ${s.goal_minutes}:00`}
+   ]
+  },
+  touch:{
+   id:'touch',
+   label:'Dynamics',
+   prefix:'touch',
+   defaultSlug:'touch-acc3',
+   slugs:['touch-acc3','touch-acc4','touch-even'],
+   modes:[
+    {slug:'touch-acc3',label:'Accent every 3rd'},
+    {slug:'touch-acc4',label:'Accent every 4th'},
+    {slug:'touch-even',label:'Even volume'}
+   ],
+   playDesc:'Controls pick attack consistency. Keep quiet notes steady within ±1.5 dB, and dig in +4 dB louder on accented downbeats.',
+   takes:(s)=>[
+    {kind:'steady',label:s&&s.activity==='touch-even'?'▶ Play 12 even picks':'▶ Play clean accented round',primary:true},
+    {kind:'wrong',label:s&&s.activity==='touch-even'?'▶ Spike one loud pick':'▶ Accent the wrong beat'},
+    {kind:'uneven',label:'▶ Play wild / uneven volume'}
+   ],
+   scores:(s)=>[
+    {k:'Last spread',v:fmtBest('touch',s.drill_last)},
+    {k:'Personal best',v:fmtBest('touch',s.drill_best),hi:s.drill_best>0},
+    {k:'Rounds',v:String(s.drill_rounds)},
+    {k:'5:00 Quest',v:`${fmtClock(s.session_ms)} / ${s.goal_minutes}:00`}
+   ]
+  }
+ };
+
+ function makeDrillTrack(g){
+  return {
+   id:g.id,
+   label:g.label,
+   drill:g,
+   steps:[
+    {
+     id:`${g.id}-cal`,
+     title:'Calibrate quiet cable',
+     how:'Hold the red <b>QUEST</b> button (<kbd>Q</kbd>) for <b>1.2 seconds</b> while strings are muted, then wait 3 seconds for <i>Ready</i>.',
+     btn:'Calibrate for me'
+    },
+    {
+     id:`${g.id}-open`,
+     title:`Select ${g.label} on the pedal`,
+     how:`Switch to Guitar Drills with <b>MODE</b> (<kbd>M</kbd>), then tap <b>QUEST</b> (<kbd>Q</kbd>) while paused until <b>${g.label}</b> appears.`,
+     btn:`Jump to ${g.label}`
+    },
+    {
+     id:`${g.id}-start`,
+     title:'Tap FOOTSWITCH to start',
+     how:'Tap <b>FOOTSWITCH</b> (<kbd>Space</kbd>) to arm the round.',
+     btn:'Start for me'
+    },
+    {
+     id:`${g.id}-play`,
+     title:`Play & test ${g.label}`,
+     how:g.playDesc,
+     playground:true
+    }
+   ]
+  };
+ }
+
  const TRACKS=[
   {
    id:'tour',
-   label:'Quest + Drills Tour',
-   summary:'Full 3-button pedal loop: calibrate → enter Drills (MODE ×2) → pick preset (QUEST) → play a drill (earns both a Personal Best and Quest time!) → complete 5-min Quest → save & reboot.',
+   label:'First Run',
    steps:[
     {
-     id:'plug',
-     title:'Plug in (quiet cable)',
-     how:'Keep Guitar input on Not playing (strings muted on buffered dry branch).'
+     id:'t-cal',
+     title:'Hold QUEST (1.2 s) to calibrate',
+     how:'With strings muted, press and hold the red <b>QUEST</b> button (<kbd>Q</kbd>) for <b>1.2 seconds</b>, then wait 3 seconds for <i>Ready</i>.',
+     btn:'Calibrate for me'
     },
     {
-     id:'calibrate',
-     title:'Calibrate noise floor (hold QUEST 1.2 s)',
-     how:'Hold QUEST (key Q) for 1.2 s while muted, then wait 3 s until screen reads Ready: tap footswitch.'
+     id:'t-tuner',
+     title:'Tap MODE once to check the Tuner',
+     how:'Tap <b>MODE</b> (<kbd>M</kbd>) once to open the chromatic tuner. Practice credit pauses automatically while you tune.',
+     btn:'Open Tuner & play A4'
     },
     {
-     id:'enter-drill',
-     title:'Switch screen to Guitar Drills (MODE × 2)',
-     how:'Tap MODE (key M) twice: Pet → Tuner → Drill. You land on PULSE 8TH (paused).'
+     id:'t-pick',
+     title:'Tap MODE for Drills, then tap QUEST to pick one',
+     how:'Tap <b>MODE</b> (<kbd>M</kbd>) to enter <b>Guitar Drills</b>, then tap <b>QUEST</b> (<kbd>Q</kbd>) while paused to cycle through the drills.',
+     btn:'Pick a drill for me'
     },
     {
-     id:'cycle-preset',
-     title:'Cycle drill presets (tap QUEST while paused)',
-     how:'While paused on Drill, tap QUEST (key Q) to step presets (or click PULSE QTR / any preset pill below).'
+     id:'t-drill',
+     title:'Tap FOOTSWITCH to start & play a round',
+     how:'Tap <b>FOOTSWITCH</b> (<kbd>Space</kbd>) to start, then play a clean round. Practicing a drill earns both a <b>Personal Best</b> and <b>5:00 Quest</b> time!',
+     btn:'▶ Play a clean round',
+     btnPrimary:true
     },
     {
-     id:'start-drill',
-     title:'Start the drill (tap FOOTSWITCH)',
-     how:'Tap FOOTSWITCH (key Space) to start. On PULSE, watch the amber LED flash the 4/4 beat; QUEST locks while running.'
+     id:'t-quest',
+     title:'Reach 5:00 to claim your Quest Fragment',
+     how:'Keep playing (in <b>Drills</b> or <b>Pet</b> mode) until the gold ring hits 5:00 to earn <b>+1 Fragment</b>.',
+     btn:'▶ Fast-forward to 5:00',
+     btnPrimary:true
     },
     {
-     id:'win-drill',
-     title:'Play a clean drill round (Personal Best + Quest time)',
-     how:'Click Clean take in Guitar drills (or play notes). VEX saves a NEW PERSONAL BEST to Skills EEPROM AND credits your Quest timer!'
-    },
-    {
-     id:'fragment',
-     title:'Finish the 5-minute Quest (+1 Fragment)',
-     how:'Playing on Pet OR any Drill earns Quest time. Reach 5:00 (use 100× speed or Advance 5 min) for +1 Fragment.'
-    },
-    {
-     id:'save-all',
-     title:'Check Tuner, then Pause & Save (hold MODE 1.2 s)',
-     how:'Tap MODE to check Tuner (credit pauses), tap MODE to Pet or Drill, pause if running (FOOTSWITCH), then hold MODE 1.2 s.'
-    },
-    {
-     id:'replug',
-     title:'Unplug & replug (Reboot)',
-     how:'Click Reboot — both your Quest fragments (EEPROM 0/64) and Drill personal bests (EEPROM 128/192) restore cleanly.'
+     id:'t-save',
+     title:'Pause, hold MODE (1.2 s) to save, & Reboot',
+     how:'Pause first (<kbd>Space</kbd>), hold <b>MODE</b> (<kbd>M</kbd>) for 1.2 s until <i>Saved</i> appears, then click <b>Reboot</b> to verify EEPROM restore.',
+     btn:'Save & Reboot for me'
     }
    ]
   },
-  {
-   id:'pulse',
-   label:'Timing (PULSE)',
-   summary:'PULSE checks picked note attacks against a 4-bar LED beat ladder (+4 / −4 BPM, ±30 ms pass window) or your own spacing in PULSE FREE.',
-   steps:[
-    {
-     id:'p-open',
-     title:'Open PULSE QTR (MODE → Drill, QUEST → preset)',
-     how:'Calibrate if needed, tap MODE to Drill, and select PULSE QTR while paused (starts at 92 BPM, or 8 BPM under saved best).'
-    },
-    {
-     id:'p-start',
-     title:'Start the 4/4 LED beat (tap FOOTSWITCH)',
-     how:'Tap FOOTSWITCH (Space). The amber LED flashes longer on beat 1 (75 ms) and shorter on beats 2–4 (32 ms).'
-    },
-    {
-     id:'p-steady',
-     title:'Play 4 clean bars (+4 BPM & NEW PERSONAL BEST)',
-     how:'Click Clean 4-bar take in Guitar drills. All 16 quarter notes land within ±30 ms: tempo steps up +4 BPM and saves best = 92 BPM.'
-    },
-    {
-     id:'p-rush',
-     title:'Try a rushing / uneven take (red early/late dots)',
-     how:'Click Rushing take or Uneven take. Dots plot outside ±30 ms in red and report RUSHING / SPREAD ms (two misses step −4 BPM).'
-    },
-    {
-     id:'p-free',
-     title:'Try PULSE FREE (self-paced / external metronome)',
-     how:'Pause (FOOTSWITCH), select PULSE FREE (LED beat turns off), tap FOOTSWITCH, and play steady notes — VEX infers your BPM from spacing.'
-    }
-   ]
-  },
-  {
-   id:'hunt',
-   label:'Note Finder (HUNT)',
-   summary:'HUNT prompts notes across 10-note seeded rounds — anywhere on the neck (HUNT ANY) or on a named string verified by exact MIDI pitch (HUNT STR) — and repeats slow notes.',
-   steps:[
-    {
-     id:'h-open',
-     title:'Open HUNT STR (string-specific pitch check)',
-     how:'Calibrate if needed, enter Drill (MODE), and select HUNT STR while paused.'
-    },
-    {
-     id:'h-start',
-     title:'Start the 10-note round (tap FOOTSWITCH)',
-     how:'Tap FOOTSWITCH (Space). Read the big target note and gold string prompt (e.g. F# on E6 STR = F#2).'
-    },
-    {
-     id:'h-wrong',
-     title:'Play the wrong string/octave (red rejection)',
-     how:'Click Wrong string / note (plays F#3 on D string when F#2 on E6 is asked). Screen flashes HEARD F#3 - TRY AGAIN in red.'
-    },
-    {
-     id:'h-win',
-     title:'Find all 10 notes (NEW PERSONAL BEST & slow-note repeat)',
-     how:'Click Find all 10 notes. VEX times every find, saves best avg seconds/note, and brings slow notes back sooner next round.'
-    },
-    {
-     id:'h-any',
-     title:'Switch to HUNT ANY (any octave accepted)',
-     how:'Pause (FOOTSWITCH), select HUNT ANY, tap FOOTSWITCH, and play the target pitch class in any octave.'
-    }
-   ]
-  },
-  {
-   id:'bend',
-   label:'Bend & Vibrato (BEND)',
-   summary:'BEND uses the fast 11.6 ms pitch profile (≥140 Hz) to score half-step (+100 c) and whole-step (+200 c) bends AND measure live vibrato rate & width.',
-   steps:[
-    {
-     id:'b-open',
-     title:'Open BEND 1/2 (+100 c half-step target)',
-     how:'Calibrate if needed, enter Drill (MODE), and select BEND 1/2 while paused.'
-    },
-    {
-     id:'b-vib',
-     title:'Start & hold a note with Vibrato (rate + width)',
-     how:'Tap FOOTSWITCH (Space), then click Steady E4 vibrato. Screen shows live VIB 5.6HZ 41C beside TYP 5-7HZ 25-70C without counting a bend.'
-    },
-    {
-     id:'b-flat',
-     title:'Try an under-bent note (flat cents error)',
-     how:'Click Under-bent (−32 c flat). A red dot marks the flat apex below the gold target line and shows LAST −25 CENTS.'
-    },
-    {
-     id:'b-win',
-     title:'Complete 8 clean bends (median error Personal Best)',
-     how:'Click 8 clean target bends. Fills the 8-bend history bar in gold and saves median |error| (0.1 c) to Skills EEPROM.'
-    },
-    {
-     id:'b-whole',
-     title:'Switch to BEND FULL (+200 c whole-step bend)',
-     how:'Pause (FOOTSWITCH), select BEND FULL, tap FOOTSWITCH, and bend up a full whole tone (+200 c).'
-    }
-   ]
-  },
-  {
-   id:'run',
-   label:'Scale Runs (RUN)',
-   summary:'RUN sets your key root from the first note of each 16-note phrase, lights 12 chromatic dots gold (in key) or red (outside), tracks hammer-ons, and saves clean tempo.',
-   steps:[
-    {
-     id:'r-open',
-     title:'Open RUN PENTA (minor pentatonic)',
-     how:'Calibrate if needed, enter Drill (MODE), and select RUN PENTA while paused.'
-    },
-    {
-     id:'r-start',
-     title:'Start phrase (FOOTSWITCH — first note sets root)',
-     how:'Tap FOOTSWITCH (Space). Screen reads FIRST NOTE = ROOT (16 NOTES).'
-    },
-    {
-     id:'r-clean',
-     title:'Play a clean 16-note scale run (NEW PERSONAL BEST)',
-     how:'Click Clean 16-note scale run (starts on A2 → sets A MIN PENTA, flashes scale degrees gold, saves CLEAN 112 BPM).'
-    },
-    {
-     id:'r-out',
-     title:'Play outside notes (red flash & best protected)',
-     how:'Click Out-of-key notes (red). Chromatic outside notes flash red, increment the OUT count, and leave your clean best intact.'
-    },
-    {
-     id:'r-diatonic',
-     title:'Try RUN MAJOR or RUN MINOR (7-note scales)',
-     how:'Pause (FOOTSWITCH), select RUN MAJOR or RUN MINOR, tap FOOTSWITCH, and run a 16-note diatonic phrase.'
-    }
-   ]
-  },
-  {
-   id:'touch',
-   label:'Dynamics (TOUCH)',
-   summary:'TOUCH gates pitch off (0 YIN work) and plots each note’s 36 ms attack crest in dB against your running median — for even picking or +4 dB accents every 3rd/4th note.',
-   steps:[
-    {
-     id:'t-open',
-     title:'Open TOUCH ACC3 (accent 1 of 3 ≥ +4 dB)',
-     how:'Calibrate if needed, enter Drill (MODE), and select TOUCH ACC3 while paused.'
-    },
-    {
-     id:'t-start',
-     title:'Start 12-note round (tap FOOTSWITCH)',
-     how:'Tap FOOTSWITCH (Space) to arm the 12-bar dB level graph.'
-    },
-    {
-     id:'t-wrong',
-     title:'Accent the wrong beat (beat 2 rejected)',
-     how:'Click Accent on wrong beat. Bars plot against the gold median line and warn ACCENT BEAT 1 >= +4DB in red (no best saved).'
-    },
-    {
-     id:'t-win',
-     title:'Nail beat-1 accents (NEW PERSONAL BEST dB spread)',
-     how:'Click Clean take (hits accents). Four tall gold bars rise ≥ +4 dB above unaccented picks and save your dB spread.'
-    },
-    {
-     id:'t-even',
-     title:'Try TOUCH EVEN (uniform picking consistency)',
-     how:'Pause (FOOTSWITCH), select TOUCH EVEN, tap FOOTSWITCH, and play 12 matched notes for minimal dB spread.'
-    }
-   ]
-  },
-  {
-   id:'pet',
-   label:'Pet & Tuner (8)',
-   summary:'Original 8-step Pet companion walkthrough: 40 ms smoothing, 500 ms chord-gap hold, participation Quest fragment, Tuner pause rule, and EEPROM save/reboot.',
-   steps:[
-    {id:'c-plug',title:'Plug in (quiet cable)',how:'Keep Guitar input on Not playing (buffered dry branch, strings muted).'},
-    {id:'c-cal',title:'Calibrate noise floor',how:'Hold QUEST (key Q) for 1.2 s while muted, then wait 3 s for Ready.'},
-    {id:'c-start',title:'Start the session',how:'On Pet screen, tap FOOTSWITCH (key Space) to start the 5-minute quest.'},
-    {id:'c-play',title:'Play & watch the 500 ms hold',how:'Choose Strumming or Playing for 3 s — the 500 ms hold bridges chord gaps.'},
-    {id:'c-frag',title:'Earn the quest fragment',how:'Reach the 5:00 goal (use 100× speed or Advance 5 min) for +1 fragment.'},
-    {id:'c-tune',title:'Check tuning (credit pauses)',how:'Tap MODE (key M) to open the tuner; try Synth note to tune a string.'},
-    {id:'c-save',title:'Pause & save to EEPROM',how:'Return to Pet or Drill (MODE), pause if running, then hold MODE 1.2 s.'},
-    {id:'c-replug',title:'Unplug & replug',how:'Click Reboot — totals return from EEPROM; boot stays paused & uncalibrated.'}
-   ]
-  }
+  makeDrillTrack(DRILL_GUIDES.pulse),
+  makeDrillTrack(DRILL_GUIDES.hunt),
+  makeDrillTrack(DRILL_GUIDES.bend),
+  makeDrillTrack(DRILL_GUIDES.run),
+  makeDrillTrack(DRILL_GUIDES.touch)
  ];
 
- // Backwards-compatible export of the classic 8 steps.
- const STEPS=TRACKS[0].steps;
+ function updatePedalCaptions(s,spotlight){
+  const modeSub=document.querySelector('[data-ctl-sub="mode"]');
+  const questSub=document.querySelector('[data-ctl-sub="quest"]');
+  const footSub=document.querySelector('[data-ctl-sub="foot"]');
+  if(s&&modeSub&&questSub&&footSub){
+   if(s.activity==='pet'){
+    modeSub.textContent=s.running?'tap: open Tuner (M)':'tap: Tuner · hold: save (M)';
+    questSub.textContent=!s.calibrated?'hold 1.2s: calibrate (Q)':(s.running?'hold 1.2s: calibrate (Q)':`tap: goal (${s.goal_minutes}m) · hold: cal (Q)`);
+    footSub.textContent=s.running?'tap: pause quest (Space)':'tap: start quest (Space)';
+   }else if(s.tuning){
+    modeSub.textContent='tap: open Drills (M)';
+    questSub.textContent='hold 1.2s: calibrate (Q)';
+    footSub.textContent='paused while tuning';
+   }else{
+    modeSub.textContent=s.running?'tap: back to Pet (M)':'tap: Pet · hold: save (M)';
+    questSub.textContent=s.running?'pause first to switch drill':'tap: next drill · hold: cal (Q)';
+    footSub.textContent=s.running?'tap: pause drill (Space)':'tap: start drill (Space)';
+   }
+  }
+  for(const el of document.querySelectorAll('.ctl[data-control]')){
+   const name=el.dataset.control;
+   const hit=spotlight&&spotlight.ctl===name;
+   el.classList.toggle('target',Boolean(hit));
+   const cue=el.querySelector('.ctl-cue');
+   if(cue)cue.textContent=hit?(spotlight.cue||'HERE'):'';
+  }
+ }
 
  function createSession(container,statusEl,api){
   const doneByTrack=new Map(TRACKS.map(t=>[t.id,new Set()]));
-  let activeTrackId=localStorage.getItem('vex.walk.track')||'tour';
+  let activeTrackId=localStorage.getItem('vex.guide.track')||'tour';
   if(!TRACKS.some(t=>t.id===activeTrackId))activeTrackId='tour';
+  let peekStepId='';
 
-  let base={fragments:0,activeMs:0,onsets:0};
+  let base={fragments:0};
   let seen={
-   tuner:false,save:false,rebootAfterSave:false,
-   presetChanged:false,pulseRush:false,pulseFreeDone:false,
-   huntWrong:false,huntAnyHit:false,
-   bendVib:false,bendFlat:false,bendWholeHit:false,
-   runOut:false,runDiatonicDone:false,
-   touchWrong:false,touchEvenDone:false
+   tuner:false,presetStepped:false,tourDrillWon:false,tourFragment:false,
+   save:false,rebootAfterSave:false
   };
-  let prev={drillSlug:'',huntPc:-1,huntMidi:-1,onsets:0,pulseRounds:0,pulseBpm:0,touchRounds:0},lastRenderedSig='';
+  let startedFamilies=new Set();
+  let wonFamilies=new Set();
+  let familyRoundsAtOpen={};
+  let prevDrillSlug='';
+  let lastSig='';
 
   function activeTrack(){return TRACKS.find(t=>t.id===activeTrackId)||TRACKS[0];}
 
   function resetProgress(){
    for(const set of doneByTrack.values())set.clear();
    const s=api.getState();
-   base={
-    fragments:s?s.fragments:0,
-    activeMs:s?s.active_ms:0,
-    onsets:s?s.onsets:0
-   };
+   base={fragments:s?s.fragments:0};
    seen={
-    tuner:false,save:false,rebootAfterSave:false,
-    presetChanged:false,pulseRush:false,pulseFreeDone:false,
-    huntWrong:false,huntAnyHit:false,
-    bendVib:false,bendFlat:false,bendWholeHit:false,
-    runOut:false,runDiatonicDone:false,
-    touchWrong:false,touchEvenDone:false
+    tuner:false,presetStepped:false,tourDrillWon:false,tourFragment:false,
+    save:false,rebootAfterSave:false
    };
-   prev={
-    drillSlug:s&&isDrill(s.activity)?s.activity:'',
-    huntPc:s?s.hunt_pc:-1,huntMidi:s?s.hunt_midi:-1,onsets:s?s.onsets:0,
-    pulseRounds:s&&s.activity.startsWith('pulse')?s.drill_rounds:0,
-    pulseBpm:s?s.bpm:0,
-    touchRounds:s&&s.activity.startsWith('touch')?s.drill_rounds:0
-   };
-   lastRenderedSig='';
+   startedFamilies=new Set();
+   wonFamilies=new Set();
+   familyRoundsAtOpen={};
+   prevDrillSlug=s&&isDrill(s.activity)?s.activity:'';
+   peekStepId='';
+   lastSig='';
    evaluate();
   }
 
   function onReboot(){
    if(seen.save)seen.rebootAfterSave=true;
+   startedFamilies.clear();
   }
 
   function setTrack(id){
    if(!TRACKS.some(t=>t.id===id))return;
    activeTrackId=id;
-   try{localStorage.setItem('vex.walk.track',id);}catch(_){}
-   lastRenderedSig='';
+   peekStepId='';
+   try{localStorage.setItem('vex.guide.track',id);}catch(_){}
+   const s=api.getState();
+   const tr=activeTrack();
+   if(tr.drill&&s&&s.activity.startsWith(tr.drill.prefix)){
+    familyRoundsAtOpen[tr.id]=s.drill_rounds;
+   }
+   lastSig='';
    buildDom();
    evaluate();
   }
 
-  // Helpers that drive the real pedal controls / shared protocol cleanly -------------------------
+  // Helpers driving real pedal controls / shared protocol -----------------------------------------
   function ensureCalibrated(){
    api.ensureStage4();
    let s=api.getState();
@@ -331,333 +379,365 @@
    }
    return s;
   }
-  function ensurePreset(slug){
+  function switchPresetClean(slug,autoStart){
    ensureCalibrated();
    let s=ensureScreen('drill');
    if(s.running){api.press('foot',100);s=api.getState();}
    if(s.activity!==slug){
     api.selectDrill(slug);
-    seen.presetChanged=true;
+    seen.presetStepped=true;
+   }
+   s=api.getState();
+   const tr=activeTrack();
+   if(tr.drill&&slug.startsWith(tr.drill.prefix)){
+    familyRoundsAtOpen[tr.id]=s.drill_rounds;
+   }
+   if(autoStart&&!s.running){
+    api.press('foot',100);
    }
    evaluate();
-   return api.getState();
-  }
-  function ensurePresetRunning(slug){
-   let s=ensurePreset(slug);
-   if(!s.running)api.press('foot',100);
-   evaluate();
-   return api.getState();
-  }
-  function ensurePetRunning(){
-   ensureCalibrated();
-   let s=ensureScreen('pet');
-   if(!s.running)api.press('foot',100);
-   return api.getState();
   }
 
-  function doStep(id){
+  function doStep(stepId){
    api.exitTestPattern();
-   // --- Track 1: Quest + Drills Tour ---
-   if(id==='plug'||id==='c-plug'){
-    api.ensureStage4();api.setInputMode('quiet');api.advance(100);
-   }else if(id==='calibrate'||id==='c-cal'){
-    api.ensureStage4();ensureScreen('pet');api.setInputMode('quiet');api.advance(50);api.press('quest',1300);api.advance(3100);
-   }else if(id==='enter-drill'){
-    ensureCalibrated();ensureScreen('drill');
-   }else if(id==='cycle-preset'){
+   const tr=activeTrack();
+   if(stepId==='t-cal'||stepId.endsWith('-cal')){
+    ensureCalibrated();
+   }else if(stepId==='t-tuner'){
+    ensureCalibrated();
+    ensureScreen('tuner');
+    seen.tuner=true;
+    api.playTone(650,440,-18);
+   }else if(stepId==='t-pick'){
     ensureCalibrated();
     let s=ensureScreen('drill');
-    if(s.running){api.press('foot',100);s=api.getState();}
-    // Step with real QUEST tap if on pulse-8th, then land on pulse-qtr so LED beat is ready for step 5!
+    if(s.running)api.press('foot',100);
     api.press('quest',100);
-    api.selectDrill('pulse-qtr');
-    seen.presetChanged=true;
-   }else if(id==='start-drill'){
+    seen.presetStepped=true;
+   }else if(stepId==='t-drill'){
+    ensureCalibrated();
     let s=api.getState();
-    const target=isDrill(s.activity)?s.activity:'pulse-qtr';
-    ensurePresetRunning(target);
-   }else if(id==='win-drill'){
-    let s=api.getState();
-    if(!isDrill(s.activity))ensurePresetRunning('pulse-qtr');
-    else if(!s.running)api.press('foot',100);
+    if(!isDrill(s.activity))s=ensureScreen('drill');
+    if(!s.running)api.press('foot',100);
     api.playDrill('steady');
-   }else if(id==='fragment'||id==='c-frag'){
+   }else if(stepId==='t-quest'){
+    ensureCalibrated();
     let s=api.getState();
-    if(!s.calibrated)ensureCalibrated();
-    s=api.getState();
     if(s.tuning)s=ensureScreen('pet');
     if(!s.running)api.press('foot',100);
     s=api.getState();
-    const goalMs=s.goal_minutes*60000;
-    const remain=goalMs-s.session_ms;
+    const remain=s.goal_minutes*60000-s.session_ms;
     if(remain>1500){api.setInputMode('play');api.advance(remain-1000);}
     api.setInputMode('strum');api.advance(1500);
     api.setInputMode('quiet');
-   }else if(id==='save-all'){
+   }else if(stepId==='t-save'){
     ensureCalibrated();
-    ensureScreen('tuner');seen.tuner=true;
-    api.setInputMode('synth',{hz:440,cents:0,db:-20});api.advance(500);
-    api.setInputMode('quiet');
-    let s=ensureScreen('pet');
+    let s=api.getState();
+    if(s.tuning)s=ensureScreen('pet');
+    s=api.getState();
     if(s.running){api.press('foot',100);s=api.getState();}
-    if(s.active_ms===0&&s.fragments===0){
-     ensurePetRunning();api.setInputMode('play');api.advance(4000);api.setInputMode('quiet');api.press('foot',100);
+    if(!seen.save){
+     if(s.active_ms===0&&s.fragments===0&&s.skills_slot<0){
+      api.press('foot',100);api.setInputMode('play');api.advance(4000);api.setInputMode('quiet');api.press('foot',100);
+     }
+     api.press('mode',1350);
+     evaluate();
     }
-    api.press('mode',1350);
-   }else if(id==='replug'||id==='c-replug'){
-    if(!seen.save)doStep(id==='c-replug'?'c-save':'save-all');
-    evaluate();
     api.setInputMode('quiet');
     api.reboot();
     api.advance(100);
-
-   // --- Track 2: Timing (PULSE) ---
-   }else if(id==='p-open'){
-    ensurePreset('pulse-qtr');
-   }else if(id==='p-start'){
-    ensurePresetRunning('pulse-qtr');
-   }else if(id==='p-steady'){
-    ensurePresetRunning('pulse-qtr');api.playDrill('steady');
-   }else if(id==='p-rush'){
-    ensurePresetRunning('pulse-qtr');api.playDrill('rushing');
-   }else if(id==='p-free'){
-    ensurePresetRunning('pulse-free');api.playDrill('steady');
-
-   // --- Track 3: Note Finder (HUNT) ---
-   }else if(id==='h-open'){
-    ensurePreset('hunt-str');
-   }else if(id==='h-start'){
-    ensurePresetRunning('hunt-str');
-   }else if(id==='h-wrong'){
-    ensurePresetRunning('hunt-str');api.playDrill('wrong');
-   }else if(id==='h-win'){
-    ensurePresetRunning('hunt-str');api.playDrill('steady');
-   }else if(id==='h-any'){
-    ensurePresetRunning('hunt-any');api.playDrill('rushing');
-
-   // --- Track 4: Bend & Vibrato (BEND) ---
-   }else if(id==='b-open'){
-    ensurePreset('bend-half');
-   }else if(id==='b-vib'){
-    ensurePresetRunning('bend-half');api.playDrill('rushing');
-   }else if(id==='b-flat'){
-    ensurePresetRunning('bend-half');api.playDrill('wrong');
-   }else if(id==='b-win'){
-    ensurePresetRunning('bend-half');api.playDrill('steady');
-   }else if(id==='b-whole'){
-    ensurePresetRunning('bend-whole');api.playDrill('steady');
-
-   // --- Track 5: Scale Runs (RUN) ---
-   }else if(id==='r-open'){
-    ensurePreset('run-penta');
-   }else if(id==='r-start'){
-    ensurePresetRunning('run-penta');
-   }else if(id==='r-clean'){
-    ensurePresetRunning('run-penta');api.playDrill('steady');
-   }else if(id==='r-out'){
-    ensurePresetRunning('run-penta');api.playDrill('wrong');
-   }else if(id==='r-diatonic'){
-    ensurePresetRunning('run-major');api.playDrill('steady');
-
-   // --- Track 6: Dynamics (TOUCH) ---
-   }else if(id==='t-open'){
-    ensurePreset('touch-acc3');
-   }else if(id==='t-start'){
-    ensurePresetRunning('touch-acc3');
-   }else if(id==='t-wrong'){
-    ensurePresetRunning('touch-acc3');api.playDrill('wrong');
-   }else if(id==='t-win'){
-    ensurePresetRunning('touch-acc3');api.playDrill('steady');
-   }else if(id==='t-even'){
-    ensurePresetRunning('touch-even');api.playDrill('steady');
-
-   // --- Track 7: Classic Pet & Tuner ---
-   }else if(id==='c-start'){
-    ensurePetRunning();
-   }else if(id==='c-play'){
-    ensurePetRunning();api.setInputMode('strum');api.advance(3500);
-   }else if(id==='c-tune'){
-    api.ensureStage4();ensureScreen('tuner');
-    api.setInputMode('synth',{hz:440,cents:0,db:-20});api.advance(600);
-   }else if(id==='c-save'){
-    api.ensureStage4();
-    let s=ensureScreen('pet');
-    if(s.running){api.press('foot',100);s=api.getState();}
-    if(s.active_ms===0&&s.fragments===0){
-     ensurePetRunning();api.setInputMode('play');api.advance(6500);api.press('foot',100);
+   }else if(tr.drill&&stepId===`${tr.id}-open`){
+    switchPresetClean(tr.drill.defaultSlug,false);
+   }else if(tr.drill&&stepId===`${tr.id}-start`){
+    const g=tr.drill;
+    let s=api.getState();
+    if(!s.activity.startsWith(g.prefix))switchPresetClean(g.defaultSlug,true);
+    else{
+     ensureCalibrated();
+     if(!s.running)api.press('foot',100);
     }
-    api.press('mode',1350);
    }
    evaluate();
   }
 
-  function liveHintForStep(stepId,s){
-   if(!s)return '';
-   const scr=s.activity==='pet'?'PET':s.tuning?'TUNER':`DRILL (${s.activity.toUpperCase()})`;
-   const runTxt=s.running?'running':'paused';
-   if(stepId==='calibrate'||stepId==='c-cal'){
-    if(s.calibrating)return 'Live: calibrating noise floor… keep strings muted for 3 s';
-    return `Live: ${scr} · uncalibrated — hold QUEST (key Q) for 1.2 s`;
+  function runDrillTake(kind){
+   api.exitTestPattern();
+   const tr=activeTrack();
+   if(!tr.drill)return;
+   const g=tr.drill;
+   ensureCalibrated();
+   let s=api.getState();
+   if(!s.activity.startsWith(g.prefix)){
+    switchPresetClean(g.defaultSlug,true);
+   }else if(!s.running){
+    api.press('foot',100);
    }
-   if(stepId==='enter-drill'){
-    if(s.activity==='pet')return 'Live: on PET — tap MODE (key M) twice to reach DRILL';
-    if(s.tuning)return 'Live: on TUNER — tap MODE (key M) once more to reach DRILL';
+   const before=api.getState();
+   const prevRounds=before?before.drill_rounds:0;
+   api.playDrill(kind);
+   const after=api.getState();
+   if(after&&(after.drill_rounds>prevRounds||(kind==='steady'&&after.drill_best>0))){
+    wonFamilies.add(tr.id);
    }
-   if(stepId==='cycle-preset'){
-    if(!isDrill(s.activity))return `Live: on ${scr} — tap MODE to enter DRILL first`;
-    if(s.running)return `Live: ${s.activity.toUpperCase()} is running — tap FOOTSWITCH to pause before tapping QUEST`;
-    return `Live: ${s.activity.toUpperCase()} · paused — tap QUEST (key Q) to cycle presets`;
+   evaluate();
+  }
+
+  // Dynamic 1-sentence instruction & pedal spotlight (never two competing instructions!) --------
+  function guidanceForCurrentStep(tr,stepId,s){
+   if(!s)return {how:'',spot:null};
+   if(stepId==='t-cal'||stepId.endsWith('-cal')){
+    if(s.calibrating)return {how:'Calibrating noise floor… keep strings muted for <b>3 seconds</b>.',spot:{ctl:'quest',cue:'WAIT 3s'}};
+    return {how:'With strings muted, press &amp; hold the red <b>QUEST</b> button (<kbd>Q</kbd>) for <b>1.2 seconds</b>.',spot:{ctl:'quest',cue:'HOLD 1.2s'}};
    }
-   if(stepId==='start-drill'||stepId.endsWith('-start')){
-    return `Live: ${scr} · ${runTxt} — tap FOOTSWITCH (key Space) to start`;
+   if(stepId==='t-tuner'){
+    if(isDrill(s.activity))return {how:'Tap <b>MODE</b> (<kbd>M</kbd>) twice to cycle around to the <b>Tuner</b>.',spot:{ctl:'mode',cue:'TAP ×2'}};
+    return {how:'Tap <b>MODE</b> (<kbd>M</kbd>) once to open the chromatic tuner (practice credit pauses while tuning).',spot:{ctl:'mode',cue:'TAP'}};
    }
-   if(s.activity.startsWith('hunt')&&s.running){
-    const str=s.hunt_midi>0?STR_NAMES[['40','45','50','55','59','64'].findIndex((_,i)=>s.hunt_midi>=[40,45,50,55,59,64][i]&&s.hunt_midi<[40,45,50,55,59,64][i]+12)]||'STR':'ANY STRING';
-    return `Live: target ${PC[s.hunt_pc]||'?'} (${str}) · rounds ${s.drill_rounds} · best ${fmtBest(s.activity,s.drill_best)}`;
+   if(stepId==='t-pick'){
+    if(s.activity==='pet')return {how:'Tap <b>MODE</b> (<kbd>M</kbd>) twice to open <b>Guitar Drills</b>.',spot:{ctl:'mode',cue:'TAP ×2'}};
+    if(s.tuning)return {how:'Tap <b>MODE</b> (<kbd>M</kbd>) once more to open <b>Guitar Drills</b>.',spot:{ctl:'mode',cue:'TAP'}};
+    if(s.running)return {how:'Tap <b>FOOTSWITCH</b> (<kbd>Space</kbd>) to pause first so <b>QUEST</b> can switch drills.',spot:{ctl:'foot',cue:'PAUSE'}};
+    return {how:`Paused on <b>${PRESET_SCREEN[s.activity]||s.activity.toUpperCase()}</b> — tap <b>QUEST</b> (<kbd>Q</kbd>) once to preview the next drill.`,spot:{ctl:'quest',cue:'TAP'}};
    }
-   if(s.activity.startsWith('bend')&&s.running){
-    return `Live: bends ${s.bend_count}/8 · last ${s.bend_err>=0?'+':''}${s.bend_err} c · vib ${(s.vib_rate_x10/10).toFixed(1)} Hz / ${s.vib_width} c · best ${fmtBest(s.activity,s.drill_best)}`;
+   if(stepId==='t-drill'){
+    if(!isDrill(s.activity)){
+     const taps=s.activity==='pet'?'TAP ×2':'TAP';
+     return {how:'Tap <b>MODE</b> (<kbd>M</kbd>) to return to <b>Guitar Drills</b>.',spot:{ctl:'mode',cue:taps}};
+    }
+    if(!s.running)return {how:`Tap <b>FOOTSWITCH</b> (<kbd>Space</kbd>) to start <b>${PRESET_SCREEN[s.activity]||s.activity.toUpperCase()}</b>, or click <b>Play a clean round</b>.`,spot:{ctl:'foot',cue:'TAP'}};
+    return {how:`<b>${PRESET_SCREEN[s.activity]||s.activity.toUpperCase()}</b> is running — click <b>▶ Play a clean round</b> below (earns a Personal Best + Quest time!).`,spot:null};
    }
-   if(s.activity.startsWith('run')&&s.running){
-    const root=s.run_root>=0?PC[s.run_root]:'unset';
-    return `Live: root ${root} · ${s.bpm||0} BPM · ${s.run_outside} outside · best ${fmtBest(s.activity,s.drill_best)}`;
+   if(stepId==='t-quest'){
+    const rem=Math.max(0,s.goal_minutes*60-Math.floor(s.session_ms/1000));
+    return {how:`Keep playing until the gold ring reaches <b>5:00</b> (+1 Fragment) — <b>${fmtClock(s.session_ms)} / ${s.goal_minutes}:00</b> (${rem}s left).`,spot:!s.running?{ctl:'foot',cue:'TAP'}:null};
    }
-   if(isDrill(s.activity)){
-    return `Live: ${s.activity.toUpperCase()} · ${runTxt}${s.bpm?` · ${s.bpm} BPM`:''} · rounds ${s.drill_rounds} · best ${fmtBest(s.activity,s.drill_best)} · quest ${Math.floor(s.session_ms/1000)}s/${s.goal_minutes*60}s`;
+   if(stepId==='t-save'){
+    if(seen.save&&!seen.rebootAfterSave){
+     return {how:'Saved to EEPROM! Now click <b>Reboot</b> in the top bar (or <b>▶ Reboot pedal</b> below) to verify your Fragment &amp; Personal Bests reload.',spot:null};
+    }
+    if(s.tuning)return {how:'Tap <b>MODE</b> (<kbd>M</kbd>) once to leave the Tuner before saving.',spot:{ctl:'mode',cue:'TAP'}};
+    if(s.running)return {how:'Tap <b>FOOTSWITCH</b> (<kbd>Space</kbd>) to pause first.',spot:{ctl:'foot',cue:'PAUSE'}};
+    return {how:'Hold <b>MODE</b> (<kbd>M</kbd>) for <b>1.2 seconds</b> until <i>Saved - safe to unplug</i> appears.',spot:{ctl:'mode',cue:'HOLD 1.2s'}};
    }
-   return `Live: ${scr} · ${runTxt} · quest ${Math.floor(s.session_ms/1000)}s/${s.goal_minutes*60}s · fragments ${s.fragments}`;
+   if(tr.drill&&stepId===`${tr.id}-open`){
+    const g=tr.drill;
+    if(s.activity==='pet')return {how:'Tap <b>MODE</b> (<kbd>M</kbd>) twice to open <b>Guitar Drills</b>.',spot:{ctl:'mode',cue:'TAP ×2'}};
+    if(s.tuning)return {how:'Tap <b>MODE</b> (<kbd>M</kbd>) once more to open <b>Guitar Drills</b>.',spot:{ctl:'mode',cue:'TAP'}};
+    if(s.running)return {how:'A drill is running — tap <b>FOOTSWITCH</b> (<kbd>Space</kbd>) to pause first so <b>QUEST</b> can switch drills.',spot:{ctl:'foot',cue:'PAUSE'}};
+    const info=questTapsTo(s.activity,g.slugs);
+    if(info&&info.taps>0){
+     const word=info.taps===1?'1 more time':`${info.taps} more times`;
+     return {
+      how:`Tap <b>QUEST</b> (<kbd>Q</kbd>) <b>${word}</b> until the screen shows <b>${info.screen}</b>.`,
+      spot:{ctl:'quest',cue:info.taps===1?'TAP':`TAP ×${info.taps}`}
+     };
+    }
+    return {how:`Tap <b>QUEST</b> (<kbd>Q</kbd>) until <b>${g.label}</b> appears.`,spot:{ctl:'quest',cue:'TAP'}};
+   }
+   if(tr.drill&&stepId===`${tr.id}-start`){
+    return {how:'Tap <b>FOOTSWITCH</b> (<kbd>Space</kbd>) to start the round.',spot:{ctl:'foot',cue:'TAP'}};
+   }
+   if(tr.drill&&stepId===`${tr.id}-play`){
+    if(!s.running)return {how:`${tr.drill.playDesc} <b>(Paused — tap <kbd>Space</kbd> or click any ▶ Play button below.)</b>`,spot:{ctl:'foot',cue:'RESUME'}};
+    return {how:tr.drill.playDesc,spot:null};
+   }
+   return {how:'',spot:null};
   }
 
   function evaluate(){
    const s=api.getState();
    if(!s)return;
-   const mode=api.getInputMode();
 
-   // Latching observations so quick manual actions never miss a step
    if(s.stage===4&&s.tuning)seen.tuner=true;
    if(s.stage===4&&isDrill(s.activity)){
-    if(s.activity!=='pulse-8th'||(prev.drillSlug&&prev.drillSlug!==s.activity))seen.presetChanged=true;
-    prev.drillSlug=s.activity;
+    if(s.activity!=='pulse-8th'||(prevDrillSlug&&prevDrillSlug!==s.activity))seen.presetStepped=true;
+    prevDrillSlug=s.activity;
+   }
+   if(s.stage===4&&isDrill(s.activity)&&s.drill_rounds>=1&&s.drill_best>0)seen.tourDrillWon=true;
+   if(s.stage===4&&(s.fragments>base.fragments||(s.calibrated&&s.fragments>=1&&s.session_ms>=s.goal_minutes*60000))){
+    seen.tourFragment=true;
    }
    if(s.stage===4&&!s.tuning&&!s.running&&(s.saved_slot>=0||s.skills_slot>=0)&&(s.notice==='Saved - safe to unplug'||s.notice==='Already saved')){
     seen.save=true;
    }
-   if(s.activity.startsWith('pulse')){
-    if(s.drill_rounds>prev.pulseRounds&&s.activity!=='pulse-free'&&s.bpm<=prev.pulseBpm)seen.pulseRush=true;
-    prev.pulseRounds=s.drill_rounds;prev.pulseBpm=s.bpm;
-   }
-   if(s.activity==='pulse-free'&&s.drill_rounds>=1&&s.bpm>=40)seen.pulseFreeDone=true;
-   if(s.activity.startsWith('hunt')&&s.running){
-    if(s.onsets>prev.onsets&&s.hunt_pc===prev.huntPc&&s.hunt_midi===prev.huntMidi)seen.huntWrong=true;
-    if(s.activity==='hunt-any'&&prev.huntPc>=0&&(s.hunt_pc!==prev.huntPc||s.drill_rounds>0))seen.huntAnyHit=true;
-    prev.huntPc=s.hunt_pc;prev.huntMidi=s.hunt_midi;
-   }
-   if(s.activity.startsWith('bend')&&s.vib_rate_x10>=29&&s.vib_width>=12)seen.bendVib=true;
-   if(s.activity.startsWith('bend')&&(s.bend_count>=1||s.drill_rounds>=1)&&Math.abs(s.bend_err)>=15)seen.bendFlat=true;
-   if(s.activity==='bend-whole'&&(s.drill_rounds>=1||(s.bend_count>=1&&Math.abs(s.bend_err)<=15)))seen.bendWholeHit=true;
-   if(s.activity.startsWith('run')&&s.run_outside>=1)seen.runOut=true;
-   if((s.activity==='run-major'||s.activity==='run-minor')&&s.drill_rounds>=1&&s.run_outside===0)seen.runDiatonicDone=true;
-   if(s.activity.startsWith('touch')){
-    if(s.drill_rounds>prev.touchRounds&&(s.drill_best===0||s.drill_last>220||s.drill_last>s.drill_best))seen.touchWrong=true;
-    prev.touchRounds=s.drill_rounds;
-   }
-   if(s.activity==='touch-even'&&s.drill_rounds>=1&&s.drill_best>0)seen.touchEvenDone=true;
-   prev.onsets=s.onsets;
 
+   // Evaluate First Run (6 steps)
    const tour=doneByTrack.get('tour');
-   if(s.stage===4&&!s.calibrating&&mode==='quiet'&&s.now_ms>=50&&s.rms<=0.02)tour.add('plug');
-   if(s.stage===4&&s.calibrated){tour.add('plug');tour.add('calibrate');}
-   if(s.stage===4&&isDrill(s.activity))tour.add('enter-drill');
-   if(s.stage===4&&(seen.presetChanged||(isDrill(s.activity)&&s.activity!=='pulse-8th')))tour.add('cycle-preset');
-   if(s.stage===4&&isDrill(s.activity)&&s.running)tour.add('start-drill');
-   if(s.stage===4&&s.skills_slot>=0&&(s.active_ms>base.activeMs||s.session_ms>0)){tour.add('enter-drill');tour.add('start-drill');tour.add('win-drill');}
-   if(s.stage===4&&(s.fragments>base.fragments||(s.calibrated&&s.fragments>=1&&s.session_ms>=s.goal_minutes*60000)))tour.add('fragment');
-   if(seen.save)tour.add('save-all');
-   if(seen.save&&seen.rebootAfterSave&&s.stage===4&&!s.running&&!s.calibrated&&(s.saved_slot>=0||s.skills_slot>=0))tour.add('replug');
+   if(s.stage===4&&(s.calibrated||seen.rebootAfterSave))tour.add('t-cal');
+   if(seen.tuner)tour.add('t-tuner');
+   if(seen.presetStepped){tour.add('t-cal');tour.add('t-pick');}
+   if(seen.tourDrillWon){tour.add('t-cal');tour.add('t-pick');tour.add('t-drill');}
+   if(seen.tourFragment)tour.add('t-quest');
+   if(seen.save&&seen.rebootAfterSave&&!s.running&&!s.calibrated&&(s.saved_slot>=0||s.skills_slot>=0)){
+    tour.add('t-save');
+   }
 
-   const pulse=doneByTrack.get('pulse');
-   if(s.activity==='pulse-qtr'&&s.calibrated)pulse.add('p-open');
-   if(s.activity.startsWith('pulse')&&s.running&&s.beat_ms>0){pulse.add('p-open');pulse.add('p-start');}
-   if(s.activity.startsWith('pulse')&&s.drill_best>0&&s.drill_rounds>=1){pulse.add('p-open');pulse.add('p-start');pulse.add('p-steady');}
-   if(seen.pulseRush)pulse.add('p-rush');
-   if(seen.pulseFreeDone||(s.activity==='pulse-free'&&s.running&&s.bpm>=40))pulse.add('p-free');
+   // Evaluate each of the 5 Drill guides (4 steps each)
+   for(const tr of TRACKS){
+    if(!tr.drill)continue;
+    const g=tr.drill;
+    const set=doneByTrack.get(tr.id);
+    set.clear();
+    const inFam=s.stage===4&&s.activity.startsWith(g.prefix);
+    if(inFam&&s.running){
+     startedFamilies.add(tr.id);
+     if(familyRoundsAtOpen[tr.id]===undefined)familyRoundsAtOpen[tr.id]=s.drill_rounds;
+    }
+    if(!inFam)startedFamilies.delete(tr.id);
+    const baseRounds=familyRoundsAtOpen[tr.id]!==undefined?familyRoundsAtOpen[tr.id]:0;
+    if(inFam&&(s.drill_rounds>baseRounds||(s.drill_best>0&&s.drill_rounds>=1))){
+     wonFamilies.add(tr.id);
+    }
 
-   const hunt=doneByTrack.get('hunt');
-   if(s.activity==='hunt-str'&&s.calibrated)hunt.add('h-open');
-   if(s.activity==='hunt-str'&&s.running){hunt.add('h-open');hunt.add('h-start');}
-   if(seen.huntWrong)hunt.add('h-wrong');
-   if(s.activity.startsWith('hunt')&&s.drill_best>0&&s.drill_rounds>=1){hunt.add('h-open');hunt.add('h-start');hunt.add('h-win');}
-   if(seen.huntAnyHit||(s.activity==='hunt-any'&&s.running&&s.onsets>base.onsets))hunt.add('h-any');
+    if(s.stage===4&&s.calibrated)set.add(`${g.id}-cal`);
+    if(s.stage===4&&s.calibrated&&inFam)set.add(`${g.id}-open`);
+    if(s.stage===4&&s.calibrated&&inFam&&(s.running||startedFamilies.has(tr.id)))set.add(`${g.id}-start`);
+    if(s.stage===4&&s.calibrated&&inFam&&wonFamilies.has(tr.id))set.add(`${g.id}-play`);
+   }
 
-   const bend=doneByTrack.get('bend');
-   if(s.activity==='bend-half'&&s.calibrated)bend.add('b-open');
-   if(seen.bendVib){bend.add('b-open');bend.add('b-vib');}
-   if(seen.bendFlat)bend.add('b-flat');
-   if(s.activity.startsWith('bend')&&s.drill_best>0&&s.drill_rounds>=1){bend.add('b-open');bend.add('b-win');}
-   if(seen.bendWholeHit||(s.activity==='bend-whole'&&s.bend_count>=1))bend.add('b-whole');
+   const tr=activeTrack();
+   const doneSet=doneByTrack.get(tr.id);
+   let activeIdx=tr.steps.findIndex(st=>!doneSet.has(st.id));
+   // On the 4-step drill guides, keep Step 4 (the playground) focused even after it ticks ✓!
+   const allDone=activeIdx===-1;
+   if(allDone&&tr.drill)activeIdx=tr.steps.length-1;
 
-   const run=doneByTrack.get('run');
-   if(s.activity==='run-penta'&&s.calibrated)run.add('r-open');
-   if(s.activity.startsWith('run')&&s.running){run.add('r-open');run.add('r-start');}
-   if(s.activity.startsWith('run')&&s.drill_best>0&&s.drill_rounds>=1&&s.run_outside===0){run.add('r-open');run.add('r-start');run.add('r-clean');}
-   if(seen.runOut)run.add('r-out');
-   if(seen.runDiatonicDone)run.add('r-diatonic');
-
-   const touch=doneByTrack.get('touch');
-   if(s.activity==='touch-acc3'&&s.calibrated)touch.add('t-open');
-   if(s.activity.startsWith('touch')&&s.running){touch.add('t-open');touch.add('t-start');}
-   if(seen.touchWrong)touch.add('t-wrong');
-   if(s.activity.startsWith('touch')&&s.drill_best>0&&s.drill_rounds>=1){touch.add('t-open');touch.add('t-start');touch.add('t-win');}
-   if(seen.touchEvenDone)touch.add('t-even');
-
-   const pet=doneByTrack.get('pet');
-   if(s.stage===4&&!s.calibrating&&mode==='quiet'&&s.now_ms>=50&&s.rms<=0.02)pet.add('c-plug');
-   if(s.stage===4&&s.calibrated){pet.add('c-plug');pet.add('c-cal');}
-   if(s.stage===4&&s.calibrated&&s.running)pet.add('c-start');
-   if(s.stage===4&&((s.active_ms-base.activeMs)>=2500||(s.running&&s.active&&s.session_ms>=2500))){pet.add('c-start');pet.add('c-play');}
-   if(s.stage===4&&(s.fragments>base.fragments||(s.calibrated&&s.fragments>=1&&s.session_ms>=s.goal_minutes*60000))){pet.add('c-play');pet.add('c-frag');}
-   if(seen.tuner)pet.add('c-tune');
-   if(seen.save)pet.add('c-save');
-   if(seen.save&&seen.rebootAfterSave&&s.stage===4&&!s.running&&!s.calibrated&&s.saved_slot>=0&&s.sequence>=1)pet.add('c-replug');
-
-   render(s);
-  }
-
-  function render(s){
-   const tr=activeTrack(),doneSet=doneByTrack.get(tr.id);
-   const activeIdx=tr.steps.findIndex(st=>!doneSet.has(st.id));
    const curStep=activeIdx>=0?tr.steps[activeIdx]:null;
-   const liveTxt=curStep?liveHintForStep(curStep.id,s):'';
-   const countsSig=TRACKS.map(t=>`${t.id}:${doneByTrack.get(t.id).size}`).join(',');
-   const sig=`${tr.id}|${Array.from(doneSet).sort().join(',')}|${activeIdx}|${countsSig}|${liveTxt}`;
-   if(sig===lastRenderedSig)return;
-   lastRenderedSig=sig;
+   const guide=curStep?guidanceForCurrentStep(tr,curStep.id,s):{how:'',spot:null};
+   updatePedalCaptions(s,guide.spot);
 
-   statusEl.textContent=`${doneSet.size} / ${tr.steps.length} complete`;
-   const sumEl=document.getElementById('session-summary');
-   if(sumEl)sumEl.textContent=tr.summary;
+   const scoreJson=tr.drill?JSON.stringify(tr.drill.scores(s)):'';
+   const sig=`${tr.id}|${activeIdx}|${allDone}|${peekStepId}|${s.activity}|${+s.running}|${+s.calibrated}|${+s.calibrating}|${guide.how}|${scoreJson}|`+
+             TRACKS.map(t=>`${t.id}:${doneByTrack.get(t.id).size}`).join(',');
+   if(sig===lastSig)return;
+   lastSig=sig;
+
+   if(allDone){
+    statusEl.textContent=`All ${tr.steps.length} steps complete ✓`;
+    statusEl.className='sub ok';
+   }else{
+    statusEl.textContent=`Step ${activeIdx+1} of ${tr.steps.length}`;
+    statusEl.className='sub';
+   }
 
    const tracksEl=document.getElementById('session-tracks');
    if(tracksEl){
-    for(const btn of tracksEl.querySelectorAll('.track-pill')){
+    for(const btn of tracksEl.querySelectorAll('.guide-tab')){
      const tid=btn.dataset.track,tDef=TRACKS.find(x=>x.id===tid),tDone=doneByTrack.get(tid);
      btn.classList.toggle('sel',tid===tr.id);
      btn.classList.toggle('done',tDone.size===tDef.steps.length);
-     const b=btn.querySelector('b');
-     if(b)b.textContent=`${tDone.size}/${tDef.steps.length}`;
+     btn.setAttribute('aria-selected',tid===tr.id?'true':'false');
     }
    }
 
    for(let i=0;i<tr.steps.length;i++){
     const st=tr.steps[i],row=container.children[i];
     if(!row)continue;
-    const done=doneSet.has(st.id),cur=i===activeIdx;
+    const done=doneSet.has(st.id);
+    const cur=i===activeIdx;
+    const upcoming=!done&&!cur;
     row.classList.toggle('done',done);
     row.classList.toggle('current',cur);
+    row.classList.toggle('upcoming',upcoming);
+    row.classList.toggle('peek',!cur&&peekStepId===st.id);
     row.dataset.done=done?'1':'0';
     row.querySelector('.step-mark').textContent=done?'✓':String(i+1);
-    const liveEl=row.querySelector('.step-live');
-    if(liveEl)liveEl.textContent=cur?liveTxt:'';
+    const tag=row.querySelector('.step-tag');
+    if(tag){
+     tag.textContent=cur?(done?'Ready to test':'Current step'):(done?'Done':'');
+    }
+    const howEl=row.querySelector('.step-how');
+    if(howEl){
+     const html=cur&&guide.how?guide.how:st.how;
+     if(howEl.innerHTML!==html)howEl.innerHTML=html;
+    }
+    if(st.playground&&tr.drill){
+     updatePlayground(row,tr.drill,s);
+    }else if(st.id==='t-save'){
+     const actBtn=row.querySelector('.step-do');
+     if(actBtn)actBtn.textContent=seen.save&&!seen.rebootAfterSave?'▶ Reboot pedal':'Save & Reboot for me';
+    }
+   }
+
+   const banner=document.getElementById('session-done-banner');
+   if(banner){
+    if(allDone&&!tr.drill){
+     banner.hidden=false;
+     banner.textContent='✓ First run complete! Click Timing, Note Finder, Bend & Vibrato, Scale Run, or Dynamics above to test each guitar drill.';
+    }else{
+     banner.hidden=true;
+    }
+   }
+  }
+
+  function buildPlaygroundDom(mount,g){
+   const box=document.createElement('div');
+   box.className='bench-box';
+
+   const modeRow=document.createElement('div');
+   modeRow.className='bench-group';
+   const modeLbl=document.createElement('span');
+   modeLbl.className='bench-lbl';
+   modeLbl.textContent='Mode';
+   modeRow.appendChild(modeLbl);
+   for(const m of g.modes){
+    const b=document.createElement('button');
+    b.type='button';
+    b.className='pill';
+    b.dataset.preset=m.slug;
+    b.textContent=m.label;
+    b.addEventListener('click',e=>{e.stopPropagation();switchPresetClean(m.slug,true);});
+    modeRow.appendChild(b);
+   }
+   box.appendChild(modeRow);
+
+   const takeRow=document.createElement('div');
+   takeRow.className='bench-group';
+   const takeLbl=document.createElement('span');
+   takeLbl.className='bench-lbl';
+   takeLbl.textContent='Try playing';
+   takeRow.appendChild(takeLbl);
+   for(const t of g.takes(null)){
+    const b=document.createElement('button');
+    b.type='button';
+    b.className=t.primary?'btn-primary':'';
+    b.dataset.take=t.kind;
+    b.textContent=t.label;
+    b.addEventListener('click',e=>{e.stopPropagation();runDrillTake(t.kind);});
+    takeRow.appendChild(b);
+   }
+   box.appendChild(takeRow);
+
+   const strip=document.createElement('div');
+   strip.className='score-strip';
+   box.appendChild(strip);
+   mount.appendChild(box);
+  }
+
+  function updatePlayground(row,g,s){
+   for(const b of row.querySelectorAll('[data-preset]')){
+    b.classList.toggle('sel',s.activity===b.dataset.preset);
+   }
+   const takes=g.takes(s);
+   for(const t of takes){
+    const b=row.querySelector(`[data-take="${t.kind}"]`);
+    if(b&&b.textContent!==t.label)b.textContent=t.label;
+   }
+   const strip=row.querySelector('.score-strip');
+   if(strip){
+    const scores=g.scores(s);
+    while(strip.children.length<scores.length){
+     const chip=document.createElement('span');
+     chip.className='score-chip';
+     chip.innerHTML='<span></span>: <b></b>';
+     strip.appendChild(chip);
+    }
+    for(let i=0;i<scores.length;i++){
+     const sc=scores[i],chip=strip.children[i];
+     chip.className='score-chip'+(sc.hi?' hi':'');
+     chip.firstElementChild.textContent=sc.k;
+     chip.lastElementChild.textContent=sc.v;
+    }
    }
   }
 
@@ -668,9 +748,10 @@
    for(const t of TRACKS){
     const b=document.createElement('button');
     b.type='button';
-    b.className='track-pill'+(t.id===activeTrackId?' sel':'');
+    b.role='tab';
+    b.className='guide-tab'+(t.id===activeTrackId?' sel':'');
     b.dataset.track=t.id;
-    b.innerHTML=`<span>${t.label}</span><b class="mono">0/${t.steps.length}</b>`;
+    b.innerHTML=`<span>${t.label}</span><i class="dot" aria-hidden="true"></i>`;
     b.addEventListener('click',()=>setTrack(t.id));
     tracksEl.appendChild(b);
    }
@@ -683,11 +764,42 @@
     const row=document.createElement('div');
     row.className='step-row';
     row.dataset.step=st.id;
-    row.innerHTML=
+    const head=document.createElement('div');
+    head.className='step-head';
+    head.innerHTML=
      `<span class="step-mark" aria-hidden="true">${i+1}</span>`+
-     `<div class="step-body"><strong>${st.title}</strong><p>${st.how}</p><div class="step-live mono"></div></div>`+
-     `<button type="button" class="step-do" data-do="${st.id}">Do it for me</button>`;
-    row.querySelector('.step-do').addEventListener('click',()=>doStep(st.id));
+     `<span class="step-title">${st.title}</span>`+
+     `<span class="step-tag"></span>`;
+    head.addEventListener('click',()=>{
+     peekStepId=peekStepId===st.id?'':st.id;
+     lastSig='';
+     evaluate();
+    });
+
+    const detail=document.createElement('div');
+    detail.className='step-detail';
+    detail.innerHTML=`<p class="step-how">${st.how}</p>`;
+
+    if(st.playground&&tr.drill){
+     const mount=document.createElement('div');
+     mount.className='bench-mount';
+     buildPlaygroundDom(mount,tr.drill);
+     detail.appendChild(mount);
+    }else if(st.btn){
+     const acts=document.createElement('div');
+     acts.className='step-actions';
+     const btn=document.createElement('button');
+     btn.type='button';
+     btn.className='step-do'+(st.btnPrimary?' btn-primary':' btn-gold');
+     btn.dataset.do=st.id;
+     btn.textContent=st.btn;
+     btn.addEventListener('click',e=>{e.stopPropagation();doStep(st.id);});
+     acts.appendChild(btn);
+     detail.appendChild(acts);
+    }
+
+    row.appendChild(head);
+    row.appendChild(detail);
     container.appendChild(row);
    });
   }
@@ -695,17 +807,17 @@
   buildTrackBar();
   buildDom();
   return {
-   STEPS,
    TRACKS,
    evaluate,
    resetProgress,
    onReboot,
    doStep,
    setTrack,
+   runDrillTake,
    getActiveTrack:()=>activeTrackId,
    getCompleted:()=>Array.from(doneByTrack.get(activeTrackId))
   };
  }
 
- root.VexSession={STEPS,TRACKS,createSession,fmtBest};
-})(typeof globalThis!=='undefined'?globalThis:this);
+ root.VexSession={createSession,TRACKS,fmtBest};
+})(typeof globalThis!=='undefined'?globalThis:window);

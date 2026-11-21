@@ -481,7 +481,6 @@ function updatePanels(force){
  if(sim.source&&sim.source.kind==='wav')$('wav-pos').textContent=`${(sim.source.pos/RATE).toFixed(1)} / ${(sim.source.total/RATE).toFixed(1)} s`;
  $('power').textContent=s.power?'power on':'POWER CUT · reboot to continue';
 
- updateDrillsPanel(s);
  const evSig=`${s.onsets}:${s.note_midi}`;
  if(evSig!==sim.lastEventSig){sim.lastEventSig=evSig;sim.stripDirty=true;}
  if(sim.stripDirty||force)drawActivityStrip(s);
@@ -644,27 +643,7 @@ function selectInspectTab(tabName){
  sim.recDirty=true;lastStoreSig='';updatePanels(true);
 }
 
-// Guitar drills panel ("Play it for me" performances via shared protocol.h) -----------------------
-const DRILL_FAMILIES=[
- {prefix:'pulse',label:'Timing',walk:'pulse',
-  plays:{steady:'Clean 4-bar take (+4 BPM)',rushing:'Rushing (−9 ms/note)',uneven:'Uneven (±46 ms jitter)',wrong:'Off-grid notes'},
-  hint:'Anchors on your first pick. Keep within ±30 ms for 4 bars to climb +4 BPM; amber LED flashes the beat (except PULSE FREE).'},
- {prefix:'hunt',label:'Note finder',walk:'hunt',
-  plays:{steady:'Find all 10 notes',rushing:'Fast 4-note streak',uneven:'Slow / hesitant finds',wrong:'Wrong string / note'},
-  hint:'HUNT STR checks exact string + pitch register (e.g. F#2 on E6 vs F#3 on D); HUNT ANY accepts any octave. Slow notes repeat sooner.'},
- {prefix:'bend',label:'Bend & vib',walk:'bend',
-  plays:{steady:'8 clean target bends',rushing:'Steady E4 vibrato',uneven:'Over-bent (+28 c sharp)',wrong:'Under-bent (−32 c flat)'},
-  hint:'Fret a base note (≥ D3) then bend up +100 c (1/2) or +200 c (full) and hold the top. Holding steady wobble reports vibrato Hz & cents.'},
- {prefix:'run',label:'Scale runs',walk:'run',
-  plays:{steady:'Clean 16-note scale run',rushing:'Brisk 128 BPM run',uneven:'Uneven spacing run',wrong:'Out-of-key notes (red)'},
-  hint:'First note of each 16-note phrase sets your key root. In-scale notes light gold; outside notes flash red and protect your clean BPM best.'},
- {prefix:'touch',label:'Dynamics',walk:'touch',
-  plays:{steady:'Clean take (hits accents)',rushing:'Fast even picking',uneven:'Uneven volume (±6 dB)',wrong:'Accent on wrong beat'},
-  hint:'Pitch is gated off. Bars plot each pick’s dB level vs your running median; ACC3 / ACC4 require ≥ +4 dB on beat 1 of each group.'}
-];
-function familyForActivity(act){
- return DRILL_FAMILIES.find(f=>act&&act.startsWith(f.prefix))||DRILL_FAMILIES[0];
-}
+// Simulated drill takes (driven through shared simulator/protocol.h) ------------------------------
 function selectDrillBySlug(slug){
  setPaused(false);setInputMode('quiet');
  if(sim.stage!==4){sim.stage=4;$('stage').value='4';boot(false);}
@@ -679,62 +658,6 @@ function execSim(line){
  if(M._vex_store_dirty())persist();
  sim.now=M._vex_now();sim.audioClock=sim.now;
  sampleStrip();
-}
-function initDrillsPanel(){
- const wrap=$('drill-presets');if(!wrap)return;
- wrap.innerHTML='';
- const buckets=new Map(DRILL_FAMILIES.map(f=>[f.prefix,[]]));
- const n=M._vex_preset_count();
- for(let i=0;i<n;i++){
-  const slug=M.UTF8ToString(M._vex_preset_slug(i));
-  const title=M.UTF8ToString(M._vex_preset_title(i));
-  const fam=familyForActivity(slug);
-  buckets.get(fam.prefix).push({slug,title});
- }
- for(const fam of DRILL_FAMILIES){
-  const row=document.createElement('div');
-  row.className='drill-fam';row.dataset.fam=fam.prefix;
-  const lbl=document.createElement('span');
-  lbl.className='drill-fam-lbl';lbl.textContent=fam.label;
-  lbl.style.cursor='pointer';lbl.title=`Open ${fam.label} step-by-step walkthrough`;
-  lbl.onclick=()=>{if(sessionCtrl)sessionCtrl.setTrack(fam.walk);};
-  const pills=document.createElement('div');pills.className='drill-fam-pills';
-  for(const item of buckets.get(fam.prefix)){
-   const b=document.createElement('button');
-   b.type='button';b.className='pill';b.dataset.drill=item.slug;b.textContent=item.title;
-   b.onclick=()=>selectDrillBySlug(item.slug);
-   pills.appendChild(b);
-  }
-  row.appendChild(lbl);row.appendChild(pills);wrap.appendChild(row);
- }
- for(const b of document.querySelectorAll('[data-drill-play]')){
-  b.onclick=()=>playDrillPerformance(b.dataset.drillPlay);
- }
-}
-function updateDrillsPanel(s){
- for(const b of document.querySelectorAll('[data-drill]')){
-  b.classList.toggle('sel',s.activity===b.dataset.drill);
- }
- const fam=familyForActivity(s.activity);
- const onDrill=s.activity!=='pet'&&s.activity!=='tuner';
- for(const row of document.querySelectorAll('.drill-fam')){
-  row.classList.toggle('active',onDrill&&row.dataset.fam===fam.prefix);
- }
- for(const b of document.querySelectorAll('[data-drill-play]')){
-  const k=b.dataset.drillPlay;
-  if(fam.plays[k])b.textContent=fam.plays[k];
- }
- const hintEl=$('drill-hint');
- if(hintEl){
-  hintEl.textContent=onDrill?fam.hint:'On the pedal: tap MODE twice (Pet → Tuner → Drill), tap QUEST while paused to cycle presets, and tap FOOTSWITCH to start/pause.';
- }
- const el=$('drill-status');if(!el)return;
- const fmt=window.VexSession&&window.VexSession.fmtBest?window.VexSession.fmtBest:(_,v)=>String(v);
- if(!onDrill){
-  el.textContent=`currently on ${s.activity.toUpperCase()} · click any preset below or tap MODE twice`;
- }else{
-  el.textContent=`${s.activity} · ${s.running?'running':'paused'}${s.bpm?` · ${s.bpm} BPM`:''} · best ${fmt(s.activity,s.drill_best)} · rounds ${s.drill_rounds}`;
- }
 }
 function playDrillPerformance(kind){
  setPaused(false);setInputMode('quiet');
@@ -760,6 +683,7 @@ function playDrillPerformance(kind){
    execSim(`notes 140 0 0 -18 ${midiName(wrongMidi)}`);
   }else{
    const count=kind==='steady'?10:4;
+   if(kind==='steady'){execSim(`drill ${act}`);execSim('press foot 100');}
    for(let i=0;i<count;i++){
     s=readState();
     if(kind==='uneven'&&i%2===0)execSim('wait 1400');
@@ -769,7 +693,10 @@ function playDrillPerformance(kind){
   }
  }else if(act.startsWith('bend')){
   const tgt=act==='bend-whole'?200:100;
-  if(kind==='steady'){for(let i=0;i<8;i++)execSim(`bend 900 A3 ${tgt} 340 -16`);}
+  if(kind==='steady'){
+   if(s.bend_count>0){execSim(`drill ${act}`);execSim('press foot 100');}
+   for(let i=0;i<8;i++)execSim(`bend 900 A3 ${tgt} 340 -16`);
+  }
   else if(kind==='rushing')execSim(`vib 1200 E4 5.6 42 -16`);
   else if(kind==='uneven')execSim(`bend 900 D4 ${tgt+28} 340 -16`);
   else execSim(`bend 900 A3 ${tgt-32} 340 -16`);
@@ -784,12 +711,13 @@ function playDrillPerformance(kind){
  }else if(act.startsWith('touch')){
   const acc3=act==='touch-acc3',acc4=act==='touch-acc4';
   if(kind==='steady'){
-   if(acc3)execSim('notes 110x2 2 0 -20 D3@+6 D3 D3 G3@+6 G3 G3 B3@+6 B3 B3 D3@+6 D3 D3');
-   else if(acc4)execSim('notes 110x2 2 0 -20 D3@+6 D3 D3 D3 G3@+6 G3 G3 G3 B3@+6 B3 B3 B3');
-   else execSim('notes 110x2 2 0 -18 D3 D3 D3 D3 G3 G3 G3 G3 B3 B3 B3 B3');
-  }else if(kind==='rushing')execSim('notes 132x2 4 0 -18 D3 D3 D3 D3 G3 G3 G3 G3 B3 B3 B3 B3');
-  else if(kind==='uneven')execSim('notes 110x2 5 0 -20 D3@-6 D3@+5 D3@-4 D3@+7 G3@-5 G3@+4 G3@-7 G3@+6 B3@-5 B3@+6 B3@-4 B3@+5');
-  else execSim('notes 110x2 2 0 -18 D3 D3@+6 D3 G3 G3@+6 G3 B3 B3@+6 B3 D3 D3@+6 D3');
+   execSim(`drill ${act}`);execSim('press foot 100');
+   if(acc3)execSim('notes 110x2 2 0 -20 A2@+6 A2 A2 D3@+6 D3 D3 E3@+6 E3 E3 A2@+6 A2 A2');
+   else if(acc4)execSim('notes 110x2 2 0 -20 A2@+6 A2 A2 A2 D3@+6 D3 D3 D3 E3@+6 E3 E3 E3');
+   else execSim('notes 110x2 2 0 -18 A2 A2 A2 A2 D3 D3 D3 D3 E3 E3 E3 E3');
+  }else if(kind==='rushing')execSim('notes 132x2 4 0 -18 A2 A2 A2 A2 D3 D3 D3 D3 E3 E3 E3 E3');
+  else if(kind==='uneven')execSim('notes 110x2 5 0 -20 A2@-5 A2@+4 A2@-4 A2@+5 D3@-5 D3@+4 D3@-4 D3@+5 E3@-5 E3@+4 E3@-4 E3@+5');
+  else execSim('notes 110x2 2 0 -20 A2 A2@+6 A2 D3 D3@+6 D3 E3 E3@+6 E3 A2 A2@+6 A2');
  }
  renderScreenNow();updatePanels(true);
 }
@@ -882,6 +810,7 @@ VexModule().then(mod=>{
   exitTestPattern:()=>{if(sim.testPattern)setTestPattern(false);},
   press:(name,ms)=>{setPaused(false);pressSync(name,ms);renderScreenNow();updatePanels(true);},
   advance:ms=>{setPaused(false);run(ms);renderScreenNow();updatePanels(true);},
+  playTone:(ms,hz,db)=>{setPaused(false);execSim(`tone ${ms} ${hz} ${db}`);renderScreenNow();updatePanels(true);},
   selectDrill:slug=>selectDrillBySlug(slug),
   playDrill:kind=>playDrillPerformance(kind),
   reboot:()=>{recordCommand('reboot');boot(true);renderScreenNow();updatePanels(true);}
@@ -901,7 +830,6 @@ VexModule().then(mod=>{
  });
  galleryCtrl.init();
 
- initDrillsPanel();
  wire();
  renderScreenNow();
  updatePanels(true);
