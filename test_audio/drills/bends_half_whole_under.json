@@ -1,0 +1,17 @@
+{
+  "name": "bends_half_whole_under",
+  "kind": "synthetic",
+  "pitch_mode": "fast",
+  "commands": [
+    "bend 950 B3 100 350 -16",
+    "tone 200 0 -60",
+    "bend 950 A3 200 350 -16",
+    "tone 200 0 -60",
+    "bend 950 D4 182 350 -16"
+  ],
+  "expected": [
+    {"onset_ms": 40.0, "note": "B3", "bend_cents": 100.0},
+    {"onset_ms": 1190.0, "note": "A3", "bend_cents": 200.0},
+    {"onset_ms": 2340.0, "note": "D4", "bend_cents": 182.0}
+  ]
+}

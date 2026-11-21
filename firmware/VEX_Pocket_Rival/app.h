@@ -1,5 +1,6 @@
 #pragma once
 #include "core.h"
+#include "notes.h"
 #include "ui.h"
 namespace vex {
 // Byte storage adapter. Teensy wraps EEPROM; the simulator wraps a file and can cut power mid-write.
@@ -12,9 +13,10 @@ struct LevelObs{uint16_t dt;float ms;};
 // levels, audio observations and a millisecond clock; nothing here touches hardware or draws.
 struct App {
  Store& store;int stage;
- Progress progress;Button mode,quest,foot;Pitch pitchNow;
+ Progress progress;Button mode,quest,foot;Pitch pitchNow;NoteTracker notes;
  Activity activity=ACT_PET;
- bool codec_ok=false,calibrating=false,raw_mode=false,raw_quest=false,raw_foot=false,obs_seen=false;
+ PitchMode pitch_override=PITCH_OFF;
+ bool codec_ok=false,calibrating=false,raw_mode=false,raw_quest=false,raw_foot=false,obs_seen=false,slow_run_hop=false;
  // Tuner presentation facts: a periodic candidate below the confidence threshold (uncertain), and the last
  // confident reading so the display can fade it instead of blanking the moment a string decays.
  bool uncertain=false;Pitch last_pitch;uint32_t last_pitch_at=0;
@@ -27,7 +29,7 @@ struct App {
  int saved_slot=-1;const char* notice="Hold QUEST: calibrate";
  App(Store& s,int stage_):store(s),stage(stage_){}
  void message(const char* s){notice=s;notice_at=now;}
- void begin(uint32_t t,bool codec){now=t;codec_ok=codec;obs_seen=false;obs_head=obs_count=0;env=0;if(stage==4)load();tick_at=save_at=active_at=t;last_level=progress.level();session_xp_start=progress.xp();fragment_at=levelup_at=summary_at=t-100000;message("Hold QUEST: calibrate");}
+ void begin(uint32_t t,bool codec){now=t;codec_ok=codec;obs_seen=false;obs_head=obs_count=0;env=0;notes.clear();pitch_override=PITCH_OFF;if(stage==4)load();tick_at=save_at=active_at=t;last_level=progress.level();session_xp_start=progress.xp();fragment_at=levelup_at=summary_at=t-100000;message(codec?"Hold QUEST: calibrate":"Check audio board");}
  // Session bookkeeping around running transitions. Called after any change to progress.running or newSession().
  void startSession(){session_xp_start=progress.xp();}
  void pauseSession(){progress.active=false;progress.hold_ms=0;summary_ms=uint32_t(progress.session_ms);summary_xp=uint32_t(progress.xp()-session_xp_start);summary_at=now;}
@@ -73,9 +75,12 @@ struct App {
   if(ef==2){setRunning(false);progress.newSession();summary_at=now-100000;message("New session / paused");}
  }
  void command(char c,uint32_t t){now=t;if(stage!=4)return;if(c=='c')calibrate();if(c=='s')save();if(c=='p')setRunning(false);if(c=='r'){setRunning(false);progress.newSession();summary_at=now-100000;}}
- bool wantsPitch()const{return stage==3||act().wants_pitch;}
- void observe(float r,float p,uint32_t t){
+ PitchMode pitchMode()const{if(pitch_override!=PITCH_OFF)return pitch_override;if(stage==3)return PITCH_TUNER;return act().pitch_mode;}
+ bool wantsPitch()const{return pitchMode()!=PITCH_OFF;}
+ void observeOnset(const Onset& o,uint32_t t){now=t;notes.onOnset(o,t);}
+ void observe(float r,float p,uint32_t t,uint32_t sample=0){
   now=t;rms=r;peak=p;
+  if(sample&&isfinite(r)&&isfinite(p)&&r>=0&&p>=0)notes.onLevel(r,p,sample,progress.gate);
   if(!isfinite(r)||!isfinite(p)||r<0||p<0){env=r;obs_head=obs_count=0;obs_seen=false;rms_at=peak_at=t;return;}
   if(p>=.98f){env=0;obs_head=obs_count=0;obs_seen=true;rms_at=peak_at=t;return;}
   uint32_t gap=obs_seen?t-rms_at:100;rms_at=peak_at=t;obs_seen=true;
@@ -98,8 +103,10 @@ struct App {
  }
  // Tuner smoothing: a three-sample median over valid estimates removes single-window glitches, and the
  // displayed note only changes once the estimate is more than 60 cents from the current note's centre.
- void observePitch(float hz,float probability,uint32_t t){
-  now=t;pitch_at=t;Pitch raw=pitch(hz,probability);
+ void observePitch(float hz,float probability,uint32_t t,uint32_t win_end_sample=0,uint16_t win_len=2048){
+  now=t;pitch_at=t;
+  if(win_end_sample)notes.onPitch(hz,probability,win_end_sample,win_len,pitchMode()!=PITCH_FAST,t);
+  Pitch raw=pitch(hz,probability);
   if(!raw.valid){hz_count=0;pitchNow=Pitch{};uncertain=isfinite(hz)&&isfinite(probability)&&hz>=55&&hz<=1400&&probability>=PITCH_UNCERTAIN;return;}
   uncertain=false;
   hz_hist[0]=hz_hist[1];hz_hist[1]=hz_hist[2];hz_hist[2]=hz;if(hz_count<3)hz_count++;

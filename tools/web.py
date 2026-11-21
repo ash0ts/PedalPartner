@@ -23,6 +23,7 @@ SCENARIOS=ROOT/'tests/scenarios';GOLDENS=ROOT/'tests/golden'
 EMSCRIPTEN_MIN='7.0'   # Homebrew bottle used for development; record the actual version in the handoff
 EXPORTS=['_vex_boot','_vex_reset','_vex_now','_vex_controls','_vex_tick','_vex_observe','_vex_pitch','_vex_serial','_vex_audio_ptr','_vex_audio_capacity','_vex_audio_push',
          '_vex_cmd_buf','_vex_cmd_cap','_vex_command','_vex_feed_begin','_vex_feed_samples',
+         '_vex_event_count','_vex_event',
          '_vex_render','_vex_test','_vex_frame_ptr','_vex_store_ptr','_vex_store_size','_vex_store_load','_vex_store_dirty','_vex_powercut',
          '_vex_state_schema','_vex_state_ptr','_vex_state_str','_vex_state','_vex_notice',
          '_vex_last_analysis_us','_vex_pose','_vex_display_ms']
@@ -246,6 +247,11 @@ function loadWav(rel,kind){
 }
 (async()=>{
   const M=await VexModule();
+  // Round-trip WAV encoder/decoder check for Workbench "Record clip".
+  const testPcm=Int16Array.from([0,1234,-1234,32767,-32768,42]);
+  const wavBytes=VexScenario.encodeWav16Mono(testPcm,44100);
+  const backPcm=VexScenario.parseWavLeft16(wavBytes);
+  if(backPcm.length!==testPcm.length||testPcm.some((v,i)=>backPcm[i]!==v))throw Error('encodeWav16Mono round-trip mismatch');
   const files=fs.readdirSync(scnDir).filter(f=>f.endsWith('.txt')).sort();
   const captured=[];const errors=[];
   for(const file of files){

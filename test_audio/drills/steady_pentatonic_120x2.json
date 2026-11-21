@@ -1,0 +1,18 @@
+{
+  "name": "steady_pentatonic_120x2",
+  "kind": "synthetic",
+  "pitch_mode": "run",
+  "commands": [
+    "notes 120x2 0 0 -18 E2 G2 A2 B2 D3 E3 G3 A3"
+  ],
+  "expected": [
+    {"onset_ms": 50.0, "note": "E2"},
+    {"onset_ms": 300.0, "note": "G2"},
+    {"onset_ms": 550.0, "note": "A2"},
+    {"onset_ms": 800.0, "note": "B2"},
+    {"onset_ms": 1050.0, "note": "D3"},
+    {"onset_ms": 1300.0, "note": "E3"},
+    {"onset_ms": 1550.0, "note": "G3"},
+    {"onset_ms": 1800.0, "note": "A3"}
+  ]
+}

@@ -52,19 +52,45 @@ EMSCRIPTEN_KEEPALIVE void vex_serial(int c,uint32_t now){sim.app().command(char(
 EMSCRIPTEN_KEEPALIVE int16_t* vex_audio_ptr(){return audio;}
 EMSCRIPTEN_KEEPALIVE int vex_audio_capacity(){return int(sizeof(audio)/sizeof(audio[0]));}
 
-// Push n samples (multiple of 128) written at vex_audio_ptr(), then run foreground level + pitch.
+// Push n samples (multiple of 128) written at vex_audio_ptr(), then run foreground level, onsets + pitch.
 EMSCRIPTEN_KEEPALIVE int vex_audio_push(int n,uint32_t now){
+ sim.analyzer.setGate(sim.app().progress.gate);
  for(int i=0;i+vex::Analyzer::BLOCK<=n;i+=vex::Analyzer::BLOCK)sim.analyzer.push(audio+i,vex::Analyzer::BLOCK);
- float r,p;if(sim.analyzer.takeLevel(r,p))sim.app().observe(r,p,now);
- if(!sim.app().wantsPitch()){sim.analyzer.skip();lastAnalysisUs=0;return 0;}
+ float r,p;uint32_t sc=0;
+ if(sim.analyzer.takeLevel(r,p,&sc))sim.app().observe(r,p,now,sc);
+ vex::Onset ons;while(sim.analyzer.takeOnset(ons))sim.app().observeOnset(ons,now);
+ vex::PitchMode pm=sim.app().pitchMode();
+ if(pm==vex::PITCH_OFF){sim.analyzer.skip();lastAnalysisUs=0;return 0;}
  double started=emscripten_get_now();
- int analyzed=sim.analyzer.analyze();
+ int analyzed=sim.analyzer.analyze(pm,sim.app().slow_run_hop);
  if(analyzed){
   lastAnalysisUs=uint32_t((emscripten_get_now()-started)*1000);
   sim.analyses++;
-  sim.app().observePitch(sim.analyzer.hz,sim.analyzer.probability,now);
+  sim.app().observePitch(sim.analyzer.hz,sim.analyzer.probability,now,sim.analyzer.pitch_sample,
+                         vex::pitchProfile(pm,sim.app().slow_run_hop).window);
  }
  return analyzed;
+}
+
+double eventOut[8];
+EMSCRIPTEN_KEEPALIVE uint32_t vex_event_count(){return sim.app().notes.total_events;}
+EMSCRIPTEN_KEEPALIVE double* vex_event(uint32_t seq){
+ const auto& nt=sim.app().notes;
+ if(seq==0||seq>nt.total_events||nt.total_events-seq>=vex::NoteTracker::EVENT_CAP){
+  for(double& v:eventOut)v=0;
+  return eventOut;
+ }
+ const auto& e=nt.atSeq(seq);
+ // Convert sample-based onset_ms_exact to current session clock domain for the 30 s strip.
+ eventOut[0]=double(e.seq);
+ eventOut[1]=double(e.onset_ms);
+ eventOut[2]=double(e.onset_ms_exact);
+ eventOut[3]=double(e.midi);
+ eventOut[4]=double(e.cents);
+ eventOut[5]=double(e.bend_cents);
+ eventOut[6]=double(e.peak);
+ eventOut[7]=double((e.pitched?1:0)|(e.legato?2:0));
+ return eventOut;
 }
 
 // Scenario protocol execution (simulator/protocol.h) and streamed PCM feeding for `wav`/`raw`.

@@ -60,6 +60,27 @@ static std::string toJson(const vexsim::SimHost& sim) {
   }
  } emit{o};
  vexsim::stateFields(sim.stateSource(), emit);
+ if (sim.emit_events) {
+  const auto& nt = sim.app().notes;
+  uint32_t first = nt.total_events > vex::NoteTracker::EVENT_CAP ? nt.total_events - vex::NoteTracker::EVENT_CAP + 1 : 1;
+  o << ",\"events\":[";
+  for (uint32_t sq = first; sq <= nt.total_events; sq++) {
+   const auto& ev = nt.atSeq(sq);
+   char name[8]; vex::midiNoteName(ev.midi, name);
+   if (sq > first) o << ",";
+   o << "{\"seq\":" << ev.seq
+     << ",\"onset_ms\":" << ev.onset_ms_exact
+     << ",\"midi\":" << ev.midi
+     << ",\"note\":\"" << name << "\""
+     << ",\"cents\":" << ev.cents
+     << ",\"bend_cents\":" << ev.bend_cents
+     << ",\"peak\":" << ev.peak
+     << ",\"rms\":" << ev.rms
+     << ",\"pitched\":" << (ev.pitched ? "true" : "false")
+     << ",\"legato\":" << (ev.legato ? "true" : "false") << "}";
+  }
+  o << "]";
+ }
  o << "}";
  return o.str();
 }

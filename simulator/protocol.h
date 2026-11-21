@@ -1,5 +1,5 @@
 #pragma once
-// Shared scenario command interpreter and synthetic guitar tone generator for both the native
+// Shared scenario command interpreter and synthetic guitar performance generator for both the native
 // simulator (simulator/main.cpp) and WebAssembly (simulator/web/vex_web.cpp).
 // Uses a small C tokenizer and placement-new storage so WebAssembly stays free of iostreams,
 // exceptions and per-command heap allocations.
@@ -81,6 +81,83 @@ struct Tok {
  }
 };
 
+// Parse note token: `E2`, `F#3`, `Bb3`, `A4`, `~G3` (legato), `A3@+5` (+5 dB accent), `R`/`-` (rest),
+// `m60` (MIDI), or raw frequency in Hz (`440`, `82.41`). Also optional `+15c`/`-10c` detune suffix.
+inline bool parseNoteSpec(const char* raw, float& hz, float& dbDelta, bool& isRest, bool& isLegato) {
+ hz = 0; dbDelta = 0; isRest = false; isLegato = false;
+ if (!raw || !*raw) return false;
+ char buf[32];
+ strncpy(buf, raw, sizeof(buf) - 1);
+ buf[sizeof(buf) - 1] = '\0';
+ char* s = buf;
+ if (*s == '~') { isLegato = true; ++s; }
+ char* at = strchr(s, '@');
+ if (at) {
+  *at = '\0';
+  char* end = nullptr;
+  float d = strtof(at + 1, &end);
+  if (end == at + 1 || !isfinite(d)) return false;
+  dbDelta = d;
+ }
+ float detuneCents = 0;
+ char* ct = strchr(s, ':');
+ if (ct) {
+  *ct = '\0';
+  char* end = nullptr;
+  float c = strtof(ct + 1, &end);
+  if (end == ct + 1 || !isfinite(c)) return false;
+  detuneCents = c;
+ }
+ if (strcmp(s, "R") == 0 || strcmp(s, "r") == 0 || strcmp(s, "-") == 0) {
+  isRest = true;
+  return true;
+ }
+ if ((s[0] >= 'A' && s[0] <= 'G') || (s[0] >= 'a' && s[0] <= 'g')) {
+  static constexpr int SEMI[7] = {9, 11, 0, 2, 4, 5, 7}; // A B C D E F G
+  char up = (s[0] >= 'a') ? char(s[0] - 'a' + 'A') : s[0];
+  int semi = SEMI[up - 'A'];
+  int idx = 1;
+  if (s[idx] == '#') { semi++; idx++; }
+  else if (s[idx] == 'b') { semi--; idx++; }
+  if (!s[idx]) return false;
+  char* end = nullptr;
+  long oct = strtol(s + idx, &end, 10);
+  if (end == s + idx || *end != '\0') return false;
+  int midi = int((oct + 1) * 12 + semi);
+  hz = 440.f * powf(2.f, (float(midi - 69) + detuneCents / 100.f) / 12.f);
+  return hz > 0;
+ }
+ if (s[0] == 'm' && s[1] >= '0' && s[1] <= '9') {
+  char* end = nullptr;
+  long midi = strtol(s + 1, &end, 10);
+  if (end == s + 1 || *end != '\0') return false;
+  hz = 440.f * powf(2.f, (float(midi - 69) + detuneCents / 100.f) / 12.f);
+  return hz > 0;
+ }
+ char* end = nullptr;
+ float f = strtof(s, &end);
+ if (end == s || *end != '\0' || !isfinite(f) || f < 0) return false;
+ if (f == 0.f) { isRest = true; return true; }
+ hz = f * powf(2.f, detuneCents / 1200.f);
+ return true;
+}
+
+inline bool parseTempoStepMs(const char* tok, float& stepMs) {
+ char* end = nullptr;
+ float bpm = strtof(tok, &end);
+ if (end == tok || !isfinite(bpm) || bpm <= 0.f) return false;
+ float subdiv = 1.f;
+ if (*end == 'x' || *end == '*') {
+  char* e2 = nullptr;
+  subdiv = strtof(end + 1, &e2);
+  if (e2 == end + 1 || *e2 != '\0' || subdiv <= 0.f) return false;
+ } else if (*end != '\0') {
+  return false;
+ }
+ stepMs = 60000.f / (bpm * subdiv);
+ return stepMs >= 45.f && stepMs <= 10000.f;
+}
+
 struct SimStore : vex::Store {
  static constexpr int CAPACITY = 128;
  uint8_t bytes[CAPACITY]{};
@@ -104,22 +181,39 @@ struct SimStore : vex::Store {
 };
 
 struct SimHost {
+ static constexpr uint32_t DEFAULT_SEED = 0x56455831u;
  SimStore& store;
  int stage = 4;
  alignas(8) uint8_t appStorage[sizeof(vex::App)]{};
  vex::App* appPtr = nullptr;
  vex::Analyzer analyzer{};
  bool raw_mode = false, raw_quest = false, raw_foot = false, test = false;
- bool inject = false;
+ bool inject = false, emit_events = false;
  float rms = 0, peak = 0, hz = 0, probability = 0;
  double sample_ms = 0;
  uint32_t analyses = 0;
+ uint32_t rng = DEFAULT_SEED;
 
  explicit SimHost(SimStore& s) : store(s) { boot(0); }
  ~SimHost() { if (appPtr) appPtr->~App(); }
 
  vex::App& app() { return *appPtr; }
  const vex::App& app() const { return *appPtr; }
+
+ uint32_t rngU32() {
+  uint32_t x = rng ? rng : DEFAULT_SEED;
+  x ^= x << 13;
+  x ^= x >> 17;
+  x ^= x << 5;
+  rng = x;
+  return x;
+ }
+ // Triangular symmetric value in [-1, +1] with zero mean.
+ float rngTri() {
+  float a = float(rngU32() & 0xffffu) * (1.f / 65535.f);
+  float b = float(rngU32() & 0xffffu) * (1.f / 65535.f);
+  return a + b - 1.f;
+ }
 
  StateSource stateSource() const {
   return {app(), analyzer, store.powered, analyses, test};
@@ -134,7 +228,9 @@ struct SimHost {
   analyzer = vex::Analyzer();
   raw_mode = raw_quest = raw_foot = false;
   inject = false;
+  emit_events = false;
   sample_ms = now;
+  rng = DEFAULT_SEED;
  }
 
  void reset() {
@@ -146,10 +242,19 @@ struct SimHost {
  }
 
  void poll() {
+  analyzer.setGate(app().progress.gate);
   float r, p;
-  if (analyzer.takeLevel(r, p)) app().observe(r, p, app().now);
-  if (app().wantsPitch()) {
-   if (analyzer.analyze()) { analyses++; app().observePitch(analyzer.hz, analyzer.probability, app().now); }
+  uint32_t sc = 0;
+  if (analyzer.takeLevel(r, p, &sc)) app().observe(r, p, app().now, sc);
+  vex::Onset ons;
+  while (analyzer.takeOnset(ons)) app().observeOnset(ons, app().now);
+  vex::PitchMode pm = app().pitchMode();
+  if (pm != vex::PITCH_OFF) {
+   if (analyzer.analyze(pm, app().slow_run_hop)) {
+    analyses++;
+    app().observePitch(analyzer.hz, analyzer.probability, app().now, analyzer.pitch_sample,
+                       vex::pitchProfile(pm, app().slow_run_hop).window);
+   }
   } else {
    analyzer.skip();
   }
@@ -190,6 +295,13 @@ struct SimHost {
   feedSamples(pcm, count);
  }
 
+ static inline int16_t pluckSample(double phase, float amp) {
+  float v = amp * (sinf(float(phase)) + .45f * sinf(float(2 * phase)) + .15f * sinf(float(3 * phase))) * (1.f / 1.6f);
+  if (v > 1.f) v = 1.f;
+  else if (v < -1.f) v = -1.f;
+  return int16_t(lroundf(v * 32767.f));
+ }
+
  // Streamed harmonic guitar pluck / gapped strum generator (0 heap bytes).
  void playTone(uint32_t ms, float freq, float dbfs, float decay_ms, float gap_ms) {
   constexpr double PI = 3.14159265358979323846;
@@ -215,10 +327,139 @@ struct SimHost {
     float env = decay_ms > 0 ? expf(-(gap_ms > 0 ? 1.5f : 1.f) * in_ms / decay_ms) : 1.f;
     phase += stepRad;
     if (phase > 2.0 * PI) phase -= 2.0 * PI;
-    float v = amp * env * (sinf(float(phase)) + .45f * sinf(float(2 * phase)) + .15f * sinf(float(3 * phase))) / 1.6f;
-    if (v > 1.f) v = 1.f;
-    else if (v < -1.f) v = -1.f;
-    block[k] = int16_t(lroundf(v * 32767.f));
+    block[k] = pluckSample(phase, amp * env);
+   }
+   feedBlock(block);
+  }
+ }
+
+ // Multi-note synthetic guitar phrase with fixed-seed timing jitter, drift, rests, accents and legato.
+ struct SynthNote { float start_ms, hz, amp; bool rest, legato; };
+ void playNotes(float step_ms, float jitter_ms, float drift_ms, float base_dbfs, const SynthNote* rawNotes, int count) {
+  constexpr double PI = 3.14159265358979323846;
+  if (count <= 0) return;
+  SynthNote notes[64];
+  if (count > 64) count = 64;
+  float lead_ms = 50.f, prev_ms = 0.f;
+  for (int i = 0; i < count; i++) {
+   notes[i] = rawNotes[i];
+   float jit = jitter_ms > 0.f ? rngTri() * jitter_ms : 0.f;
+   float t = lead_ms + float(i) * (step_ms + drift_ms) + jit;
+   if (i > 0 && t < prev_ms + 45.f) t = prev_ms + 45.f;
+   if (t < 10.f) t = 10.f;
+   notes[i].start_ms = t;
+   notes[i].amp = powf(10.f, (base_dbfs + rawNotes[i].amp) / 20.f);
+   prev_ms = t;
+  }
+  float tail_ms = fmaxf(step_ms * 1.05f, 260.f);
+  float total_ms = notes[count - 1].start_ms + tail_ms;
+  size_t total_samples = size_t(double(total_ms) * vex::Analyzer::RATE / 1000.0);
+  float tau = fminf(400.f, fmaxf(150.f, step_ms * .82f));
+  beginFeed();
+  int cur = -1;
+  double phase = 0;
+  float pluck_origin_ms = 0, cur_amp = 0, cur_hz = 0;
+  for (size_t i = 0; i < total_samples; i += vex::Analyzer::BLOCK) {
+   int16_t block[vex::Analyzer::BLOCK]{};
+   size_t chunk = total_samples - i < size_t(vex::Analyzer::BLOCK) ? total_samples - i : size_t(vex::Analyzer::BLOCK);
+   for (size_t k = 0; k < chunk; k++) {
+    float t_ms = float(i + k) * (1000.f / vex::Analyzer::RATE);
+    while (cur + 1 < count && t_ms >= notes[cur + 1].start_ms) {
+     cur++;
+     if (notes[cur].rest) {
+      cur_hz = 0;
+     } else if (notes[cur].legato && cur_hz > 0) {
+      float cur_env = expf(-(t_ms - pluck_origin_ms) / tau);
+      cur_hz = notes[cur].hz;
+      // Hammer-on keeps continuous phase and current decayed amplitude (no pick energy jump).
+      cur_amp = fmaxf(cur_amp * cur_env, notes[cur].amp * .28f);
+      pluck_origin_ms = t_ms;
+     } else {
+      cur_hz = notes[cur].hz;
+      cur_amp = notes[cur].amp;
+      pluck_origin_ms = t_ms;
+      phase = 0;
+     }
+    }
+    if (cur < 0 || notes[cur].rest || cur_hz <= 0.f) continue;
+    float in_ms = t_ms - pluck_origin_ms;
+    float atk = (!notes[cur].legato && (t_ms - notes[cur].start_ms) < 2.5f) ? (t_ms - notes[cur].start_ms) / 2.5f : 1.f;
+    float env = atk * expf(-in_ms / tau);
+    phase += 2.0 * PI * double(cur_hz) / vex::Analyzer::RATE;
+    if (phase > 2.0 * PI) phase -= 2.0 * PI;
+    block[k] = pluckSample(phase, cur_amp * env);
+   }
+   feedBlock(block);
+  }
+ }
+
+ // Smooth raised-cosine guitar string bend from `base_hz` to `base_hz * 2^(target_cents / 1200)`.
+ void playBend(uint32_t ms, float base_hz, float target_cents, float hold_ms, float dbfs) {
+  constexpr double PI = 3.14159265358979323846;
+  size_t total = size_t(uint64_t(ms) * vex::Analyzer::RATE / 1000);
+  beginFeed();
+  if (!total || base_hz <= 0.f) return;
+  float lead_ms = 40.f;
+  float base_ms = fminf(220.f, float(ms) * .26f);
+  if (hold_ms <= 0.f) hold_ms = fminf(340.f, float(ms) * .38f);
+  float ramp_ms = float(ms) - lead_ms - base_ms - hold_ms;
+  if (ramp_ms < 40.f) ramp_ms = 40.f;
+  float amp = powf(10.f, dbfs / 20.f);
+  float tau = fmaxf(900.f, float(ms) * 1.4f);
+  double phase = 0;
+  for (size_t i = 0; i < total; i += vex::Analyzer::BLOCK) {
+   int16_t block[vex::Analyzer::BLOCK]{};
+   size_t chunk = total - i < size_t(vex::Analyzer::BLOCK) ? total - i : size_t(vex::Analyzer::BLOCK);
+   for (size_t k = 0; k < chunk; k++) {
+    float t_ms = float(i + k) * (1000.f / vex::Analyzer::RATE);
+    if (t_ms < lead_ms) continue;
+    float nt = t_ms - lead_ms;
+    float cents = 0.f;
+    if (nt > base_ms) {
+     float u = (nt - base_ms) / ramp_ms;
+     if (u >= 1.f) cents = target_cents;
+     else cents = target_cents * .5f * (1.f - cosf(float(PI) * u));
+    }
+    float f = base_hz * powf(2.f, cents / 1200.f);
+    float atk = nt < 2.5f ? nt / 2.5f : 1.f;
+    float env = atk * expf(-nt / tau);
+    phase += 2.0 * PI * double(f) / vex::Analyzer::RATE;
+    if (phase > 2.0 * PI) phase -= 2.0 * PI;
+    block[k] = pluckSample(phase, amp * env);
+   }
+   feedBlock(block);
+  }
+ }
+
+ // Held note with sinusoidal vibrato (`width_cents` = peak-to-peak pitch swing in cents).
+ void playVib(uint32_t ms, float base_hz, float rate_hz, float width_cents, float dbfs) {
+  constexpr double PI = 3.14159265358979323846;
+  size_t total = size_t(uint64_t(ms) * vex::Analyzer::RATE / 1000);
+  beginFeed();
+  if (!total || base_hz <= 0.f) return;
+  float lead_ms = 40.f, settle_ms = 140.f;
+  float amp = powf(10.f, dbfs / 20.f);
+  float tau = fmaxf(1200.f, float(ms) * 1.5f);
+  double phase = 0;
+  for (size_t i = 0; i < total; i += vex::Analyzer::BLOCK) {
+   int16_t block[vex::Analyzer::BLOCK]{};
+   size_t chunk = total - i < size_t(vex::Analyzer::BLOCK) ? total - i : size_t(vex::Analyzer::BLOCK);
+   for (size_t k = 0; k < chunk; k++) {
+    float t_ms = float(i + k) * (1000.f / vex::Analyzer::RATE);
+    if (t_ms < lead_ms) continue;
+    float nt = t_ms - lead_ms;
+    float cents = 0.f;
+    if (nt > settle_ms && rate_hz > 0.f) {
+     float vt_s = (nt - settle_ms) * .001f;
+     float fade = fminf(1.f, vt_s * 12.f);
+     cents = fade * (.5f * width_cents) * sinf(float(2.0 * PI) * rate_hz * vt_s);
+    }
+    float f = base_hz * powf(2.f, cents / 1200.f);
+    float atk = nt < 2.5f ? nt / 2.5f : 1.f;
+    float env = atk * expf(-nt / tau);
+    phase += 2.0 * PI * double(f) / vex::Analyzer::RATE;
+    if (phase > 2.0 * PI) phase -= 2.0 * PI;
+    block[k] = pluckSample(phase, amp * env);
    }
    feedBlock(block);
   }
@@ -243,10 +484,10 @@ struct SimHost {
   inject = false;
  }
 
- // Optional host callback for `wav` and `raw` file commands on native builds.
  using FileFeeder = bool (*)(SimHost& host, const char* kind, const char* path, double start_ms, double len_ms, void* ctx);
 
  CmdResult exec(const char* line, FileFeeder fileFeeder = nullptr, void* fileCtx = nullptr) {
+  emit_events = false;
   Tok t(line);
   if (t.empty()) return CMD_NOP;
   char cmd[32];
@@ -286,6 +527,66 @@ struct SimHost {
    if (t.f32(dbfs)) { if (t.f32(decay)) t.f32(gap); }
    if (decay < 0 || gap < 0) return CMD_BAD_ARG;
    playTone(ms, freq, dbfs, decay, gap);
+   return CMD_OK;
+  }
+  if (strcmp(cmd, "notes") == 0) {
+   char tempoTok[32];
+   float step_ms = 0, jitter_ms = 0, drift_ms = 0, dbfs = -18;
+   if (!t.word(tempoTok, sizeof tempoTok) || !parseTempoStepMs(tempoTok, step_ms)) return CMD_BAD_ARG;
+   if (!t.f32(jitter_ms) || !t.f32(drift_ms) || !t.f32(dbfs) || jitter_ms < 0) return CMD_BAD_ARG;
+   SynthNote specs[64]{};
+   int n = 0;
+   char ntok[32];
+   while (n < 64 && t.word(ntok, sizeof ntok)) {
+    float nhz = 0, dbd = 0; bool rest = false, leg = false;
+    if (!parseNoteSpec(ntok, nhz, dbd, rest, leg)) return CMD_BAD_ARG;
+    specs[n++] = {0.f, nhz, dbd, rest, leg};
+   }
+   if (!n) return CMD_BAD_ARG;
+   playNotes(step_ms, jitter_ms, drift_ms, dbfs, specs, n);
+   return CMD_OK;
+  }
+  if (strcmp(cmd, "bend") == 0) {
+   uint32_t ms = 0; char ntok[32]; float target = 0, hold = 0, dbfs = -18;
+   if (!t.u32(ms) || !t.word(ntok, sizeof ntok) || !t.f32(target) || ms > 60000) return CMD_BAD_ARG;
+   float nhz = 0, dbd = 0; bool rest = false, leg = false;
+   if (!parseNoteSpec(ntok, nhz, dbd, rest, leg) || rest) return CMD_BAD_ARG;
+   if (t.f32(hold)) t.f32(dbfs);
+   playBend(ms, nhz, target, hold, dbfs + dbd);
+   return CMD_OK;
+  }
+  if (strcmp(cmd, "vib") == 0) {
+   uint32_t ms = 0; char ntok[32]; float rate = 0, width = 0, dbfs = -18;
+   if (!t.u32(ms) || !t.word(ntok, sizeof ntok) || !t.f32(rate) || !t.f32(width) || ms > 60000 || rate < 0 || width < 0) return CMD_BAD_ARG;
+   float nhz = 0, dbd = 0; bool rest = false, leg = false;
+   if (!parseNoteSpec(ntok, nhz, dbd, rest, leg) || rest) return CMD_BAD_ARG;
+   t.f32(dbfs);
+   playVib(ms, nhz, rate, width, dbfs + dbd);
+   return CMD_OK;
+  }
+  if (strcmp(cmd, "events") == 0) {
+   char sub[16];
+   if (t.word(sub, sizeof sub)) {
+    if (strcmp(sub, "clear") != 0) return CMD_BAD_ARG;
+    app().notes.clear();
+   }
+   emit_events = true;
+   return CMD_OK;
+  }
+  if (strcmp(cmd, "pitch") == 0) {
+   char m[16];
+   if (!t.word(m, sizeof m)) return CMD_BAD_ARG;
+   if (strcmp(m, "off") == 0) app().pitch_override = vex::PITCH_OFF;
+   else if (strcmp(m, "tuner") == 0) app().pitch_override = vex::PITCH_TUNER;
+   else if (strcmp(m, "fast") == 0) app().pitch_override = vex::PITCH_FAST;
+   else if (strcmp(m, "run") == 0) app().pitch_override = vex::PITCH_RUN;
+   else return CMD_BAD_ARG;
+   return CMD_OK;
+  }
+  if (strcmp(cmd, "seed") == 0) {
+   uint32_t s = 0;
+   if (!t.u32(s)) return CMD_BAD_ARG;
+   rng = s ? s : DEFAULT_SEED;
    return CMD_OK;
   }
   if (strcmp(cmd, "serial") == 0) {

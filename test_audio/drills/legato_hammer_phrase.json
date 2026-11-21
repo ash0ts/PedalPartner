@@ -1,0 +1,16 @@
+{
+  "name": "legato_hammer_phrase",
+  "kind": "synthetic",
+  "pitch_mode": "run",
+  "commands": [
+    "notes 100x2 0 0 -17 A2 C3 ~D3 E3 G3 ~A3"
+  ],
+  "expected": [
+    {"onset_ms": 50.0, "note": "A2"},
+    {"onset_ms": 350.0, "note": "C3"},
+    {"onset_ms": 650.0, "note": "D3", "legato": true},
+    {"onset_ms": 950.0, "note": "E3"},
+    {"onset_ms": 1250.0, "note": "G3"},
+    {"onset_ms": 1550.0, "note": "A3", "legato": true}
+  ]
+}

@@ -8,8 +8,52 @@
 })(typeof globalThis!=='undefined'?globalThis:this,function(){
  'use strict';
  const BLOCK=128,RATE=44100,BLOCK_MS=1000*BLOCK/RATE;
+ const NOTE_NAMES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
  const schemaCache=new WeakMap();
  const utf8Out=typeof TextEncoder!=='undefined'?new TextEncoder():null;
+
+ function midiNoteName(midi){
+  if(!midi||midi<=0||midi>127)return '';
+  return NOTE_NAMES[midi%12]+(Math.floor(midi/12)-1);
+ }
+
+ function encodeWav16Mono(samples,rate=RATE){
+  const pcm=samples instanceof Int16Array?samples:Int16Array.from(samples);
+  const dataBytes=pcm.length*2;
+  const out=new Uint8Array(44+dataBytes);
+  const dv=new DataView(out.buffer);
+  const tag=(o,s)=>{for(let i=0;i<4;i++)out[o+i]=s.charCodeAt(i);};
+  tag(0,'RIFF');dv.setUint32(4,36+dataBytes,true);tag(8,'WAVE');
+  tag(12,'fmt ');dv.setUint32(16,16,true);dv.setUint16(20,1,true);dv.setUint16(22,1,true);
+  dv.setUint32(24,rate,true);dv.setUint32(28,rate*2,true);dv.setUint16(32,2,true);dv.setUint16(34,16,true);
+  tag(36,'data');dv.setUint32(40,dataBytes,true);
+  for(let i=0;i<pcm.length;i++)dv.setInt16(44+i*2,pcm[i],true);
+  return out;
+ }
+
+ function readRecentEvents(M){
+  if(!M._vex_event_count)return [];
+  const total=M._vex_event_count()>>>0;
+  const first=total>64?total-64+1:1;
+  const out=[];
+  for(let seq=first;seq<=total;seq++){
+   const p=M._vex_event(seq)>>3;
+   const flags=M.HEAPF64[p+7]|0,midi=M.HEAPF64[p+3]|0;
+   out.push({
+    seq:M.HEAPF64[p]|0,
+    onsetMs:M.HEAPF64[p+1],
+    exactMs:M.HEAPF64[p+2],
+    midi,
+    note:midiNoteName(midi),
+    cents:M.HEAPF64[p+4],
+    bendCents:M.HEAPF64[p+5],
+    peak:M.HEAPF64[p+6],
+    pitched:(flags&1)!==0,
+    legato:(flags&2)!==0
+   });
+  }
+  return out;
+ }
 
  function parseValue(v){
   if(v==='true'||v==='false')return v==='true';
@@ -187,6 +231,7 @@
 
  return {
   BLOCK,RATE,BLOCK_MS,
+  midiNoteName,encodeWav16Mono,readRecentEvents,
   parseValue,stateNames,fieldIndex,readModuleState,
   parseWavLeft16,createStrumSource,
   execLine,feedPcm,renderRgba,diffRgba,runScenario

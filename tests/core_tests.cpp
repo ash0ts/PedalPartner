@@ -113,6 +113,83 @@ static void analyzerTests(){
   for(uint32_t d=1;d<=2000;d++){holdApp.observe(0,0,t0+d);holdApp.tick(t0+d);}
   assert(!holdApp.progress.active&&holdApp.progress.hold_ms==0&&holdApp.progress.active_ms-atStop<=vex::ACTIVITY_HOLD_MS);}
  a->skip();assert(a->hz==0&&a->probability==0&&!a->analyze()&&audioLockDepth==0&&audioLocks>0);
+ // Onset ring + per-activity pitch profiles on one sample ring:
+ // 1. Sustained low E2 (82.41 Hz) triggers exactly 1 attack onset and 0 false beating onsets over 1.5 s.
+ {auto oa=std::make_unique<vex::Analyzer>();oa->setGate(.004f);int16_t blk[vex::Analyzer::BLOCK];
+  for(int b=0;b<40;b++){memset(blk,0,sizeof blk);oa->push(blk,vex::Analyzer::BLOCK);}
+  vex::Onset ev;assert(!oa->takeOnset(ev));
+  double ph=0;int onsetCount=0;uint32_t firstSample=0;
+  for(int b=0;b<int(1.5f*SR/vex::Analyzer::BLOCK);b++){
+   for(int j=0;j<vex::Analyzer::BLOCK;j++){ph+=2*M_PI*82.4069/SR;float v=.12f*(sinf(float(ph))+.45f*sinf(float(2*ph))+.15f*sinf(float(3*ph)))/1.6f;blk[j]=int16_t(v*32767);}
+   oa->push(blk,vex::Analyzer::BLOCK);
+   while(oa->takeOnset(ev)){if(onsetCount==0)firstSample=ev.sample;onsetCount++;}
+  }
+  assert(onsetCount==1&&firstSample>=40*128&&firstSample<=43*128);
+  // 2. Eight 120 BPM 8th-note plucks (250 ms period, ringing 350 ms decay with no silent gap!) trigger 8 onsets within +-6 ms.
+  oa=std::make_unique<vex::Analyzer>();oa->setGate(.004f);
+  std::vector<double> onsetMs;ph=0;
+  int totalSamples=int(1.95f*SR);
+  for(int i=0;i<totalSamples;i+=vex::Analyzer::BLOCK){
+   for(int j=0;j<vex::Analyzer::BLOCK;j++){
+    double tMs=(i+j)*1000.0/SR,inMs=fmod(tMs,250.0);
+    if(j==0&&inMs<2.9)ph=0;
+    ph+=2*M_PI*196.0/SR;
+    float v=.18f*expf(-float(inMs)/180.f)*(sinf(float(ph))+.45f*sinf(float(2*ph)))/1.45f;
+    blk[j]=int16_t(v*32767);
+   }
+   oa->push(blk,vex::Analyzer::BLOCK);
+   while(oa->takeOnset(ev))onsetMs.push_back(ev.sample*1000.0/SR);
+  }
+  assert(onsetMs.size()==8);
+  for(size_t k=0;k<8;k++)assert(fabs(onsetMs[k]-k*250.0)<8.0);
+  // 3. PITCH_FAST (1024/512) tracks 4× faster than PITCH_TUNER (2048/2048), and PITCH_RUN runs at 1024 hop (or 2048 fallback).
+  auto fa=std::make_unique<vex::Analyzer>(),ta=std::make_unique<vex::Analyzer>(),ra=std::make_unique<vex::Analyzer>();
+  int fastFrames=0,tunerFrames=0,runFrames=0;ph=0;
+  for(int i=0;i<int(0.5f*SR);i+=vex::Analyzer::BLOCK){
+   for(int j=0;j<vex::Analyzer::BLOCK;j++){ph+=2*M_PI*329.63/SR;blk[j]=int16_t(.15f*sinf(float(ph))*32767);}
+   fa->push(blk,vex::Analyzer::BLOCK);ta->push(blk,vex::Analyzer::BLOCK);ra->push(blk,vex::Analyzer::BLOCK);
+   if(fa->analyze(vex::PITCH_FAST)){fastFrames++;assert(fa->probability>.95f&&fabsf(1200*log2f(fa->hz/329.63f))<4);}
+   if(ta->analyze(vex::PITCH_TUNER)){tunerFrames++;assert(ta->probability>.95f&&fabsf(1200*log2f(ta->hz/329.63f))<4);}
+   if(ra->analyze(vex::PITCH_RUN)){runFrames++;assert(ra->probability>.95f&&fabsf(1200*log2f(ra->hz/329.63f))<4);}
+  }
+  assert(fastFrames>=tunerFrames*3&&runFrames>=tunerFrames*2-1);}
+}
+#include "../simulator/protocol.h"
+static void noteTrackerTests(){
+ vexsim::SimStore store;
+ vexsim::SimHost sim(store);
+ assert(sim.exec("calibrate")==vexsim::CMD_OK);
+ assert(sim.exec("pitch run")==vexsim::CMD_OK);
+ // Picked pentatonic run + legato hammer-on (~G3) through full 44.1 kHz synthesis -> Analyzer -> NoteTracker.
+ assert(sim.exec("events clear")==vexsim::CMD_OK);
+ assert(sim.exec("notes 120x2 0 0 -18 E2 G2 A2 B2 D3 E3 ~G3")==vexsim::CMD_OK);
+ const auto& nt=sim.app().notes;
+ assert(nt.total_events==7);
+ const int wantMidi[7]={40,43,45,47,50,52,55};
+ for(int i=0;i<7;i++){
+  const auto& e=nt.atSeq(uint32_t(i+1));
+  assert(e.pitched&&e.midi==wantMidi[i]&&fabsf(e.cents)<5.f);
+  if(i<6)assert(!e.legato&&fabs(e.onset_ms_exact-(50.0+i*250.0))<10.0);
+  else assert(e.legato);
+ }
+ // Fixed-seed jitter repeats bit-for-bit across resets.
+ sim.reset();sim.exec("calibrate");sim.exec("notes 120x2 18 0 -18 A2 C3 D3 E3 G3 A3");
+ float run1[6];assert(sim.app().notes.total_events==6);
+ for(int i=0;i<6;i++)run1[i]=sim.app().notes.atSeq(uint32_t(i+1)).onset_ms_exact;
+ sim.reset();sim.exec("calibrate");sim.exec("notes 120x2 18 0 -18 A2 C3 D3 E3 G3 A3");
+ for(int i=0;i<6;i++)assert(sim.app().notes.atSeq(uint32_t(i+1)).onset_ms_exact==run1[i]);
+ // Whole-step (+200 c) and slightly flat (+184 c) string bends under PITCH_FAST: single NoteEvent, <3 c bend error!
+ sim.reset();sim.exec("calibrate");sim.exec("pitch fast");sim.exec("events clear");
+ assert(sim.exec("bend 950 A3 200 350 -16")==vexsim::CMD_OK);
+ assert(sim.app().notes.total_events==1);
+ assert(sim.app().notes.atSeq(1).midi==57&&fabsf(sim.app().notes.atSeq(1).bend_cents-200.f)<3.5f);
+ sim.exec("events clear");
+ assert(sim.exec("bend 950 D4 184 350 -16")==vexsim::CMD_OK);
+ assert(sim.app().notes.total_events==1&&fabsf(sim.app().notes.atSeq(1).bend_cents-184.f)<3.5f);
+ // Vibrato under PITCH_FAST stays a single note and populates continuous trace frames.
+ sim.exec("events clear");uint32_t trBefore=sim.app().notes.total_trace;
+ assert(sim.exec("vib 1100 E4 5.5 44 -16")==vexsim::CMD_OK);
+ assert(sim.app().notes.total_events==1&&sim.app().notes.atSeq(1).midi==64&&sim.app().notes.total_trace-trBefore>=70);
 }
 #include "../firmware/VEX_Pocket_Rival/flush.h"
 #include "../simulator/canvas.h"
@@ -186,7 +263,7 @@ static void linkTests(){
  FILE* f=fopen("build/link_sample.bin","wb");if(f){fwrite(out.bytes.data(),1,out.bytes.size(),f);fclose(f);}
 }
 int main(){
- appTests();analyzerTests();displayTests();linkTests();
+ appTests();analyzerTests();noteTrackerTests();displayTests();linkTests();
  vex::Progress p;p.tick(100,.1,.2,true);assert(p.active_ms==0);p.calibrated=true;p.running=true;
  p.tick(100,.1,.2,true);assert(p.active_ms==100&&p.hold_ms==vex::ACTIVITY_HOLD_MS);
  // Silence holds up to ACTIVITY_HOLD_MS (including partial final ticks), then stops.
