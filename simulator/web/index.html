@@ -76,7 +76,14 @@ canvas#screen{width:100%;height:100%;image-rendering:pixelated;border-radius:50%
 .swatch i{width:9px;height:9px;border-radius:2px;display:inline-block}
 canvas#activity-strip{width:100%;height:98px;display:block;border-radius:5px;background:#100e14}
 
-/* Guided 8-step practice session */
+/* Guided multi-track walkthrough */
+.track-bar{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 9px}
+.track-pill{border-radius:999px;padding:4px 10px;font-size:12px;background:#17141c;border:1px solid var(--line);color:var(--dim);display:inline-flex;align-items:center;gap:5px}
+.track-pill b{font-size:10.5px;font-weight:600;color:var(--dim);opacity:.85}
+.track-pill.sel{background:var(--red);border-color:var(--red-hi);color:#fff;font-weight:600}
+.track-pill.sel b{color:#f7e3b5;opacity:1}
+.track-pill.done{border-color:rgba(111,174,122,.55)}
+.track-pill.done b{color:var(--ok)}
 .steps{display:flex;flex-direction:column;gap:6px}
 .step-row{display:grid;grid-template-columns:26px 1fr auto;gap:10px;align-items:center;padding:8px 10px;border-radius:9px;background:#18151d;border:1px solid #2b2630}
 .step-row.current{border-color:var(--gold);background:var(--panel-hi)}
@@ -87,7 +94,17 @@ canvas#activity-strip{width:100%;height:98px;display:block;border-radius:5px;bac
 .step-body strong{font-size:13px;display:block;color:var(--ink)}
 .step-row.done .step-body strong{color:#cfe3d3}
 .step-body p{margin:2px 0 0;font-size:12px;color:var(--dim);line-height:1.35}
+.step-live{margin-top:4px;font-size:11.5px;color:var(--gold);display:none}
+.step-row.current .step-live{display:block}
 .step-do{font-size:12px;padding:5px 10px;white-space:nowrap}
+
+/* Grouped drill preset rows */
+.drill-groups{display:flex;flex-direction:column;gap:5px;margin-bottom:8px}
+.drill-fam{display:grid;grid-template-columns:96px 1fr;gap:8px;align-items:center}
+@media(max-width:640px){.drill-fam{grid-template-columns:1fr;gap:3px}}
+.drill-fam-lbl{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);font-weight:600}
+.drill-fam.active .drill-fam-lbl{color:var(--gold)}
+.drill-fam-pills{display:flex;flex-wrap:wrap;gap:5px}
 
 /* Screens gallery */
 .gal-filters{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:9px}
@@ -131,7 +148,7 @@ textarea{width:100%;min-height:130px;resize:vertical}
  <div class="group"><button id="pause" title="Key P">Pause</button>
   <label for="speed">speed</label><select id="speed"><option value="1">1×</option><option value="10">10×</option><option value="100">100×</option></select>
   <button id="step1">Step 1 s</button><button id="adv5">Advance 5 min</button></div>
- <div class="group"><label for="stage">stage</label><select id="stage"><option value="2">2 screen / input</option><option value="3">3 audio check</option><option value="4" selected>4 pet / tuner</option></select>
+ <div class="group"><label for="stage">stage</label><select id="stage"><option value="2">2 screen / input</option><option value="3">3 audio check</option><option value="4" selected>4 pet / tuner / drills</option></select>
   <button id="reboot">Reboot</button><button id="reset" title="Zero both EEPROM slots and reboot">Factory reset</button></div>
  <span class="spacer"></span>
  <button type="button" class="bridge-pill" id="bridge-pill" title="Open Teensy hardware mirror in Inspect"><i></i><span id="bridge-text">Teensy: bridge off</span></button>
@@ -159,6 +176,26 @@ textarea{width:100%;min-height:130px;resize:vertical}
  </section>
 
  <section>
+  <div class="panel" id="session-panel">
+   <h2>Guided walkthrough <span class="sub mono" id="session-status">0 / 9 complete</span><span class="spacer"></span><button type="button" id="session-reset" style="font-size:11.5px;padding:3px 9px">Reset walkthrough</button></h2>
+   <div class="track-bar" id="session-tracks" role="tablist" aria-label="Walkthrough tracks"></div>
+   <p class="hint" id="session-summary" style="margin:0 0 9px">Pick a walkthrough above, then do each step by hand on the pedal (mouse or keys <code>M</code>, <code>Q</code>, <code>Space</code>) or click <b>Do it for me</b>.</p>
+   <div class="steps" id="session-steps"></div>
+  </div>
+
+  <div class="panel" id="drills-panel">
+   <h2>Guitar drills <span class="sub mono" id="drill-status">tap MODE twice or click any preset below</span></h2>
+   <div class="drill-groups" id="drill-presets" role="group" aria-label="Drill presets"></div>
+   <div class="row" style="margin-top:6px">
+    <label>play it for me</label>
+    <button type="button" class="pill alt" data-drill-play="steady" title="Clean, locked performance for the selected drill">Clean take</button>
+    <button type="button" class="pill alt" data-drill-play="rushing" title="Rushing ahead of the beat / vibrato">Rushing take</button>
+    <button type="button" class="pill alt" data-drill-play="uneven" title="Loose timing, hesitant finds or over-bent notes">Uneven take</button>
+    <button type="button" class="pill alt" data-drill-play="wrong" title="Out-of-key, wrong-string, flat bend or wrong accent beat">Wrong notes</button>
+   </div>
+   <p class="hint" id="drill-hint" style="margin-top:4px">On the pedal: <code>MODE</code> switches <b>Pet → Tuner → Drill</b> · <code>QUEST</code> (while paused) cycles presets · <code>FOOTSWITCH</code> starts/pauses.</p>
+  </div>
+
   <div class="panel" id="input-panel">
    <h2>Guitar input <span class="sub" id="audio-status">Not playing (quiet cable floor)</span></h2>
    <div class="sig-bar" role="group" aria-label="Guitar signal">
@@ -220,25 +257,6 @@ textarea{width:100%;min-height:130px;resize:vertical}
     </div>
     <canvas id="activity-strip" width="600" height="98" aria-label="30 second note lane, level, gate, credited time and activity hold strip"></canvas>
    </div>
-  </div>
-
-  <div class="panel" id="drills-panel">
-   <h2>Guitar drills <span class="sub mono" id="drill-status">select a preset or tap MODE twice</span></h2>
-   <div class="sig-bar" id="drill-presets" role="group" aria-label="Drill presets"></div>
-   <div class="row" style="margin-top:6px">
-    <label>play it for me</label>
-    <button type="button" class="pill alt" data-drill-play="steady" title="Clean, locked performance for the selected drill">Steady take</button>
-    <button type="button" class="pill alt" data-drill-play="rushing" title="Rushing ahead of the beat / brisk performance">Rushing take</button>
-    <button type="button" class="pill alt" data-drill-play="uneven" title="Loose timing or hesitant spacing">Uneven take</button>
-    <button type="button" class="pill alt" data-drill-play="wrong" title="Out-of-key, wrong-string or under-bent notes">Wrong notes</button>
-   </div>
-   <p class="hint" id="drill-hint" style="margin-top:4px">Pick a drill preset above (or tap <code>MODE</code> to Drill and <code>QUEST</code> while paused), then play or click a performance.</p>
-  </div>
-
-  <div class="panel" id="session-panel">
-   <h2>Practice session <span class="sub mono" id="session-status">0 / 8 complete</span><span class="spacer"></span><button type="button" id="session-reset" style="font-size:11.5px;padding:3px 9px">Reset walkthrough</button></h2>
-   <p class="hint" style="margin:0 0 9px">Do each step by hand on the pedal (mouse or keys <code>M</code>, <code>Q</code>, <code>Space</code>) or click <b>Do it for me</b>; checkmarks read live firmware state.</p>
-   <div class="steps" id="session-steps"></div>
   </div>
 
   <div class="panel" id="gallery-panel">
