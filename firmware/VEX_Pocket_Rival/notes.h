@@ -55,7 +55,7 @@ struct NoteTracker {
  // Legato step detector state (distinguishes sudden fretted semitone steps from smooth string bends).
  bool prev_frame_valid=false;
  float prev_frame_cents=0;
- bool glide_seen=false;
+ uint8_t glide_frames=0;
  int16_t step_cand_midi=0;
  float step_cand_cents=0;
  uint8_t step_cand_count=0;
@@ -81,7 +81,7 @@ struct NoteTracker {
   events[(ev.seq - 1) & (EVENT_CAP - 1)] = ev;
   settle_frames = 0;
   has_prev_bend = false;
-  glide_seen = false;
+  glide_frames = 0;
   step_cand_midi = 0;
   step_cand_count = 0;
   signal_active = true;
@@ -172,11 +172,13 @@ struct NoteTracker {
   float delta = ps.cents_total - base_cents_total;
   float frame_jump = prev_frame_valid ? fabsf(ps.cents_total - prev_frame_cents) : 0.f;
 
-  // Detect gradual mid-semitone glide (characteristic of string bends, not fretted hammer-ons).
-  if (fabsf(delta) >= 28.f && fabsf(delta) <= 72.f && frame_jump < 55.f) glide_seen = true;
+  // Detect gradual mid-semitone glide (2+ frames in 28..72c = string bend; 1 frame can be a window straddle).
+  if (fabsf(delta) >= 28.f && fabsf(delta) <= 72.f && frame_jump < 55.f) {
+   if (glide_frames < 10) glide_frames++;
+  }
 
-  // Legato hammer-on / pull-off: sudden >=1 semitone step to a clean fretted pitch without mid-bend glide.
-  if (allow_legato && signal_active && !glide_seen &&
+  // Legato hammer-on / pull-off: sudden >=1 semitone step to a clean fretted pitch without multi-frame glide.
+  if (allow_legato && signal_active && glide_frames < 2 &&
       int32_t(win_end_sample - ev.sample) >= int32_t(LEGATO_MIN_SAMPLES) &&
       ps.midi != ev.midi && fabsf(ps.cents) < 32.f) {
    if (step_cand_midi == ps.midi) {
@@ -198,7 +200,7 @@ struct NoteTracker {
      base_cents_total = 100.f * float(leg.midi) + leg.cents;
      settle_frames = 2;
      has_prev_bend = false;
-     glide_seen = false;
+     glide_frames = 0;
      step_cand_count = 0;
      prev_frame_valid = true;
      prev_frame_cents = ps.cents_total;

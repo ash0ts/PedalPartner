@@ -1,0 +1,24 @@
+# Picking dynamics trainer (TOUCH): per-note dB bars vs running median, accent-every-3rd/4th
+# verification (>= +4 dB on beat 1), and even-picking dB spread personal bests (PITCH_OFF).
+calibrate
+drill touch-acc3
+press foot 100
+expect activity=touch-acc3 running=true analyses=0
+# Accents placed on beat 2 instead of beat 1 fail the accent check and save no personal best.
+notes 110x2 2 0 -20 A2 A2@+6 A2 D3 D3@+6 D3 E3 E3@+6 E3 A2 A2@+6 A2
+expect onsets=12 drill_rounds=1 drill_best=0 analyses=0
+golden drill_touch_missed
+# Clean +6 dB accents on beat 1 of every 3-note group pass and save personal best spread (0.12 dB).
+notes 110x2 2 0 -20 A2@+6 A2 A2 D3@+6 D3 D3 E3@+6 E3 E3 A2@+6 A2 A2
+expect onsets=24 drill_rounds=2 drill_best=12 skills_slot=0 anim=3
+golden drill_touch_acc3
+# Accent-every-4th preset (3 groups of 4 = 12 notes) also passes cleanly with pitch gated off.
+drill touch-acc4
+press foot 100
+notes 110x2 2 0 -20 A2@+6 A2 A2 A2 D3@+6 D3 D3 D3 E3@+6 E3 E3 E3
+expect drill_rounds=3 analyses=0
+# Even-dynamics preset scores overall dB consistency and improves best spread further.
+drill touch-even
+press foot 100
+notes 110x2 2 0 -18 A2 A2 A2 A2 D3 D3 D3 D3 E3 E3 E3 E3
+expect drill_rounds=4 drill_best=5 analyses=0

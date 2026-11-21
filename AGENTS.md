@@ -12,7 +12,8 @@ The product is VEX / Pocket Rival, a buildable first guitar companion with origi
 
 | Task | Command |
 |---|---|
-| Host logic, simulator, repository consistency | `make test` |
+| Host logic, simulator, audio eval, repository consistency | `make test` |
+| Labelled onset, pitch, bend and dynamics accuracy report | `make eval` |
 | In-browser workbench (firmware as WebAssembly; needs `em++`) | `make sim` |
 | Workbench with a Teensy mirrored in the Device tab (needs pyserial) | `make sim DEVICE=auto` |
 | Compile the WebAssembly module only / compare it with native goldens | `make web` / `make web-check` |
@@ -36,11 +37,11 @@ Python 3.10+ and C++17 suffice for host tests. CAD uses build123d 0.10.0. Target
 
 - Geometry: `hardware/cad/build_cad.py`; assembly ownership: `hardware/cad/assembly_tree.py`.
 - Parts, wiring and procurement: `hardware/data/project_data.py`; regenerate derived CSVs/docs. Measurement-to-CAD mapping and fabrication gating: `MEASUREMENTS` and `CUT_PROFILES` there, read by `tools/measure_check.py`; measured values live only in `hardware/data/measurements.csv` and `acceptance_log.csv`, entered by hand.
-- Practice, pitch math and record layout: `firmware/VEX_Pocket_Rival/core.h`.
-- Device behavior (controls, calibration, notices, saves): shared `app.h`; level/pitch analysis: shared `analyzer.h`.
+- Practice, pitch math and record layouts (`Record` v1 at EEPROM 0/64, `Skills` v1 at EEPROM 128/192): `firmware/VEX_Pocket_Rival/core.h`.
+- Device behavior (activities, controls, calibration, notices, ordered saves, LED beat): shared `app.h`; level, O(1) block-energy onsets and per-activity YIN pitch profiles: shared `analyzer.h`; note event tracker and pitch trace: shared `notes.h`; guitar drills (`PULSE`, `HUNT`, `BEND`, `RUN`, `TOUCH`): `drills.h`, `drill_view.h`, `drill_*.h` (see `docs/DRILLS.md`).
 - Display: shared `ui.h`; dirty-band flush `flush.h`. Sprites, animation timing, theme colours and fonts: `art/` (PNG + JSON), imported by `tools/make_sprites.py` into generated `theme.h`, `sprites.h`, `anim.h`, `tinyfont.h`, `displayfont.h`; never hand-edit those. See `docs/ART.md`.
-- Bench link (band/state packets, CRC-32, 76-byte `LinkState`): shared `link.h` and its Python mirror `tools/link.py` (also `BenchLog`, the `build/bench/*.jsonl` writer); telemetry JSON, serial switches, live knobs (`- + g G t`) and the `Panel` adapter: `.ino`; test pattern: `ui.h` `drawTestPattern`; upload/monitor: `tools/firmware.py`; serial bridge and Device tab: `tools/web.py`, `simulator/web/`; session summary: `tools/bench_report.py`. Knob boot values stay in `config.h`.
-- Physical integration: `.ino` (adapters only); native simulator and test oracle: `simulator/main.cpp`; browser adapter and page: `simulator/web/` (built by `tools/web.py`); scenario scripts and golden frames: `tests/scenarios/`, `tests/golden/`.
+- Bench link (band/state packets, CRC-32, 76-byte `LinkState`): shared `link.h` and its Python mirror `tools/link.py` (also `BenchLog`, the `build/bench/*.jsonl` writer); telemetry JSON, serial switches, live knobs (`- + g G t`), 1 kHz `IntervalTimer` LED beat and the `Panel` adapter: `.ino`; test pattern: `ui.h` `drawTestPattern`; upload/monitor: `tools/firmware.py`; serial bridge and Device tab: `tools/web.py`, `simulator/web/`; session summary: `tools/bench_report.py`. Knob boot values stay in `config.h`.
+- Physical integration: `.ino` (adapters only); shared simulator protocol and state schema: `simulator/protocol.h`, `simulator/state.h`; native simulator and test oracle: `simulator/main.cpp`; browser adapter and page: `simulator/web/` (built by `tools/web.py`); scenario scripts and golden frames: `tests/scenarios/`, `tests/golden/`; labelled audio evaluation: `test_audio/drills/`, `tools/eval_audio.py`.
 - Evidence: `hardware/generated/checks/`, `checks/`, GitHub Actions, measured CSV logs.
 
 ## Invariants

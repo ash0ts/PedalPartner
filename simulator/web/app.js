@@ -718,15 +718,18 @@ function playDrillPerformance(kind){
   }
  }else if(act.startsWith('bend')){
   const tgt=act==='bend-whole'?200:100;
-  if(kind==='steady'){for(let i=0;i<4;i++)execSim(`bend 900 A3 ${tgt} 340 -16`);}
+  if(kind==='steady'){for(let i=0;i<8;i++)execSim(`bend 900 A3 ${tgt} 340 -16`);}
   else if(kind==='rushing')execSim(`vib 1200 E4 5.6 42 -16`);
   else if(kind==='uneven')execSim(`bend 900 D4 ${tgt+28} 340 -16`);
   else execSim(`bend 900 A3 ${tgt-32} 340 -16`);
  }else if(act.startsWith('run')){
-  if(kind==='steady')execSim('notes 112x2 2 0 -18 A2 C3 D3 E3 G3 A3 G3 E3 D3 C3 A2 C3 D3 E3 G3 A3');
-  else if(kind==='rushing')execSim('notes 128x2 5 -8 -18 A2 C3 D3 E3 G3 A3 G3 E3');
-  else if(kind==='uneven')execSim('notes 108x2 44 0 -18 A2 C3 D3 E3 G3 A3 G3 E3');
-  else execSim('notes 108x2 3 0 -18 A2 C3 C#3 D3 F3 G3 G#3 A3');
+  const clean=act==='run-major'?'C3 D3 E3 F3 G3 A3 B3 C4 B3 A3 G3 F3 E3 D3 C3 G3':
+              act==='run-minor'?'E3 F#3 G3 A3 B3 C4 D4 E4 D4 C4 B3 A3 G3 F#3 E3 B3':
+              'A2 C3 D3 E3 G3 A3 G3 E3 D3 C3 A2 C3 D3 E3 G3 A3';
+  if(kind==='steady')execSim(`notes 112x2 2 0 -18 ${clean}`);
+  else if(kind==='rushing')execSim(`notes 128x2 4 -4 -18 ${clean}`);
+  else if(kind==='uneven')execSim(`notes 108x2 52 0 -18 ${clean}`);
+  else execSim('notes 112x2 3 0 -18 A2 Bb2 B2 C3 C#3 D3 D#3 E3 F3 F#3 G3 G#3 A3 Bb3 B3 C4');
  }else if(act.startsWith('touch')){
   const acc3=act==='touch-acc3',acc4=act==='touch-acc4';
   if(kind==='steady'){

@@ -136,6 +136,7 @@ void loop(){
    uint32_t started=micros();
    if(analyzer.analyze(pm,app.slow_run_hop)){
     timing.yin_us=micros()-started;if(timing.yin_us>timing.yin_max_us)timing.yin_max_us=timing.yin_us;
+    if(pm==vex::PITCH_RUN&&timing.yin_us>14000)app.slow_run_hop=true; // >60% of 23.2 ms hop -> fall back to 2048 hop
     app.observePitch(analyzer.hz,analyzer.probability,millis(),analyzer.pitch_sample,vex::pitchProfile(pm,app.slow_run_hop).window);
    }
   }else{analyzer.skip();timing.yin_us=0;}

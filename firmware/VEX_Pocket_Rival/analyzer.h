@@ -20,7 +20,7 @@ struct Analyzer {
  static constexpr int TAU_MIN=RATE/1400, TAU_MAX=RATE/55+1; // 31, 802
  static constexpr int ONSET_CAP=32;
  static constexpr uint32_t ONSET_REFRACT_SAMPLES=2425;      // ~55 ms refractory gap
- static constexpr float ONSET_RATIO=1.45f;
+ static constexpr float ONSET_RATIO=1.40f;
  static constexpr float THRESHOLD=.15f, SILENCE_RMS=1e-4f;
 
  struct Level { float sum_sq=0, peak=0; uint32_t count=0; };
@@ -86,9 +86,11 @@ struct Analyzer {
    last_onset_sample = sc;
    has_onset = true;
    onset_armed = false;
+   slow_rms = fast;
   }
-  if (fast < slow_rms) slow_rms = fast + .85f * (slow_rms - fast);
-  else slow_rms = slow_rms + .12f * (fast - slow_rms);
+  if (!onset_armed && fast > slow_rms) slow_rms = fast;
+  else if (fast < slow_rms) slow_rms = fast + .85f * (slow_rms - fast);
+  else slow_rms = slow_rms + .04f * (fast - slow_rms);
  }
 
  // Foreground. True when at least one block arrived since the previous call.

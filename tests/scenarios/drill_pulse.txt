@@ -6,7 +6,7 @@ press mode 100
 expect activity=tuner
 press mode 100
 expect activity=pulse-8th bpm=92 running=false
-# QUEST while paused steps through presets: pulse-8th -> pulse-free -> hunt-any -> hunt-str -> pulse-qtr.
+# QUEST while paused steps through presets: pulse-8th -> pulse-free -> hunt-any -> hunt-str -> bend-half.
 press quest 100
 expect activity=pulse-free
 press quest 100
@@ -14,6 +14,8 @@ expect activity=hunt-any
 press quest 100
 expect activity=hunt-str
 press quest 100
+expect activity=bend-half
+drill pulse-qtr
 expect activity=pulse-qtr bpm=92
 # Start PULSE QTR: LED beat flashes at 92 BPM (beat_ms=652); QUEST tap is refused while running.
 press foot 100

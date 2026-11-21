@@ -45,7 +45,7 @@ struct App {
  void startSession(){
   session_xp_start=progress.xp();
   if(activity==ACT_DRILL){
-   drills.start(now,notes.total_events);
+   drills.start(now,notes.total_events,notes.total_trace);
    syncBeatClock();
   }
  }

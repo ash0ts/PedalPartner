@@ -1,0 +1,22 @@
+{
+  "name": "accent_dynamics_acc3",
+  "kind": "synthetic",
+  "pitch_mode": "off",
+  "commands": [
+    "notes 110x2 0 0 -20 A2@+6 A2 A2 D3@+6 D3 D3 E3@+6 E3 E3 A2@+6 A2 A2"
+  ],
+  "expected": [
+    {"onset_ms": 50.0,   "peak_db": -16.2},
+    {"onset_ms": 322.7,  "peak_db": -22.5},
+    {"onset_ms": 595.5,  "peak_db": -22.2},
+    {"onset_ms": 868.2,  "peak_db": -16.1},
+    {"onset_ms": 1140.9, "peak_db": -22.4},
+    {"onset_ms": 1413.6, "peak_db": -22.1},
+    {"onset_ms": 1686.4, "peak_db": -16.1},
+    {"onset_ms": 1959.1, "peak_db": -22.3},
+    {"onset_ms": 2231.8, "peak_db": -22.1},
+    {"onset_ms": 2504.5, "peak_db": -16.2},
+    {"onset_ms": 2777.3, "peak_db": -22.5},
+    {"onset_ms": 3050.0, "peak_db": -22.2}
+  ]
+}
