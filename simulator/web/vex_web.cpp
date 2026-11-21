@@ -1,12 +1,10 @@
-// Browser hardware adapter for the shared firmware. Compiled with Emscripten by tools/web.py.
-// JavaScript owns the clock and the loop order (observe, controls, tick), exactly as the sketch does.
-// No allocation after start; all buffers are static so WASM memory never grows and JS views stay valid.
+// Browser hardware adapter for the shared firmware and scenario interpreter (simulator/protocol.h).
+// Compiled with Emscripten by tools/web.py. No allocation after start; all buffers are static so
+// WASM memory never grows and JS views stay valid.
 #include <stdint.h>
 #include <string.h>
-#include <new>
 #include <emscripten/emscripten.h>
-#include "../../firmware/VEX_Pocket_Rival/app.h"
-#include "../../firmware/VEX_Pocket_Rival/analyzer.h"
+#include "../protocol.h"
 
 namespace {
 struct WasmCanvas {
@@ -20,72 +18,113 @@ struct WasmCanvas {
  void drawFastVLine(int x,int y,int h,uint16_t c){fillRect(x,y,1,h,c);}
  void fillCircle(int x,int y,int r,uint16_t c){for(int yy=-r;yy<=r;yy++)for(int xx=-r;xx<=r;xx++)if(xx*xx+yy*yy<=r*r)fillRect(x+xx,y+yy,1,1,c);}
 };
-struct MemStore:vex::Store{
- uint8_t bytes[128];long cut=-1;bool powered=true;
- uint8_t read(int a)override{return a>=0&&a<128?bytes[a]:0xff;}
- void update(int a,uint8_t v)override{if(!powered||a<0||a>=128)return;if(cut==0){powered=false;return;}if(cut>0)cut--;bytes[a]=v;}
-};
-WasmCanvas canvas;MemStore store;vex::Analyzer analyzer;
-alignas(8) uint8_t appStorage[sizeof(vex::App)];vex::App* app=nullptr;
+
+WasmCanvas canvas;
+vexsim::SimStore store;
+vexsim::SimHost sim(store);
 uint8_t rgba[240*240*4];
 int16_t audio[vex::Analyzer::BLOCK*64];   // up to 64 blocks per push (about 186 ms)
+char cmdBuf[1024];
 uint32_t lastAnalysisUs=0;
-// Numeric state snapshot read by JS as a Float64 array; see STATE_FIELDS in app.js.
-double state[32];
+
+// Populated from simulator/state.h so numeric indices and field names have a single definition.
+double state[64];
+const char* stateStrings[16];
+char schemaBuf[1024];
+bool schemaBuilt=false;
 }
 
 extern "C" {
 EMSCRIPTEN_KEEPALIVE void vex_boot(int stage,uint32_t now){
- store.powered=true;store.cut=-1;analyzer=vex::Analyzer();
- if(app)app->~App();app=new(appStorage) vex::App(store,stage);app->begin(now,true);
+ sim.stage=stage;
+ sim.boot(now);
 }
-EMSCRIPTEN_KEEPALIVE void vex_controls(int m,int q,int f,uint32_t now){app->controls(m,q,f,now);}
-EMSCRIPTEN_KEEPALIVE void vex_tick(uint32_t now){app->tick(now);}
-EMSCRIPTEN_KEEPALIVE void vex_observe(float rms,float peak,uint32_t now){app->observe(rms,peak,now);}
-EMSCRIPTEN_KEEPALIVE void vex_pitch(float hz,float prob,uint32_t now){app->observePitch(hz,prob,now);}
-EMSCRIPTEN_KEEPALIVE void vex_serial(int c,uint32_t now){app->command(char(c),now);}
+EMSCRIPTEN_KEEPALIVE void vex_reset(){sim.reset();lastAnalysisUs=0;}
+EMSCRIPTEN_KEEPALIVE uint32_t vex_now(){return sim.app().now;}
+EMSCRIPTEN_KEEPALIVE void vex_controls(int m,int q,int f,uint32_t now){
+ sim.raw_mode=m!=0;sim.raw_quest=q!=0;sim.raw_foot=f!=0;
+ sim.app().controls(sim.raw_mode,sim.raw_quest,sim.raw_foot,now);
+}
+EMSCRIPTEN_KEEPALIVE void vex_tick(uint32_t now){sim.app().tick(now);}
+EMSCRIPTEN_KEEPALIVE void vex_observe(float rms,float peak,uint32_t now){sim.app().observe(rms,peak,now);}
+EMSCRIPTEN_KEEPALIVE void vex_pitch(float hz,float prob,uint32_t now){sim.app().observePitch(hz,prob,now);}
+EMSCRIPTEN_KEEPALIVE void vex_serial(int c,uint32_t now){sim.app().command(char(c),now);}
 EMSCRIPTEN_KEEPALIVE int16_t* vex_audio_ptr(){return audio;}
 EMSCRIPTEN_KEEPALIVE int vex_audio_capacity(){return int(sizeof(audio)/sizeof(audio[0]));}
-// Push n samples (multiple of 128) already written at vex_audio_ptr(), then run the foreground steps the sketch
-// runs each loop: take accumulated level, analyze a completed window. Returns 1 when a pitch window was analyzed.
+
+// Push n samples (multiple of 128) written at vex_audio_ptr(), then run foreground level + pitch.
 EMSCRIPTEN_KEEPALIVE int vex_audio_push(int n,uint32_t now){
- for(int i=0;i+vex::Analyzer::BLOCK<=n;i+=vex::Analyzer::BLOCK)analyzer.push(audio+i,vex::Analyzer::BLOCK);
- float r,p;if(analyzer.takeLevel(r,p))app->observe(r,p,now);
- if(!app->wantsPitch()){analyzer.skip();lastAnalysisUs=0;return 0;}
+ for(int i=0;i+vex::Analyzer::BLOCK<=n;i+=vex::Analyzer::BLOCK)sim.analyzer.push(audio+i,vex::Analyzer::BLOCK);
+ float r,p;if(sim.analyzer.takeLevel(r,p))sim.app().observe(r,p,now);
+ if(!sim.app().wantsPitch()){sim.analyzer.skip();lastAnalysisUs=0;return 0;}
  double started=emscripten_get_now();
- int analyzed=analyzer.analyze();
- if(analyzed){lastAnalysisUs=uint32_t((emscripten_get_now()-started)*1000);app->observePitch(analyzer.hz,analyzer.probability,now);}
+ int analyzed=sim.analyzer.analyze();
+ if(analyzed){
+  lastAnalysisUs=uint32_t((emscripten_get_now()-started)*1000);
+  sim.analyses++;
+  sim.app().observePitch(sim.analyzer.hz,sim.analyzer.probability,now);
+ }
  return analyzed;
 }
+
+// Scenario protocol execution (simulator/protocol.h) and streamed PCM feeding for `wav`/`raw`.
+EMSCRIPTEN_KEEPALIVE char* vex_cmd_buf(){return cmdBuf;}
+EMSCRIPTEN_KEEPALIVE int vex_cmd_cap(){return int(sizeof(cmdBuf));}
+EMSCRIPTEN_KEEPALIVE int vex_command(){return int(sim.exec(cmdBuf));}
+EMSCRIPTEN_KEEPALIVE void vex_feed_begin(){sim.beginFeed();}
+EMSCRIPTEN_KEEPALIVE void vex_feed_samples(int n){if(n>0)sim.feedSamples(audio,size_t(n));}
+
 EMSCRIPTEN_KEEPALIVE uint32_t vex_last_analysis_us(){return lastAnalysisUs;}
-bool testPattern=false;
-// Serial `t` on the bench: render ui.h drawTestPattern instead of the app screen.
-EMSCRIPTEN_KEEPALIVE void vex_test(int on){testPattern=on!=0;}
+EMSCRIPTEN_KEEPALIVE void vex_test(int on){sim.test=on!=0;}
 EMSCRIPTEN_KEEPALIVE uint8_t* vex_render(uint32_t now){
- if(testPattern)vex::drawTestPattern(canvas,now);else vex::drawScreen(canvas,app->view());
+ if(sim.test)vex::drawTestPattern(canvas,now);else vex::drawScreen(canvas,sim.app().view());
  for(int i=0;i<240*240;i++){uint16_t p=canvas.px[i];uint8_t r=(p>>11)&31,g=(p>>5)&63,b=p&31;
-  // Same integer scaling as simulator/canvas.h so WASM frames can be compared with native goldens.
   rgba[i*4]=uint8_t(r*255/31);rgba[i*4+1]=uint8_t(g*255/63);rgba[i*4+2]=uint8_t(b*255/31);rgba[i*4+3]=255;}
  return rgba;
 }
 EMSCRIPTEN_KEEPALIVE uint8_t* vex_frame_ptr(){return rgba;}
 EMSCRIPTEN_KEEPALIVE uint8_t* vex_store_ptr(){return store.bytes;}
-// After JS copies bytes into the store (e.g. from localStorage), reload the device from them.
-EMSCRIPTEN_KEEPALIVE void vex_store_load(){store.powered=true;store.cut=-1;}
+EMSCRIPTEN_KEEPALIVE int vex_store_size(){return vexsim::SimStore::CAPACITY;}
+EMSCRIPTEN_KEEPALIVE void vex_store_load(){store.powered=true;store.cut=-1;store.dirty=false;}
+EMSCRIPTEN_KEEPALIVE int vex_store_dirty(){int d=store.dirty?1:0;store.dirty=false;return d;}
 EMSCRIPTEN_KEEPALIVE void vex_powercut(long n){store.cut=n;}
-EMSCRIPTEN_KEEPALIVE int vex_pose(){return vex::chooseAnim(vex::quantised(app->view())).anim;}
+EMSCRIPTEN_KEEPALIVE int vex_pose(){return vex::chooseAnim(vex::quantised(sim.app().view())).anim;}
 EMSCRIPTEN_KEEPALIVE int vex_display_ms(){return int(DISPLAY_MS);}
-EMSCRIPTEN_KEEPALIVE const char* vex_notice(){return app->notice;}
+EMSCRIPTEN_KEEPALIVE const char* vex_notice(){return sim.app().notice;}
+
+EMSCRIPTEN_KEEPALIVE const char* vex_state_schema(){
+ if(!schemaBuilt){
+  struct SchemaEmit{
+   size_t pos=0;
+   void add(const char* k,char kind){
+    if(pos&&pos+1<sizeof schemaBuf)schemaBuf[pos++]=',';
+    for(const char* p=k;*p&&pos+3<sizeof schemaBuf;++p)schemaBuf[pos++]=*p;
+    schemaBuf[pos++]=':';schemaBuf[pos++]=kind;schemaBuf[pos]='\0';
+   }
+   void u(const char* k,uint64_t){add(k,'i');}
+   void i(const char* k,int64_t){add(k,'i');}
+   void f(const char* k,float){add(k,'f');}
+   void b(const char* k,bool){add(k,'b');}
+   void s(const char* k,const char*){add(k,'s');}
+  } emit;
+  vexsim::stateFields(sim.stateSource(),emit);
+  schemaBuilt=true;
+ }
+ return schemaBuf;
+}
+
 EMSCRIPTEN_KEEPALIVE double* vex_state_ptr(){return state;}
+EMSCRIPTEN_KEEPALIVE const char* vex_state_str(int idx){return (idx>=0&&idx<16&&stateStrings[idx])?stateStrings[idx]:"";}
 EMSCRIPTEN_KEEPALIVE double* vex_state(){
- const auto& p=app->progress;const vex::AnimFrame f=vex::chooseAnim(vex::quantised(app->view()));int i=0;
- state[i++]=double(p.active_ms);state[i++]=double(p.session_ms);state[i++]=double(p.xp());state[i++]=p.level();state[i++]=p.fragments;
- state[i++]=p.goalMs()/60000;state[i++]=p.running;state[i++]=p.calibrated;state[i++]=p.active;state[i++]=app->tuning;state[i++]=app->calibrating;
- state[i++]=p.gate;state[i++]=app->rms;state[i++]=app->peak;state[i++]=app->stage;state[i++]=app->saved_slot;state[i++]=app->sequence;
- state[i++]=store.powered;state[i++]=app->pitchNow.midi;state[i++]=app->pitchNow.cents;state[i++]=app->pitchNow.valid;state[i++]=app->uncertain;
- state[i++]=analyzer.hz;state[i++]=analyzer.probability;state[i++]=app->now;
- state[i++]=app->env;state[i++]=p.hold_ms;state[i++]=p.credit_drops;
- state[i++]=f.anim;state[i++]=f.frame;state[i++]=testPattern?1:0;
+ struct WasmEmit{
+  int ni=0,si=0;
+  void u(const char*,uint64_t v){state[ni++]=double(v);}
+  void i(const char*,int64_t v){state[ni++]=double(v);}
+  void f(const char*,float v){state[ni++]=double(v);}
+  void b(const char*,bool v){state[ni++]=v?1.0:0.0;}
+  void s(const char*,const char* v){if(si<16)stateStrings[si++]=v?v:"";}
+ } emit;
+ vexsim::stateFields(sim.stateSource(),emit);
  return state;
 }
 }

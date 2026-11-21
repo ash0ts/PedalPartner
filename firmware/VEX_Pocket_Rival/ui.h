@@ -21,7 +21,9 @@ struct View {
  Progress progress;
  Pitch pitch;
  int stage=4;
- bool tuning=false,codec_ok=true,calibrating=false,pitch_fresh=false,uncertain=false;
+ Activity activity=ACT_PET;
+ bool codec_ok=true,calibrating=false,pitch_fresh=false,uncertain=false;
+ bool tuning()const{return activity==ACT_TUNER;}
  Pitch last_pitch;uint32_t last_pitch_at=0;
  bool mode_pressed=false,quest_pressed=false,foot_pressed=false;
  float rms=0,peak=0;
@@ -91,7 +93,7 @@ inline AnimFrame chooseAnim(const View& v){
  const auto& p=v.progress;
  if(v.now-v.levelup_at<UI_CELEBRATE_MS)return{ANIM_LEVELUP,loopFrame(ANIM_LEVELUP,v.now-v.levelup_at)};
  if(v.now-v.fragment_at<UI_CELEBRATE_MS)return{ANIM_CHEER,loopFrame(ANIM_CHEER,v.now-v.fragment_at)};
- if(v.tuning)return{ANIM_LISTEN,loopFrame(ANIM_LISTEN,v.now)};
+ if(v.activity==ACT_TUNER)return{ANIM_LISTEN,loopFrame(ANIM_LISTEN,v.now)};
  if(p.active)return{ANIM_STRUM,loopFrame(ANIM_STRUM,v.now)};
  if(v.now-v.active_at>UI_SLEEP_MS&&!p.running)return{ANIM_SLEEP,loopFrame(ANIM_SLEEP,v.now)};
  int blink=shotFrame(ANIM_BLINK,v.now%UI_BLINK_EVERY_MS);
@@ -193,6 +195,12 @@ inline View quantised(const View& v){
  clampTo(q.active_at,q.now);clampTo(q.notice_at,q.now);clampTo(q.fragment_at,q.now);clampTo(q.levelup_at,q.now);clampTo(q.summary_at,q.now);clampTo(q.last_pitch_at,q.now);
  return q;
 }
+template<class Canvas> void drawActivity(Canvas& c,const View& v){
+ switch(v.activity){
+  case ACT_TUNER:drawTuner(c,v);break;
+  case ACT_PET:default:drawPet(c,v);break;
+ }
+}
 template<class Canvas> void drawScreen(Canvas& c,const View& raw){
  const View v=quantised(raw);
  c.fillScreen(UI_BG);char s[64];const auto&p=v.progress;
@@ -207,10 +215,9 @@ template<class Canvas> void drawScreen(Canvas& c,const View& raw){
   int width=int(v.peak*160);if(width<0)width=0;if(width>160)width=160;
   c.fillRect(40,151,160,9,UI_DIM);c.fillRect(40,151,width,9,v.peak>=.98?UI_RED:UI_GOLD);
   centered(c,v.peak>=.98?"CLIP - TURN DOWN":"Watch serial monitor",180,1,v.peak>=.98?UI_RED:UI_INK);
- }else if(v.tuning)drawTuner(c,v);
- else drawPet(c,v);
+ }else drawActivity(c,v);
  bool summary=v.now-v.summary_at<UI_SUMMARY_MS&&!p.running&&p.calibrated;
- if(v.stage==4&&!v.tuning&&!summary&&(v.now-v.notice_at<3000||!p.calibrated)){
+ if(v.stage==4&&v.activity==ACT_PET&&!summary&&(v.now-v.notice_at<3000||!p.calibrated)){
   c.fillRect(20,193,200,11,UI_BG);
   centered(c,v.calibrating?"MUTE STRINGS...":v.notice,195,1,UI_GOLD);
  }

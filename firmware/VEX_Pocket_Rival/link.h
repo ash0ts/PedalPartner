@@ -35,7 +35,7 @@ inline LinkState linkState(const App& app,const LinkTiming& t){
  s.tx_bytes=t.tx_bytes;s.flush_us=t.flush_us;s.flush_max_us=t.flush_max_us;s.yin_us=t.yin_us;s.yin_max_us=t.yin_max_us;s.loop_max_us=t.loop_max_us;
  s.midi=int16_t(app.pitchNow.midi);s.goal_minutes=uint16_t(p.goalMs()/60000);
  s.stage=uint8_t(app.stage);s.anim=uint8_t(f.anim);s.frame=uint8_t(f.frame);s.saved_slot=int8_t(app.saved_slot);s.cadence_mul=t.cadence_mul;s.level=uint8_t(p.level()>255?255:p.level());
- s.flags=(p.running?LINK_RUNNING:0)|(p.calibrated?LINK_CALIBRATED:0)|(p.active?LINK_ACTIVE:0)|(app.tuning?LINK_TUNING:0)|(app.calibrating?LINK_CALIBRATING:0)|(p.claimed?LINK_CLAIMED:0)|(app.codec_ok?LINK_CODEC:0)|(app.pitchNow.valid?LINK_PITCH_VALID:0);
+ s.flags=(p.running?LINK_RUNNING:0)|(p.calibrated?LINK_CALIBRATED:0)|(p.active?LINK_ACTIVE:0)|(app.tuning()?LINK_TUNING:0)|(app.calibrating?LINK_CALIBRATING:0)|(p.claimed?LINK_CLAIMED:0)|(app.codec_ok?LINK_CODEC:0)|(app.pitchNow.valid?LINK_PITCH_VALID:0);
  return s;
 }
 template<class Out> void linkPacket(Out& out,uint8_t type,uint16_t a,uint16_t b,const uint8_t* payload,size_t n){

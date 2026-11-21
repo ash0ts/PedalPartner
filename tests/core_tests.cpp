@@ -79,7 +79,9 @@ static void analyzerTests(){
  app.observePitch(30,.95f,15);assert(!app.uncertain&&!app.pitchNow.valid);
  app.observePitch(440,.95f,16);assert(!app.uncertain&&app.pitchNow.valid&&app.last_pitch_at==16);
  vex::View tv=app.view();assert(tv.last_pitch.midi==69&&!tv.uncertain);
- assert(!app.wantsPitch());app.tuning=true;assert(app.wantsPitch());app.tuning=false;
+ assert(!app.wantsPitch()&&app.activity==vex::ACT_PET&&!app.tuning());
+ app.setActivity(vex::ACT_TUNER);assert(app.wantsPitch()&&app.tuning()&&std::strcmp(app.act().name,"tuner")==0);
+ app.setActivity(vex::ACT_PET);assert(!app.wantsPitch()&&!app.tuning()&&std::strcmp(app.act().name,"pet")==0);
  vex::App s3(store,3);s3.begin(0,true);assert(s3.wantsPitch());
  // Smoothed level + activity hold through the real block analyzer: sustained low E2 near the gate
  // credits >= 95% of its duration, and 300 ms chord-change gaps never drop active mid-phrase.

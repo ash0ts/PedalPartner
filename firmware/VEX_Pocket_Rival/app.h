@@ -13,7 +13,8 @@ struct LevelObs{uint16_t dt;float ms;};
 struct App {
  Store& store;int stage;
  Progress progress;Button mode,quest,foot;Pitch pitchNow;
- bool codec_ok=false,tuning=false,calibrating=false,raw_mode=false,raw_quest=false,raw_foot=false,obs_seen=false;
+ Activity activity=ACT_PET;
+ bool codec_ok=false,calibrating=false,raw_mode=false,raw_quest=false,raw_foot=false,obs_seen=false;
  // Tuner presentation facts: a periodic candidate below the confidence threshold (uncertain), and the last
  // confident reading so the display can fade it instead of blanking the moment a string decays.
  bool uncertain=false;Pitch last_pitch;uint32_t last_pitch_at=0;
@@ -58,18 +59,21 @@ struct App {
   float floor=noise[noise_count/2];if(!isfinite(floor)||floor>.08f){message("Too loud: try again");return;}
   progress.gate=fmaxf(.001f,floor*4);progress.calibrated=true;message("Ready: tap footswitch");
  }
+ const ActivityDef& act()const{return activityDef(activity);}
+ bool tuning()const{return activity==ACT_TUNER;}
+ void setActivity(Activity a){activity=a;setRunning(false);progress.active=false;progress.hold_ms=0;message(act().enter_notice);}
  void controls(bool m,bool q,bool f,uint32_t t){
   now=t;raw_mode=m;raw_quest=q;raw_foot=f;int em=mode.update(m,t),eq=quest.update(q,t),ef=foot.update(f,t);
   if(stage!=4)return;
-  if(em==1){tuning=!tuning;setRunning(false);progress.active=false;progress.hold_ms=0;message(tuning?"Rig handles muting":"Tap footswitch to start");}
+  if(em==1)setActivity(Activity((uint8_t(activity)+1)%ACT_COUNT));
   if(em==2)save();
-  if(eq==1){if(progress.setGoal((progress.goal_index+1)%3))message("Goal set; session reset");else message("Pause to change goal");}
+  if(eq==1&&activity==ACT_PET){if(progress.setGoal((progress.goal_index+1)%3))message("Goal set; session reset");else message("Pause to change goal");}
   if(eq==2)calibrate();
-  if(ef==1&&!tuning&&!calibrating){if(progress.calibrated)setRunning(!progress.running);else message("Hold QUEST: calibrate");}
+  if(ef==1&&act().allows_run&&!calibrating){if(progress.calibrated)setRunning(!progress.running);else message("Hold QUEST: calibrate");}
   if(ef==2){setRunning(false);progress.newSession();summary_at=now-100000;message("New session / paused");}
  }
  void command(char c,uint32_t t){now=t;if(stage!=4)return;if(c=='c')calibrate();if(c=='s')save();if(c=='p')setRunning(false);if(c=='r'){setRunning(false);progress.newSession();summary_at=now-100000;}}
- bool wantsPitch()const{return stage==3||tuning;}
+ bool wantsPitch()const{return stage==3||act().wants_pitch;}
  void observe(float r,float p,uint32_t t){
   now=t;rms=r;peak=p;
   if(!isfinite(r)||!isfinite(p)||r<0||p<0){env=r;obs_head=obs_count=0;obs_seen=false;rms_at=peak_at=t;return;}
@@ -111,7 +115,7 @@ struct App {
   if(calibrating&&now-cal_at>=3000)finishCalibration();
   if(now-tick_at>=10){
    uint32_t dt=now-tick_at;tick_at=now;bool was_claimed=progress.claimed;
-   progress.tick(dt,env,peak,fresh()&&!tuning&&!calibrating,rms>progress.gate);if(progress.active)active_at=now;
+   progress.tick(dt,env,peak,fresh()&&act().credits_practice&&!calibrating,rms>progress.gate);if(progress.active)active_at=now;
    if(progress.claimed&&!was_claimed)fragment_at=now;
    if(progress.level()>last_level){last_level=progress.level();levelup_at=now;}
   }
@@ -119,7 +123,7 @@ struct App {
  }
  bool led()const{return stage==2?raw_foot:progress.active;}
  View view()const{
-  View v;v.progress=progress;v.pitch=pitchNow;v.stage=stage;v.tuning=tuning;v.codec_ok=codec_ok;v.calibrating=calibrating;
+  View v;v.progress=progress;v.pitch=pitchNow;v.stage=stage;v.activity=activity;v.codec_ok=codec_ok;v.calibrating=calibrating;
   v.rms=rms;v.peak=peak;v.now=now;v.active_at=active_at;v.notice_at=notice_at;v.notice=notice;
   v.pitch_fresh=now-pitch_at<350&&now-rms_at<100&&now-peak_at<100;
   v.uncertain=uncertain&&v.pitch_fresh;v.last_pitch=last_pitch;v.last_pitch_at=last_pitch_at;
