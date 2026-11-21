@@ -21,13 +21,16 @@ sys.path.insert(0,str(ROOT/'tools'));import link
 WEB=ROOT/'simulator/web';OUT=ROOT/'build/web';FIRMWARE=ROOT/'firmware/VEX_Pocket_Rival'
 SCENARIOS=ROOT/'tests/scenarios';GOLDENS=ROOT/'tests/golden'
 EMSCRIPTEN_MIN='7.0'   # Homebrew bottle used for development; record the actual version in the handoff
-EXPORTS=['_vex_boot','_vex_controls','_vex_tick','_vex_observe','_vex_pitch','_vex_serial','_vex_audio_ptr','_vex_audio_capacity','_vex_audio_push',
-         '_vex_render','_vex_test','_vex_frame_ptr','_vex_store_ptr','_vex_store_load','_vex_powercut','_vex_state_ptr','_vex_state','_vex_notice',
+EXPORTS=['_vex_boot','_vex_reset','_vex_now','_vex_controls','_vex_tick','_vex_observe','_vex_pitch','_vex_serial','_vex_audio_ptr','_vex_audio_capacity','_vex_audio_push',
+         '_vex_cmd_buf','_vex_cmd_cap','_vex_command','_vex_feed_begin','_vex_feed_samples',
+         '_vex_render','_vex_test','_vex_frame_ptr','_vex_store_ptr','_vex_store_size','_vex_store_load','_vex_store_dirty','_vex_powercut',
+         '_vex_state_schema','_vex_state_ptr','_vex_state_str','_vex_state','_vex_notice',
          '_vex_last_analysis_us','_vex_pose','_vex_display_ms']
 ART=ROOT/'art'
 
 def tracked_sources():
-    return [WEB/'vex_web.cpp',*sorted(FIRMWARE.glob('*.h')),WEB/'index.html',*sorted(WEB.glob('*.js')),
+    return [WEB/'vex_web.cpp',*sorted((ROOT/'simulator').glob('*.h')),*sorted(FIRMWARE.glob('*.h')),
+            WEB/'index.html',*sorted(WEB.glob('*.js')),
             *sorted(SCENARIOS.glob('*.txt')),*sorted(GOLDENS.glob('*.png')),
             *sorted(ART.glob('*.json')),*sorted(ART.glob('*/*.json')),*sorted(ART.glob('*/*.png'))]
 
@@ -247,8 +250,7 @@ function loadWav(rel,kind){
   const captured=[];const errors=[];
   for(const file of files){
     const text=fs.readFileSync(path.join(scnDir,file),'utf8');
-    const driver=VexScenario.createDriver(M);
-    const res=await VexScenario.runScenario(driver,text,{
+    const res=await VexScenario.runScenario(M,text,{
       fresh:true,label:file,loadWav,
       onGolden:(name,line,rgba)=>{
         const rgb=Buffer.alloc(240*240*3);

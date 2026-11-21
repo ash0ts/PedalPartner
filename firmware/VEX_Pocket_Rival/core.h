@@ -3,6 +3,20 @@
 #include <stddef.h>
 #include <math.h>
 namespace vex {
+// Foreground screens on stage 4. One table defines whether each screen credits practice, starts on
+// the footswitch or runs pitch analysis, so adding a drill does not scatter flags across App and UI.
+enum Activity : uint8_t { ACT_PET=0, ACT_TUNER=1, ACT_COUNT=2 };
+struct ActivityDef {
+ Activity id;
+ const char* name;
+ const char* enter_notice;
+ bool credits_practice, allows_run, wants_pitch;
+};
+constexpr ActivityDef ACTIVITIES[ACT_COUNT]={
+ {ACT_PET,"pet","Tap footswitch to start",true,true,false},
+ {ACT_TUNER,"tuner","Rig handles muting",false,false,true},
+};
+inline const ActivityDef& activityDef(Activity a){return ACTIVITIES[uint8_t(a)<ACT_COUNT?uint8_t(a):0];}
 // Hold practice activity across inter-strum gaps; silence longer than this earns nothing.
 constexpr uint16_t ACTIVITY_HOLD_MS=500;
 struct Progress {

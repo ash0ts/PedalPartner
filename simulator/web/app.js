@@ -3,7 +3,7 @@
 // (gallery.js + scenario.js) and the collapsible Inspect drawer (including the Teensy mirror).
 'use strict';
 const $=id=>document.getElementById(id);
-const {BLOCK,RATE,BLOCK_MS,STATE_FIELDS,BOOLS}=window.VexScenario;
+const {BLOCK,RATE,BLOCK_MS}=window.VexScenario;
 const POSES=['idle','blink','strum','cheer','levelup','listen','sleep'];
 const STRIP_STEP_MS=50,STRIP_LEN=600;   // 600 * 50 ms = 30.0 s
 
@@ -15,11 +15,11 @@ const sim={
  source:null,audioClock:0,carry:0,lastDraw:-1000,dirty:true,
  lastNotice:'',notices:[],telemetry:[],logDirty:false,
  record:[],span:null,recDirty:false,
- lastState:null,analyses:0,testPattern:false,
+ lastState:null,testPattern:false,
  strip:[],stripHead:0,stripDirty:true
 };
 
-let M,audioPtr,storeBytes,stateF64,image,ctx,stripCtx,sessionCtrl,galleryCtrl,pageDriver;
+let M,audioPtr,storeBytes,image,ctx,stripCtx,sessionCtrl,galleryCtrl,stripIdx;
 
 function fmtClock(ms){
  const s=Math.floor(ms/1000);
@@ -27,16 +27,15 @@ function fmtClock(ms){
 }
 
 function readState(){
- const st=window.VexScenario.readModuleState(M,sim.analyses);
- return st;
+ return window.VexScenario.readModuleState(M);
 }
 
 // Fast zero-alloc sample every 50 simulated ms for the 30 s activity strip.
 function clearStrip(){sim.strip.length=0;sim.stripHead=0;sim.stripDirty=true;}
 function sampleStrip(){
  const p=M._vex_state()>>3;
- const gate=M.HEAPF64[p+11],rms=M.HEAPF64[p+12],peak=M.HEAPF64[p+13];
- const active=M.HEAPF64[p+8]!==0,env=M.HEAPF64[p+25],hold=M.HEAPF64[p+26];
+ const gate=M.HEAPF64[p+stripIdx.gate],rms=M.HEAPF64[p+stripIdx.rms],peak=M.HEAPF64[p+stripIdx.peak];
+ const active=M.HEAPF64[p+stripIdx.active]!==0,env=M.HEAPF64[p+stripIdx.env],hold=M.HEAPF64[p+stripIdx.hold_ms];
  const item={rms,env,peak,gate,active,holding:active&&rms<=gate&&hold>0,clipped:peak>=0.98};
  if(sim.strip.length<STRIP_LEN)sim.strip.push(item);
  else{sim.strip[sim.stripHead]=item;sim.stripHead=(sim.stripHead+1)%STRIP_LEN;}
@@ -52,10 +51,11 @@ function boot(fromRebootButton){
  note(`boot stage ${sim.stage}`);
 }
 function factoryReset(){
- storeBytes.fill(0);M._vex_store_load();persist();
- setTestPattern(false);sim.analyses=0;
- if(sim.stage!==4){sim.stage=4;$('stage').value='4';}
- boot(false);
+ M._vex_reset();persist();
+ setTestPattern(false);
+ sim.stage=4;$('stage').value='4';
+ sim.now=0;sim.audioClock=0;sim.dirty=true;sim.lastDraw=-1000;sim.lastNotice='';
+ clearStrip();note('boot stage 4');
  if(sessionCtrl)sessionCtrl.resetProgress();
 }
 function setTestPattern(on){
@@ -87,7 +87,7 @@ function restoreStore(){
 // One simulated millisecond -----------------------------------------------------------------------
 function pushBlock(block,now){
  M.HEAP16.set(block,audioPtr>>1);
- if(M._vex_audio_push(BLOCK,now))sim.analyses++;
+ M._vex_audio_push(BLOCK,now);
 }
 function step(){
  const now=++sim.now;
@@ -404,7 +404,7 @@ function updatePanels(force){
  $('t-peak').textContent=s.peak.toFixed(3);
 
  const pitchWanted=s.stage===3||s.tuning;
- $('t-pitch').textContent=pitchWanted?`yin hz=${s.hz.toFixed(2)} prob=${s.probability.toFixed(2)} · midi ${s.pitch_midi} ${s.pitch_cents>=0?'+':''}${s.pitch_cents.toFixed(1)} c ${s.pitch_valid?'valid':''} · ${sim.analyses} windows`:`pitch gated (stage ${s.stage} ${s.stage===4?'practice':'no audio'} · ${sim.analyses} windows)`;
+ $('t-pitch').textContent=pitchWanted?`yin hz=${s.hz.toFixed(2)} prob=${s.probability.toFixed(2)} · midi ${s.pitch_midi} ${s.pitch_cents>=0?'+':''}${s.pitch_cents.toFixed(1)} c ${s.pitch_valid?'valid':''} · ${s.analyses} windows`:`pitch gated (stage ${s.stage} ${s.stage===4?'practice':'no audio'} · ${s.analyses} windows)`;
  $('t-yin').textContent=`analyze ${M._vex_last_analysis_us()} µs`;
  if(sim.source&&sim.source.kind==='wav')$('wav-pos').textContent=`${(sim.source.pos/RATE).toFixed(1)} / ${(sim.source.total/RATE).toFixed(1)} s`;
  $('power').textContent=s.power?'power on':'POWER CUT · reboot to continue';
@@ -416,7 +416,7 @@ function updatePanels(force){
  if($('inspect-drawer').open&&(force||nowWall-lastPanelAt>=90)){
   lastPanelAt=nowWall;
   if($('tab-state').classList.contains('sel')){
-   $('state').innerHTML=STATE_FIELDS.map(k=>`<tr><td>${k}</td><td>${typeof s[k]==='number'?(Number.isInteger(s[k])?s[k]:s[k].toFixed(4)):s[k]}</td></tr>`).join('')+`<tr><td>notice</td><td>${s.notice}</td></tr><tr><td>analyses</td><td>${sim.analyses}</td></tr>`;
+   $('state').innerHTML=window.VexScenario.stateNames(M).map(k=>`<tr><td>${k}</td><td>${typeof s[k]==='number'?(Number.isInteger(s[k])?s[k]:s[k].toFixed(4)):s[k]}</td></tr>`).join('');
   }
   if($('tab-eeprom').classList.contains('sel')){
    const sig=Array.from(storeBytes).join(',')+s.saved_slot;
@@ -469,11 +469,12 @@ async function executeScenarioOnPage(text,opts){
  sim.source=null;sim.raw={mode:0,quest:0,foot:0};
  for(const el of document.querySelectorAll('.ctl'))el.classList.remove('down');
  clearStrip();
- const res=await window.VexScenario.runScenario(pageDriver,text,{
+ const res=await window.VexScenario.runScenario(M,text,{
   fresh:o.fresh,upToLine:o.upToLine,checkExpect:true,label:o.label,
   loadWav:()=>loadWav(),
   onGolden:o.onGolden
  });
+ sim.now=res.state.now_ms;sim.audioClock=sim.now;
  sim.stage=res.state.stage;$('stage').value=String(sim.stage);
  sim.testPattern=!!res.state.test;$('testpat').checked=sim.testPattern;
  sampleStrip();
@@ -625,21 +626,21 @@ function liveReload(){
 
 VexModule().then(mod=>{
  M=mod;audioPtr=M._vex_audio_ptr();
- const sp=M._vex_store_ptr();storeBytes=M.HEAPU8.subarray(sp,sp+128);
- const fp=M._vex_frame_ptr();image=new ImageData(new Uint8ClampedArray(M.HEAPU8.buffer,fp,240*240*4),240,240);
+ const sp=M._vex_store_ptr(),ss=M._vex_store_size();storeBytes=M.HEAPU8.subarray(sp,sp+ss);
+ const fp=M._vex_frame_ptr();image=new ImageData(new Uint8ClampedArray(M.HEAPU8.buffer,fp,240*240*4),240*1,240);
+ stripIdx={
+  gate:window.VexScenario.fieldIndex(M,'gate'),
+  rms:window.VexScenario.fieldIndex(M,'rms'),
+  peak:window.VexScenario.fieldIndex(M,'peak'),
+  active:window.VexScenario.fieldIndex(M,'active'),
+  env:window.VexScenario.fieldIndex(M,'env'),
+  hold_ms:window.VexScenario.fieldIndex(M,'hold_ms')
+ };
  ctx=$('screen').getContext('2d');
  stripCtx=$('activity-strip').getContext('2d');
  sim.displayMs=M._vex_display_ms();$('cadence-ms').textContent=String(sim.displayMs);
  sim.speed=Number(localStorage.getItem('vex.speed')||'1');$('speed').value=String(sim.speed);
  if(localStorage.getItem('vex.cadence')==='0')$('cadence').checked=false;
-
- pageDriver=window.VexScenario.createDriver(M,{
-  getStage:()=>sim.stage,
-  getNow:()=>sim.now,
-  getAnalyses:()=>sim.analyses,
-  setState:({stage,now,analyses})=>{sim.stage=stage;sim.now=now;sim.analyses=analyses;},
-  onPersist:()=>persist()
- });
 
  restoreStore();storeSig=-1;
  boot(false);

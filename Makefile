@@ -15,7 +15,7 @@ build:
 	mkdir -p build
 build/core-tests: tests/core_tests.cpp $(HEADERS) | build
 	$(CXX) $(CXXFLAGS) $< -o $@
-build/vex-sim: simulator/main.cpp simulator/canvas.h $(HEADERS) | build
+build/vex-sim: simulator/main.cpp $(wildcard simulator/*.h) $(HEADERS) | build
 	$(CXX) $(CXXFLAGS) $< -o $@
 test: build/core-tests build/vex-sim
 	./build/core-tests
