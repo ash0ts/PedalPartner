@@ -70,6 +70,14 @@ vex::App app(eeprom,VEX_STAGE);
 float rms=0,peak=0;
 uint32_t drawAt=0,printAt=0,txMaxBytes=0;
 vex::LinkTiming timing;
+// 1 kHz hardware timer drives the amber LED beat flash on drills so a slow SPI display flush cannot jitter it.
+IntervalTimer ledTimer;
+volatile uint32_t isrBeatPeriod=0,isrBeatOrigin=0;
+volatile bool isrBeatActive=false;
+void ledBeatIsr(){
+ if(!isrBeatActive)return;
+ digitalWriteFast(PIN_LED,vex::App::beatFlash(millis(),isrBeatOrigin,isrBeatPeriod)?HIGH:LOW);
+}
 // Bench switches (serial) and simulated control presses; presses go through App::controls like buttons.
 bool forceFull=false,bandDiff=true,linkOn=false,testOn=false;uint32_t tapUntil[3]={0,0,0};
 // Live knobs: boot at the config.h values, step from serial, never persisted. Steps the GC9A01A and
@@ -108,6 +116,7 @@ void setup(){
 #endif
  }
  app.begin(millis(),codecOK);
+ if(VEX_STAGE==4)ledTimer.begin(ledBeatIsr,1000);
 }
 void loop(){
  uint32_t loopStart=micros(),now=millis();
@@ -135,7 +144,12 @@ void loop(){
  app.controls(digitalRead(PIN_MODE)==LOW||now<tapUntil[0],digitalRead(PIN_QUEST)==LOW||now<tapUntil[1],digitalRead(PIN_FOOT)==LOW||now<tapUntil[2],now);
  while(Serial.available())benchCommand(char(Serial.read()),now);
  app.tick(now);
- digitalWrite(PIN_LED,app.led());
+ if(app.beat_period_ms>0&&app.progress.running){
+  noInterrupts();isrBeatPeriod=app.beat_period_ms;isrBeatOrigin=app.beat_origin_ms;isrBeatActive=true;interrupts();
+ }else{
+  if(isrBeatActive){noInterrupts();isrBeatActive=false;interrupts();}
+  digitalWrite(PIN_LED,app.led());
+ }
  if(now-drawAt>=DISPLAY_MS*timing.cadence_mul){
   drawAt=now;uint32_t drawStart=micros();
   if(testOn)vex::drawTestPattern(frame,now);else vex::drawScreen(frame,app.view());
@@ -156,9 +170,9 @@ void loop(){
  }
  if(now-printAt>=1000){
   printAt=now;const auto& p=app.progress;timing.cpu=VEX_STAGE>=3?AudioProcessorUsageMax():0;vex::AnimFrame f=vex::chooseAnim(vex::quantised(app.view()));
-  Serial.printf("{\"stage\":%d,\"up_ms\":%lu,\"codec\":%d,\"rms\":%.5f,\"peak\":%.3f,\"gate\":%.5f,\"active\":%d,\"running\":%d,\"session_s\":%lu,\"total_s\":%lu,\"fragments\":%lu,\"level\":%lu,\"credit_drops\":%lu,\"cpu\":%.1f,\"memory\":%u,"
+  Serial.printf("{\"stage\":%d,\"up_ms\":%lu,\"codec\":%d,\"activity\":\"%s\",\"onsets\":%lu,\"bpm\":%u,\"rms\":%.5f,\"peak\":%.3f,\"gate\":%.5f,\"active\":%d,\"running\":%d,\"session_s\":%lu,\"total_s\":%lu,\"fragments\":%lu,\"level\":%lu,\"credit_drops\":%lu,\"cpu\":%.1f,\"memory\":%u,"
    "\"tx_bytes\":%lu,\"tx_max_bytes\":%lu,\"draw_us\":%lu,\"draw_max_us\":%lu,\"flush_us\":%lu,\"flush_max_us\":%lu,\"loop_max_us\":%lu,\"cadence_ms\":%lu,\"diff\":%d,\"full\":%d,\"link\":%d,\"test\":%d,\"spi_hz\":%lu,\"in_level\":%u,\"anim\":%d,\"frame\":%d",
-   VEX_STAGE,(unsigned long)now,app.codec_ok,app.rms,app.peak,p.gate,p.active,p.running,(unsigned long)(p.session_ms/1000),(unsigned long)(p.active_ms/1000),(unsigned long)p.fragments,(unsigned long)p.level(),(unsigned long)p.credit_drops,timing.cpu,VEX_STAGE>=3?AudioMemoryUsageMax():0,
+   VEX_STAGE,(unsigned long)now,app.codec_ok,app.activityName(),(unsigned long)app.notes.total_events,(unsigned)app.liveBpm(),app.rms,app.peak,p.gate,p.active,p.running,(unsigned long)(p.session_ms/1000),(unsigned long)(p.active_ms/1000),(unsigned long)p.fragments,(unsigned long)p.level(),(unsigned long)p.credit_drops,timing.cpu,VEX_STAGE>=3?AudioMemoryUsageMax():0,
    (unsigned long)timing.tx_bytes,(unsigned long)txMaxBytes,(unsigned long)timing.draw_us,(unsigned long)timing.draw_max_us,(unsigned long)timing.flush_us,(unsigned long)timing.flush_max_us,(unsigned long)timing.loop_max_us,(unsigned long)(DISPLAY_MS*timing.cadence_mul),bandDiff,forceFull,linkOn,testOn,(unsigned long)spiHz,inLevel,f.anim,f.frame);
 #ifdef VEX_PITCH_PJRC
   Serial.printf(",\"pitch\":\"pjrc\",\"midi\":%d,\"cents\":%.1f,\"valid\":%d}\n",app.pitchNow.midi,app.pitchNow.cents,app.pitchNow.valid);

@@ -144,8 +144,8 @@ textarea{width:100%;min-height:130px;resize:vertical}
   <div class="pedal">
    <div class="bezel" id="bezel"><canvas id="screen" width="240" height="240" aria-label="VEX 240 by 240 display"></canvas></div>
    <div class="controls">
-    <div class="ctl" data-control="mode" tabindex="0">MODE<small>tap: tuner · hold 1.2 s: save · key M</small><span class="held">0 ms</span></div>
-    <div class="ctl" data-control="quest" tabindex="0">QUEST<small>tap: goal · hold 1.2 s: calibrate · key Q</small><span class="held">0 ms</span></div>
+    <div class="ctl" data-control="mode" tabindex="0">MODE<small>tap: pet / tuner / drill · hold: save · key M</small><span class="held">0 ms</span></div>
+    <div class="ctl" data-control="quest" tabindex="0">QUEST<small>tap: goal / preset · hold: calibrate · key Q</small><span class="held">0 ms</span></div>
     <div class="ctl foot" data-control="foot" tabindex="0">FOOTSWITCH<small>tap: start / pause · hold: new session · key Space</small><span class="held">0 ms</span></div>
    </div>
   </div>
@@ -222,6 +222,19 @@ textarea{width:100%;min-height:130px;resize:vertical}
    </div>
   </div>
 
+  <div class="panel" id="drills-panel">
+   <h2>Guitar drills <span class="sub mono" id="drill-status">select a preset or tap MODE twice</span></h2>
+   <div class="sig-bar" id="drill-presets" role="group" aria-label="Drill presets"></div>
+   <div class="row" style="margin-top:6px">
+    <label>play it for me</label>
+    <button type="button" class="pill alt" data-drill-play="steady" title="Clean, locked performance for the selected drill">Steady take</button>
+    <button type="button" class="pill alt" data-drill-play="rushing" title="Rushing ahead of the beat / brisk performance">Rushing take</button>
+    <button type="button" class="pill alt" data-drill-play="uneven" title="Loose timing or hesitant spacing">Uneven take</button>
+    <button type="button" class="pill alt" data-drill-play="wrong" title="Out-of-key, wrong-string or under-bent notes">Wrong notes</button>
+   </div>
+   <p class="hint" id="drill-hint" style="margin-top:4px">Pick a drill preset above (or tap <code>MODE</code> to Drill and <code>QUEST</code> while paused), then play or click a performance.</p>
+  </div>
+
   <div class="panel" id="session-panel">
    <h2>Practice session <span class="sub mono" id="session-status">0 / 8 complete</span><span class="spacer"></span><button type="button" id="session-reset" style="font-size:11.5px;padding:3px 9px">Reset walkthrough</button></h2>
    <p class="hint" style="margin:0 0 9px">Do each step by hand on the pedal (mouse or keys <code>M</code>, <code>Q</code>, <code>Space</code>) or click <b>Do it for me</b>; checkmarks read live firmware state.</p>
@@ -239,8 +252,9 @@ textarea{width:100%;min-height:130px;resize:vertical}
    <div class="inspect-body">
     <div class="tabs"><button type="button" class="sel" data-tab="state">State</button><button type="button" data-tab="eeprom">EEPROM</button><button type="button" data-tab="log">Log</button><button type="button" data-tab="scenario">Scenario</button><button type="button" data-tab="device">Device</button></div>
     <div class="tab sel" id="tab-state"><div class="inner-panel"><h3>Device state <span class="sub">same fields as native simulator JSON</span></h3><table id="state"></table></div></div>
-    <div class="tab" id="tab-eeprom"><div class="inner-panel"><h3>EEPROM <span class="sub">two 64-byte slots, record v1, CRC-32</span></h3>
+    <div class="tab" id="tab-eeprom"><div class="inner-panel"><h3>EEPROM <span class="sub">Record v1 (0/64) + Skills v1 (128/192), CRC-32</span></h3>
       <div class="slot"><div id="slot0"></div><div id="slot1"></div></div>
+      <div class="slot" style="margin-top:8px"><div id="skslot0"></div><div id="skslot1"></div></div>
       <div class="row" style="margin-top:10px"><button type="button" id="save">Save now (serial s)</button><button type="button" id="corrupt">Corrupt latest slot</button>
        <label for="cut-n">cut power after</label><input type="number" id="cut-n" value="10" min="0" max="200" style="width:70px"><label>byte writes</label><button type="button" id="cut-arm">Arm</button><span class="mono" id="power"></span></div>
       <p class="hint">Saved bytes persist in localStorage across reloads and reboots. A power cut tears the active write; reboot falls back to the other slot.</p></div></div>

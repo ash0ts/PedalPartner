@@ -31,7 +31,9 @@ expect tuning=true running=false
 audio 1000 .1 .3 440 .99
 expect active_ms=360000
 press mode 100
-expect tuning=false running=false
+expect activity=pulse-8th tuning=false running=false
+press mode 100
+expect activity=pet tuning=false running=false
 # Leaving the tuner keeps the session paused; after thirty quiet seconds the pet sleeps.
 wait 31000
 expect running=false

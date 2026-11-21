@@ -1,0 +1,33 @@
+# Fretboard note finder (HUNT): string-specific exact MIDI pitch verification, wrong-string/note
+# rejection, seeded 10-note round completion, personal-best time save, and slow-note repetition.
+calibrate
+drill hunt-str
+press foot 100
+expect activity=hunt-str running=true hunt_pc=6 hunt_midi=42
+# Prompt asks for F# on E6 string (F#2, MIDI 42). Playing F#3 (D string, MIDI 54) is rejected!
+notes 140 0 0 -18 F#3
+expect hunt_midi=42 drill_rounds=0
+golden drill_hunt_prompt
+# Complete all 10 notes on the exact requested strings, hesitating 1.8 s on the first F# so it repeats.
+wait 1800
+notes 140 0 0 -18 F#2
+expect hunt_midi=70
+notes 140 0 0 -18 Bb4
+notes 140 0 0 -18 E3
+notes 140 0 0 -18 A2
+notes 140 0 0 -18 G4
+notes 140 0 0 -18 E3
+notes 140 0 0 -18 B3
+notes 140 0 0 -18 D#4
+notes 140 0 0 -18 C4
+notes 140 0 0 -18 G#4
+# Round 1 complete: personal best saved to EEPROM skills slot 0, cheer animation active,
+# and Round 2 immediately brings back F# (this time on the D string, MIDI 54)!
+expect drill_rounds=1 drill_best=70 skills_slot=0 anim=3 hunt_pc=6 hunt_midi=54
+golden drill_hunt_complete
+# HUNT ANY accepts any octave of the target pitch class.
+drill hunt-any
+press foot 100
+expect activity=hunt-any hunt_pc=6 hunt_midi=0
+notes 140 0 0 -18 F#4
+expect hunt_pc=10

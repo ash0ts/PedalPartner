@@ -85,6 +85,9 @@ def summarise(events):
     total=[r['total_s'] for r in tel if 'total_s' in r];s['total_s']={'first':total[0] if total else None,'last':total[-1] if total else None}
     level=[r['level'] for r in tel if 'level' in r];s['level_last']=level[-1] if level else None
     pitch=[r for r in tel if r.get('hz')];s['pitch_rows']=len(pitch)
+    s['activities']=seen('activity')
+    onsets=[r['onsets'] for r in tel if 'onsets' in r];s['onsets_max']=max(onsets) if onsets else 0
+    bpms=[r['bpm'] for r in tel if r.get('bpm')];s['bpm_max']=max(bpms) if bpms else None
     if s['cadence_ms'] and s['flush_max_us'] is not None:
         budget=s['cadence_ms']*1000;s['dma_gate']={'budget_us':budget,'limit_us':budget//DMA_GATE_FRACTION,'flush_max_us':s['flush_max_us'],'keep_blocking_driver':s['flush_max_us']<budget//DMA_GATE_FRACTION}
     else:s['dma_gate']=None
@@ -107,7 +110,7 @@ def render(s):
     out.append(f"  display: draw_us median {fmt(d['median'])} max {fmt(d['max'])} · flush_us median {fmt(f['median'])} p95 {fmt(f['p95'])} max {fmt(f['max'])} ({f['samples']} samples) · flush_max_us {fmt(s['flush_max_us'])} · tx_max_bytes {fmt(s['tx_bytes_max'])}")
     out.append(f"  loop_max_us {fmt(s['loop_max_us'])} · audio cpu max {fmt(s['cpu_max'],' %')} · audio memory max {fmt(s['memory_max'])} · yin_us median {fmt(s['yin_us']['median'])} max {fmt(s['yin_us']['max'])} · pitch rows {s['pitch_rows']}")
     out.append(f"  level: rms {fmt(s['rms']['min'])}..{fmt(s['rms']['max'])} · peak {fmt(s['peak']['min'])}..{fmt(s['peak']['max'])} · seconds at/above {CLIP} {s['clip_seconds']} · codec ok {s['codec']['ok']}/{s['codec']['seen']}")
-    out.append(f"  practice: gate {fmt(s['gate'])} · running {s['running_seconds']} s · active {s['active_seconds']} s · credit_drops {s['credit_drops']} · total_s {fmt(s['total_s']['first'])} -> {fmt(s['total_s']['last'])} · fragments {fmt(s['fragments']['first'])} -> {fmt(s['fragments']['last'])} · level {fmt(s['level_last'])}")
+    out.append(f"  practice: gate {fmt(s['gate'])} · running {s['running_seconds']} s · active {s['active_seconds']} s · credit_drops {s['credit_drops']} · total_s {fmt(s['total_s']['first'])} -> {fmt(s['total_s']['last'])} · fragments {fmt(s['fragments']['first'])} -> {fmt(s['fragments']['last'])} · level {fmt(s['level_last'])} · activities {s['activities'] or 'n/a'} · onsets {s['onsets_max']} · bpm max {fmt(s['bpm_max'])}")
     out.append('')
     out.append('Informs acceptance rows (hardware/data/acceptance_log.csv; enter the measured fields yourself):')
     rows=[]

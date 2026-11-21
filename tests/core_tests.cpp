@@ -5,7 +5,7 @@
 #include <cstring>
 #include <limits>
 #include <memory>
-struct MemStore:vex::Store{uint8_t b[128]{};uint8_t read(int a)override{return b[a];}void update(int a,uint8_t v)override{b[a]=v;}};
+struct MemStore:vex::Store{uint8_t b[256]{};uint8_t read(int a)override{return a>=0&&a<256?b[a]:0xff;}void update(int a,uint8_t v)override{if(a>=0&&a<256)b[a]=v;}};
 static void appTests(){
  MemStore store;vex::App app(store,4);app.begin(0,true);
  assert(!app.progress.running&&!app.progress.calibrated&&std::strcmp(app.notice,"Hold QUEST: calibrate")==0);
@@ -22,6 +22,38 @@ static void appTests(){
  // Saving writes 52 bytes in order and a second identical save is skipped.
  app.progress.active_ms=6000;assert(app.save()&&app.saved_slot==0&&app.sequence==1);assert(!app.save()&&std::strcmp(app.notice,"Already saved")==0);
  vex::App again(store,4);again.begin(0,true);assert(again.progress.active_ms==6000&&again.sequence==1&&!again.progress.running);
+ // Legacy 128-byte image (bytes 128..255 all 0xff as on erased EEPROM): Record loads intact and Skills boot empty.
+ for(int i=128;i<256;i++)store.b[i]=0xff;
+ vex::App legacy(store,4);legacy.begin(0,true);
+ assert(legacy.progress.active_ms==6000&&legacy.skills_slot==-1&&legacy.skills.stats[vex::SKILL_PULSE].best==0);
+ // Skills block at EEPROM 128/192: round-trips across reboot, falls back on corrupted latest slot, and survives torn writes.
+ legacy.skills.stats[vex::SKILL_PULSE]={116,112,3};
+ legacy.skills.stats[vex::SKILL_HUNT]={142,155,2};
+ assert(legacy.save()&&legacy.skills_slot==0&&legacy.skills_seq==1);
+ legacy.skills.stats[vex::SKILL_PULSE].best=124;
+ assert(legacy.save()&&legacy.skills_slot==1&&legacy.skills_seq==2);
+ vex::App reb(store,4);reb.begin(0,true);
+ assert(reb.skills_slot==1&&reb.skills_seq==2&&reb.skills.stats[vex::SKILL_PULSE].best==124&&reb.skills.stats[vex::SKILL_HUNT].best==142);
+ // Corrupt slot 1 (EEPROM 192): reboot recovers slot 0 (best=116).
+ store.b[vex::SKILLS_SLOT_B+12]^=1;
+ vex::App recov(store,4);recov.begin(0,true);
+ assert(recov.skills_slot==0&&recov.skills.stats[vex::SKILL_PULSE].best==116);
+ // Torn write mid-skills update (powercut after 20 byte updates): previous valid slot stays intact!
+ struct CutStore:vex::Store{
+  uint8_t b[256]{};int cut=-1;
+  uint8_t read(int a)override{return a>=0&&a<256?b[a]:0xff;}
+  void update(int a,uint8_t v)override{if(cut==0)return;if(cut>0)cut--;if(a>=0&&a<256)b[a]=v;}
+ } cstore;
+ std::memcpy(cstore.b,store.b,256);
+ vex::App tornApp(cstore,4);tornApp.begin(0,true);
+ assert(tornApp.skills.stats[vex::SKILL_PULSE].best==116);
+ tornApp.skills.stats[vex::SKILL_PULSE].best=140;cstore.cut=20;
+ assert(!tornApp.save());cstore.cut=-1;
+ vex::App afterTorn(cstore,4);afterTorn.begin(0,true);
+ assert(afterTorn.skills.stats[vex::SKILL_PULSE].best==116);
+ // Visual beat LED: downbeat (beat 0) flashes 75 ms; beats 1..3 flash 32 ms.
+ assert(vex::App::beatFlash(1000,1000,500)&&vex::App::beatFlash(1074,1000,500)&&!vex::App::beatFlash(1075,1000,500));
+ assert(vex::App::beatFlash(1500,1000,500)&&vex::App::beatFlash(1531,1000,500)&&!vex::App::beatFlash(1532,1000,500));
 }
 static int audioLockDepth=0,audioLocks=0;
 #define VEX_AUDIO_LOCK() do{assert(audioLockDepth==0);audioLockDepth++;audioLocks++;}while(0)
@@ -242,7 +274,7 @@ static void displayTests(){
 struct ByteSink{std::vector<uint8_t> bytes;void write(const uint8_t* p,size_t n){bytes.insert(bytes.end(),p,p+n);}};
 static void linkTests(){
  using namespace vex;
- struct MemStore:Store{uint8_t m[128]={};uint8_t read(int a)override{return m[a];}void update(int a,uint8_t v)override{m[a]=v;}} store;
+ struct MemStore:Store{uint8_t m[256]={};uint8_t read(int a)override{return m[a];}void update(int a,uint8_t v)override{m[a]=v;}} store;
  App app(store,4);app.begin(101000,true);app.progress.calibrated=true;app.progress.gate=.004f;app.setRunning(true);app.progress.active=true;
  for(int i=0;i<30;i++){app.observe(.05f,.2f,app.now);app.tick(app.now+10);}
  LinkTiming timing;timing.tx_bytes=31200;timing.flush_us=4321;timing.flush_max_us=9876;timing.yin_us=1500;timing.yin_max_us=2200;timing.loop_max_us=12000;timing.cpu=12.5f;timing.cadence_mul=1;

@@ -65,10 +65,15 @@
    if(saveCompleted)rebootAfterSave=true;
   }
 
+  function ensurePetScreen(){
+   let s=api.getState();
+   for(let guard=0;guard<4&&s.activity!=='pet';guard++){api.press('mode',100);s=api.getState();}
+   return s;
+  }
+
   function ensureCalibrated(){
    api.ensureStage4();
-   let s=api.getState();
-   if(s.tuning){api.press('mode',100);s=api.getState();}
+   let s=ensurePetScreen();
    if(!s.calibrated){
     api.setInputMode('quiet');
     api.advance(50);
@@ -79,8 +84,7 @@
 
   function ensureRunning(){
    ensureCalibrated();
-   let s=api.getState();
-   if(s.tuning){api.press('mode',100);s=api.getState();}
+   let s=ensurePetScreen();
    if(!s.running)api.press('foot',100);
   }
 
@@ -92,8 +96,7 @@
     api.advance(100);
    }else if(id==='calibrate'){
     api.ensureStage4();
-    let s=api.getState();
-    if(s.tuning)api.press('mode',100);
+    ensurePetScreen();
     api.setInputMode('quiet');
     api.advance(50);
     api.press('quest',1300);
@@ -117,14 +120,13 @@
     api.advance(1500);
    }else if(id==='tune'){
     api.ensureStage4();
-    const s=api.getState();
-    if(!s.tuning)api.press('mode',100);
+    let s=api.getState();
+    for(let guard=0;guard<4&&!s.tuning;guard++){api.press('mode',100);s=api.getState();}
     api.setInputMode('synth',{hz:440,cents:0,db:-20});
     api.advance(600);
    }else if(id==='save'){
     api.ensureStage4();
-    let s=api.getState();
-    if(s.tuning){api.press('mode',100);s=api.getState();}
+    let s=ensurePetScreen();
     if(s.running){api.press('foot',100);s=api.getState();}
     if(s.active_ms===0&&s.fragments===0){
      ensureRunning();

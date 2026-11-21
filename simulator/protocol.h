@@ -159,7 +159,7 @@ inline bool parseTempoStepMs(const char* tok, float& stepMs) {
 }
 
 struct SimStore : vex::Store {
- static constexpr int CAPACITY = 128;
+ static constexpr int CAPACITY = 256;
  uint8_t bytes[CAPACITY]{};
  long cut = -1;
  bool powered = true, dirty = false;
@@ -616,8 +616,24 @@ struct SimHost {
    return CMD_OK;
   }
   if (strcmp(cmd, "reboot") == 0) { store.flush(); boot(0); return CMD_OK; }
+  if (strcmp(cmd, "drill") == 0) {
+   char slug[32];
+   if (!t.word(slug, sizeof slug)) return CMD_BAD_ARG;
+   if (app().activity != vex::ACT_DRILL) app().setActivity(vex::ACT_DRILL);
+   else app().setRunning(false);
+   if (!app().drills.selectBySlug(slug, app().skills)) return CMD_BAD_ARG;
+   app().message(app().drills.preset().title);
+   return CMD_OK;
+  }
   if (strcmp(cmd, "corrupt") == 0) {
-   if (app().saved_slot >= 0) {
+   char which[16];
+   if (t.word(which, sizeof which) && strcmp(which, "skills") == 0) {
+    if (app().skills_slot >= 0) {
+     store.powered = true;
+     store.bytes[(app().skills_slot ? vex::SKILLS_SLOT_B : vex::SKILLS_SLOT_A) + 60] ^= 1;
+     store.dirty = true;
+    }
+   } else if (app().saved_slot >= 0) {
     store.powered = true;
     store.bytes[64 * app().saved_slot + 40] ^= 1;
     store.dirty = true;

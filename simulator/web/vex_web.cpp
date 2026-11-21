@@ -117,6 +117,9 @@ EMSCRIPTEN_KEEPALIVE void vex_powercut(long n){store.cut=n;}
 EMSCRIPTEN_KEEPALIVE int vex_pose(){return vex::chooseAnim(vex::quantised(sim.app().view())).anim;}
 EMSCRIPTEN_KEEPALIVE int vex_display_ms(){return int(DISPLAY_MS);}
 EMSCRIPTEN_KEEPALIVE const char* vex_notice(){return sim.app().notice;}
+EMSCRIPTEN_KEEPALIVE int vex_preset_count(){return int(vex::DRILL_PRESET_COUNT);}
+EMSCRIPTEN_KEEPALIVE const char* vex_preset_slug(int i){return (i>=0&&i<int(vex::DRILL_PRESET_COUNT))?vex::DRILL_PRESETS[i].slug:"";}
+EMSCRIPTEN_KEEPALIVE const char* vex_preset_title(int i){return (i>=0&&i<int(vex::DRILL_PRESET_COUNT))?vex::DRILL_PRESETS[i].title:"";}
 
 EMSCRIPTEN_KEEPALIVE const char* vex_state_schema(){
  if(!schemaBuilt){
