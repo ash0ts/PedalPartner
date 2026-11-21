@@ -1,0 +1,11 @@
+{
+  "name": "vibrato_hold_e4",
+  "kind": "synthetic",
+  "pitch_mode": "fast",
+  "commands": [
+    "vib 1200 E4 5.6 42 -16"
+  ],
+  "expected": [
+    {"onset_ms": 40.0, "note": "E4"}
+  ]
+}

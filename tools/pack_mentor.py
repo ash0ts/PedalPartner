@@ -41,6 +41,7 @@ STUDIO_EXTRA = (
     'docs/BUILD_GUIDE.md',
     'docs/LOCAL_DEVELOPMENT.md',
     'docs/PLAN.md',
+    'docs/DRILLS.md',
     'docs/SOURCES.md',
     'hardware/generated/parameters.json',
     'firmware/VEX_Pocket_Rival/config.h',

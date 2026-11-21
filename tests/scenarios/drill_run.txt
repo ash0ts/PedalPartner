@@ -1,0 +1,23 @@
+# Scale run checker (RUN): first note sets root, 12-dot chromatic display flashes gold in-scale
+# and red out-of-scale, spacing evenness infers clean tempo, and legato hammer-ons count cleanly.
+calibrate
+drill run-penta
+press foot 100
+expect activity=run-penta running=true run_root=-1
+# Clean 16-note A minor pentatonic run (including ~C3 and ~E3 hammer-ons): saves best clean BPM.
+notes 112x2 2 0 -18 A2 C3 D3 E3 G3 A3 G3 E3 D3 C3 A2 ~C3 D3 ~E3 G3 A3
+expect run_root=9 run_outside=0 bpm=112 drill_best=112 drill_rounds=1 skills_slot=0 anim=3
+golden drill_run_clean
+# Phrase with 5 out-of-scale notes (C#, F, G#) flashes red, counts outside notes, and keeps best=112.
+notes 120x2 3 0 -18 A2 C3 C#3 D3 F3 G3 G#3 A3 G3 F3 D3 C#3 C3 A2 C3 E3
+expect run_outside=5 drill_rounds=2 drill_best=112
+golden drill_run_outside
+# Major and natural minor presets validate diatonic 7-note runs from their first played root.
+drill run-major
+press foot 100
+notes 118x2 2 0 -18 C3 D3 E3 F3 G3 A3 B3 C4 B3 A3 G3 F3 E3 D3 C3 G3
+expect run_root=0 run_outside=0 drill_rounds=3 drill_best=117
+drill run-minor
+press foot 100
+notes 124x2 2 0 -18 E3 F#3 G3 A3 B3 C4 D4 E4 D4 C4 B3 A3 G3 F#3 E3 B3
+expect run_root=4 run_outside=0 drill_rounds=4 drill_best=123

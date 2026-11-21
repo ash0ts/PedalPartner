@@ -1,0 +1,29 @@
+# Bend and vibrato trainer (BEND): vibrato rate & width readout beside typical range,
+# flat bend feedback, 8-bend half-step round saving median error, and whole-step (+200 c) bends.
+calibrate
+drill bend-half
+press foot 100
+expect activity=bend-half running=true
+# Regular vibrato wobble on a held E4 reports rate (~5.6 Hz) and width (~41 c) without counting a bend.
+vib 1200 E4 5.6 42 -16
+expect bend_count=0 vib_rate_x10=56 vib_width=41
+golden drill_bend_vibrato
+# Under-bent half-step (+72 c vs +100 c target) records negative cents error (-25 c).
+bend 900 A3 72 340 -16
+expect bend_count=1 bend_err=-25
+# Seven clean +100 c bends complete the 8-bend round and save median |error| (0.1 c => best=1).
+bend 900 A3 100 340 -16
+bend 900 B3 100 340 -16
+bend 900 D4 100 340 -16
+bend 900 E4 100 340 -16
+bend 900 A3 100 340 -16
+bend 900 B3 100 340 -16
+bend 900 D4 100 340 -16
+expect drill_rounds=1 drill_best=1 skills_slot=0 anim=3 bend_err=0
+golden drill_bend_half
+# Whole-step preset (+200 c) tracks full-tone bends cleanly.
+drill bend-whole
+press foot 100
+expect activity=bend-whole
+bend 950 G3 200 360 -16
+expect bend_count=1 bend_err=2

@@ -53,6 +53,12 @@ inline void stateFields(const StateSource& s, Emit&& emit) {
  emit.u("drill_rounds", dst.rounds);
  emit.i("hunt_pc", s.app.drills.hunt.target_pc);
  emit.i("hunt_midi", s.app.drills.hunt.target_midi);
+ emit.i("bend_err", s.app.drills.bend.last_err_cents);
+ emit.u("bend_count", s.app.drills.bend.hist_count);
+ emit.u("vib_rate_x10", uint32_t(lroundf(s.app.drills.bend.vib_hz * 10.f)));
+ emit.u("vib_width", uint32_t(lroundf(s.app.drills.bend.vib_width_c)));
+ emit.i("run_root", s.app.drills.run.root_pc);
+ emit.u("run_outside", s.app.drills.run.round_done && s.app.drills.run.step_idx == 0 ? s.app.drills.run.last_outside : s.app.drills.run.outside_count);
  emit.b("power", s.powered);
  emit.i("pitch_midi", s.app.pitchNow.midi);
  emit.f("pitch_cents", s.app.pitchNow.cents);

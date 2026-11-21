@@ -40,9 +40,9 @@ struct DrillView {
  int8_t last_rel_pc = -1;
  bool last_in_scale = true;
 
- // VIZ_BARS (populated in PR 4)
+ // VIZ_BARS
  int8_t db_bars[12]{};         // dB*2 relative to median (-24..+24 => -12..+12 dB)
- uint8_t accent_mask = 0;      // bit k = bar k was an accent target
+ uint16_t accent_mask = 0;     // bit k = bar k was an accent target
  uint8_t bar_count = 0;
 };
 

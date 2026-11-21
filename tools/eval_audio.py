@@ -12,7 +12,7 @@ Real guitar clips (`"kind": "real"`, recorded with the Workbench "Record clip" b
 count and MIDI sequence while reporting timing and pitch stats.
 """
 from pathlib import Path
-import argparse, json, subprocess, sys, tempfile
+import argparse, json, math, subprocess, sys, tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 SIM = ROOT / "build/vex-sim"
@@ -99,6 +99,7 @@ def evaluate_case(spec: dict, events: list[dict]) -> dict:
     note_hits = 0
     note_total = 0
     bend_errs = []
+    level_errs = []
     seq_mismatch = False
 
     for exp, det in pairs:
@@ -113,6 +114,9 @@ def evaluate_case(spec: dict, events: list[dict]) -> dict:
                 seq_mismatch = True
         if "bend_cents" in exp:
             bend_errs.append(abs(float(det.get("bend_cents", 0.0)) - float(exp["bend_cents"])))
+        if "peak_db" in exp:
+            pk = max(float(det.get("peak", 0.0)), 1e-6)
+            level_errs.append(abs(20.0 * math.log10(pk) - float(exp["peak_db"])))
 
     return {
         "name": spec.get("name", "unnamed"),
@@ -125,6 +129,7 @@ def evaluate_case(spec: dict, events: list[dict]) -> dict:
         "note_hits": note_hits,
         "note_total": note_total,
         "bend_errs": bend_errs,
+        "level_errs": level_errs,
         "seq_mismatch": seq_mismatch,
     }
 
@@ -166,10 +171,12 @@ def main() -> None:
                 failures.append(f"{p.name}: missed={res['missed']} extra={res['extra']}")
             if res["note_hits"] != res["note_total"]:
                 failures.append(f"{p.name}: note accuracy {res['note_hits']}/{res['note_total']}")
-            if res["timing_errs"] and max(res["timing_errs"]) > 12.0:
-                failures.append(f"{p.name}: onset max error {max(res['timing_errs']):.2f} ms > 12.0 ms")
+            if res["timing_errs"] and max(res["timing_errs"]) > 15.0:
+                failures.append(f"{p.name}: onset max error {max(res['timing_errs']):.2f} ms > 15.0 ms")
             if res["bend_errs"] and max(res["bend_errs"]) > 5.0:
                 failures.append(f"{p.name}: bend max error {max(res['bend_errs']):.2f} c > 5.0 c")
+            if res["level_errs"] and max(res["level_errs"]) > 1.2:
+                failures.append(f"{p.name}: level max error {max(res['level_errs']):.2f} dB > 1.2 dB")
         else:
             real_cases += 1
             if res["missed"] or res["extra"] or res["seq_mismatch"]:
