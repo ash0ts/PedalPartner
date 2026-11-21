@@ -78,13 +78,14 @@ EMSCRIPTEN_KEEPALIVE int vex_display_ms(){return int(DISPLAY_MS);}
 EMSCRIPTEN_KEEPALIVE const char* vex_notice(){return app->notice;}
 EMSCRIPTEN_KEEPALIVE double* vex_state_ptr(){return state;}
 EMSCRIPTEN_KEEPALIVE double* vex_state(){
- const auto& p=app->progress;int i=0;
+ const auto& p=app->progress;const vex::AnimFrame f=vex::chooseAnim(vex::quantised(app->view()));int i=0;
  state[i++]=double(p.active_ms);state[i++]=double(p.session_ms);state[i++]=double(p.xp());state[i++]=p.level();state[i++]=p.fragments;
  state[i++]=p.goalMs()/60000;state[i++]=p.running;state[i++]=p.calibrated;state[i++]=p.active;state[i++]=app->tuning;state[i++]=app->calibrating;
  state[i++]=p.gate;state[i++]=app->rms;state[i++]=app->peak;state[i++]=app->stage;state[i++]=app->saved_slot;state[i++]=app->sequence;
  state[i++]=store.powered;state[i++]=app->pitchNow.midi;state[i++]=app->pitchNow.cents;state[i++]=app->pitchNow.valid;state[i++]=app->uncertain;
  state[i++]=analyzer.hz;state[i++]=analyzer.probability;state[i++]=app->now;
  state[i++]=app->env;state[i++]=p.hold_ms;state[i++]=p.credit_drops;
+ state[i++]=f.anim;state[i++]=f.frame;state[i++]=testPattern?1:0;
  return state;
 }
 }
