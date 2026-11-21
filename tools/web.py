@@ -19,12 +19,49 @@ from urllib.parse import urlparse,parse_qs
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'tools'));import link
 WEB=ROOT/'simulator/web';OUT=ROOT/'build/web';FIRMWARE=ROOT/'firmware/VEX_Pocket_Rival'
+SCENARIOS=ROOT/'tests/scenarios';GOLDENS=ROOT/'tests/golden'
 EMSCRIPTEN_MIN='7.0'   # Homebrew bottle used for development; record the actual version in the handoff
 EXPORTS=['_vex_boot','_vex_controls','_vex_tick','_vex_observe','_vex_pitch','_vex_serial','_vex_audio_ptr','_vex_audio_capacity','_vex_audio_push',
-         '_vex_render','_vex_frame_ptr','_vex_store_ptr','_vex_store_load','_vex_powercut','_vex_state_ptr','_vex_state','_vex_notice',
+         '_vex_render','_vex_test','_vex_frame_ptr','_vex_store_ptr','_vex_store_load','_vex_powercut','_vex_state_ptr','_vex_state','_vex_notice',
          '_vex_last_analysis_us','_vex_pose','_vex_display_ms']
 ART=ROOT/'art'
-SOURCES=[WEB/'vex_web.cpp',*FIRMWARE.glob('*.h'),WEB/'index.html',WEB/'app.js',WEB/'worklet.js',*ART.glob('*.json'),*ART.glob('*/*.json'),*ART.glob('*/*.png')]
+
+def tracked_sources():
+    return [WEB/'vex_web.cpp',*sorted(FIRMWARE.glob('*.h')),WEB/'index.html',*sorted(WEB.glob('*.js')),
+            *sorted(SCENARIOS.glob('*.txt')),*sorted(GOLDENS.glob('*.png')),
+            *sorted(ART.glob('*.json')),*sorted(ART.glob('*/*.json')),*sorted(ART.glob('*/*.png'))]
+
+GOLDEN_GROUPS={
+    'practice_quest.txt':'Practice & quest',
+    'calibration.txt':'Practice & quest',
+    'personality.txt':'Animations & banners',
+    'stages_and_tuner.txt':'Stages & tuner',
+    'real_audio.txt':'Reference recording',
+}
+
+def build_manifest():
+    scn_dir=OUT/'scenarios';gld_dir=OUT/'golden'
+    scn_dir.mkdir(parents=True,exist_ok=True);gld_dir.mkdir(parents=True,exist_ok=True)
+    scenarios=[];goldens=[];seen=set()
+    for sp in sorted(SCENARIOS.glob('*.txt')):
+        shutil.copy(sp,scn_dir/sp.name)
+        lines=sp.read_text().splitlines()
+        summary=next((l.lstrip('# ').strip() for l in lines if l.strip().startswith('#')),sp.stem)
+        scenarios.append({'name':sp.name,'stem':sp.stem,'file':f'scenarios/{sp.name}','summary':summary})
+        for idx,raw in enumerate(lines,1):
+            s=raw.strip()
+            if s.startswith('golden '):
+                gname=s.split()[1]
+                if gname in seen:continue
+                seen.add(gname)
+                png=GOLDENS/f'{gname}.png'
+                if png.exists():shutil.copy(png,gld_dir/png.name)
+                label=gname.replace('_',' ')
+                goldens.append({'name':gname,'label':label,'group':GOLDEN_GROUPS.get(sp.name,'Other'),
+                                'image':f'golden/{gname}.png','scenario':sp.name,'file':f'scenarios/{sp.name}','line':idx})
+    manifest={'scenarios':scenarios,'goldens':goldens}
+    (OUT/'manifest.json').write_text(json.dumps(manifest,indent=1))
+    return manifest
 
 def import_art():
     """Regenerate the sprite/theme/font headers from art/ so a saved PNG shows up on the next reload."""
@@ -53,15 +90,18 @@ def build(quiet=False):
     if r.returncode:
         lines=[l for l in log.read_text().splitlines() if 'INFO' not in l and not l.startswith('/')][-12:]
         sys.exit('em++ failed; see build/web-build.log:\n'+'\n'.join(l[:300] for l in lines))
-    for name in ['index.html','app.js','worklet.js']:shutil.copy(WEB/name,OUT/name)
+    for js in sorted(WEB.glob('*.js')):shutil.copy(js,OUT/js.name)
+    shutil.copy(WEB/'index.html',OUT/'index.html')
     shutil.copy(ROOT/'test_audio/guitar_notes_left_only.wav',OUT/'guitar_notes_left_only.wav')
-    (OUT/'build.json').write_text(json.dumps({'emscripten':version,'sources':{str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest()[:16] for p in SOURCES}},indent=1))
+    build_manifest()
+    sources=tracked_sources()
+    (OUT/'build.json').write_text(json.dumps({'emscripten':version,'sources':{str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest()[:16] for p in sources}},indent=1))
     if not quiet:print(f'Built build/web/vex.wasm ({(OUT/"vex.wasm").stat().st_size} bytes) with emscripten {version}')
 
 def stamp():
     # Files can vanish for a moment during a git checkout; ignore them until they return.
     times=[]
-    for p in SOURCES:
+    for p in tracked_sources():
         try:times.append(p.stat().st_mtime)
         except OSError:pass
     return max(times) if times else 0
@@ -173,7 +213,8 @@ def serve(port,device=None):
         def end_headers(self):
             self.send_header('Cache-Control','no-store');super().end_headers()
         def log_message(self,*_):pass
-    server=ThreadingHTTPServer(('127.0.0.1',port),Handler)
+    class Server(ThreadingHTTPServer):allow_reuse_address=True
+    server=Server(('127.0.0.1',port),Handler)
     print(f'VEX workbench: http://127.0.0.1:{port} (Ctrl-C to stop; edits rebuild and reload)',flush=True)
     if bridge:print(f'Device bridge: {device} (Device tab mirrors the panel; send "l" there or over serial to start band streaming)',flush=True)
     try:server.serve_forever()
@@ -181,45 +222,56 @@ def serve(port,device=None):
     finally:server.server_close()
 
 def check():
-    """Boot the WASM module in Node, replay a scenario prefix and compare the frame with the native golden."""
+    """Boot the WASM module in Node, replay every scenario via scenario.js and compare all goldens."""
     node=shutil.which('node')
     if not node or not shutil.which('emcc'):print('SKIP: web check needs node and emcc');return
     build(quiet=True)
     sys.path.insert(0,str(ROOT/'simulator'));from frames import png_rgb,diff_count
-    # Two frames replayed with the same steps as the native scenarios: a pet frame and a tuner frame.
     script=r'''
+const fs=require('fs'),path=require('path');
 const VexModule=require(process.argv[1]);
-VexModule().then(M=>{
-  let now=0;const raw={mode:0,quest:0,foot:0};let inject=null;
-  const step=()=>{now++;if(inject){M._vex_observe(inject.rms,inject.peak,now);if(inject.hz>0)M._vex_pitch(inject.hz,inject.prob,now);}M._vex_controls(raw.mode,raw.quest,raw.foot,now);M._vex_tick(now);};
-  const run=ms=>{for(let i=0;i<ms;i++)step();};
-  const press=(name,ms)=>{raw[name]=1;run(ms);raw[name]=0;run(30);};
-  const audio=(ms,rms,peak,hz=0,prob=1)=>{inject={rms,peak,hz,prob};run(ms);inject=null;};
-  const frame=()=>{const ptr=M._vex_render(now);const rgba=M.HEAPU8.subarray(ptr,ptr+240*240*4);const rgb=Buffer.alloc(240*240*3);
-    for(let i=0;i<240*240;i++){rgb[i*3]=rgba[i*4];rgb[i*3+1]=rgba[i*4+1];rgb[i*3+2]=rgba[i*4+2];}return rgb.toString('base64');};
-  const frames=[];
-  // tests/scenarios/practice_quest.txt up to `golden pet_listening`
-  M._vex_boot(4,0);now=0;
-  press('foot',100);audio(1000,.1,.3);M._vex_serial(99,now);audio(3100,.001,.002,0,0);press('foot',100);audio(3000,.1,.3);frames.push(frame());
-  // tests/scenarios/stages_and_tuner.txt from `stage 4` up to `golden tuner_sharp`
-  M._vex_boot(4,0);now=0;
-  press('mode',100);audio(500,.1,.3,440,.99);audio(500,.1,.3,82.4069,.99);audio(500,.1,.3,446,.99);frames.push(frame());
-  // tests/scenarios/personality.txt: two consecutive strum frames one display cadence apart.
-  M._vex_boot(4,0);now=0;
-  M._vex_serial(99,now);audio(3100,.001,.002,0,0);press('foot',100);audio(3000,.1,.3);frames.push(frame());audio(100,.1,.3);frames.push(frame());
-  // tests/scenarios/stages_and_tuner.txt: stage 2, then the bench test pattern (serial `t`).
-  M._vex_boot(2,0);now=0;press('foot',100);M._vex_test(1);frames.push(frame());M._vex_test(0);
-  process.stdout.write(frames.join('\n'));
-});'''
-    r=subprocess.run([node,'-e',script,str(OUT/'vex.js')],capture_output=True,text=True,cwd=ROOT)
-    if r.returncode:sys.exit('node failed:\n'+r.stderr[-2000:])
+const VexScenario=require(process.argv[2]);
+const scnDir=process.argv[3];
+const wavCache=new Map();
+function loadWav(rel,kind){
+  if(wavCache.has(rel))return wavCache.get(rel);
+  const buf=fs.readFileSync(rel);
+  let pcm;
+  if(kind==='raw'){pcm=new Int16Array(buf.buffer,buf.byteOffset,buf.byteLength>>1);}
+  else pcm=VexScenario.parseWavLeft16(buf);
+  wavCache.set(rel,pcm);return pcm;
+}
+(async()=>{
+  const M=await VexModule();
+  const files=fs.readdirSync(scnDir).filter(f=>f.endsWith('.txt')).sort();
+  const captured=[];const errors=[];
+  for(const file of files){
+    const text=fs.readFileSync(path.join(scnDir,file),'utf8');
+    const driver=VexScenario.createDriver(M);
+    const res=await VexScenario.runScenario(driver,text,{
+      fresh:true,label:file,loadWav,
+      onGolden:(name,line,rgba)=>{
+        const rgb=Buffer.alloc(240*240*3);
+        for(let i=0;i<240*240;i++){rgb[i*3]=rgba[i*4];rgb[i*3+1]=rgba[i*4+1];rgb[i*3+2]=rgba[i*4+2];}
+        captured.push({file,line,name,b64:rgb.toString('base64')});
+      }
+    });
+    for(const l of res.lines)if(l.startsWith('FAIL '))errors.push(l);
+  }
+  process.stdout.write(JSON.stringify({files:files.length,errors,captured}));
+})().catch(e=>{console.error(e);process.exit(1);});'''
+    r=subprocess.run([node,'-e',script,str(OUT/'vex.js'),str(OUT/'scenario.js'),str(SCENARIOS)],capture_output=True,text=True,cwd=ROOT)
+    if r.returncode:sys.exit('node failed:\n'+(r.stderr or r.stdout)[-2000:])
     import base64
-    names=['pet_listening','tuner_sharp','strum_frame_a','strum_frame_b','test_pattern'];got=r.stdout.strip().split('\n')
-    if len(got)!=len(names):sys.exit(f'WASM check produced {len(got)} frames, expected {len(names)}')
-    for name,frame in zip(names,got):
-        golden=png_rgb((ROOT/f'tests/golden/{name}.png').read_bytes());d=diff_count(golden,base64.b64decode(frame))
-        if d:sys.exit(f'WASM frame differs from native golden {name} in {d} pixels')
-    print('PASS: WASM build renders native goldens '+', '.join(names)+' pixel for pixel (strum advances one frame per display cadence)')
+    payload=json.loads(r.stdout)
+    failures=list(payload['errors']);seen=set()
+    for item in payload['captured']:
+        name=item['name'];seen.add(name)
+        golden=png_rgb((GOLDENS/f'{name}.png').read_bytes())
+        d=diff_count(golden,base64.b64decode(item['b64']))
+        if d:failures.append(f"{item['file']}:{item['line']}: WASM frame differs from native golden {name} in {d} pixels")
+    if failures:sys.exit('\n'.join(failures))
+    print(f"PASS: WASM build replays all {payload['files']} scenarios and matches all {len(seen)} native goldens pixel for pixel")
 
 def main():
     p=argparse.ArgumentParser(description=__doc__,formatter_class=argparse.RawDescriptionHelpFormatter)
