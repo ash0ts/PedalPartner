@@ -4,6 +4,7 @@
 #include <string.h>
 #include "config.h"
 #include "core.h"
+#include "drill_view.h"
 #include "theme.h"
 #include "sprites.h"
 #include "anim.h"
@@ -29,6 +30,7 @@ struct View {
  float rms=0,peak=0;
  uint32_t now=0,active_at=0,notice_at=0;
  uint32_t fragment_at=0,levelup_at=0,summary_at=0,summary_ms=0,summary_xp=0;
+ DrillView drill;
  const char* notice="Hold QUEST: calibrate";
 };
 // Tiny 5x7 font (captions). Glyphs are column bytes; advance is 6 px per scale step.
@@ -93,6 +95,10 @@ inline AnimFrame chooseAnim(const View& v){
  const auto& p=v.progress;
  if(v.now-v.levelup_at<UI_CELEBRATE_MS)return{ANIM_LEVELUP,loopFrame(ANIM_LEVELUP,v.now-v.levelup_at)};
  if(v.now-v.fragment_at<UI_CELEBRATE_MS)return{ANIM_CHEER,loopFrame(ANIM_CHEER,v.now-v.fragment_at)};
+ if(v.activity==ACT_DRILL){
+  if(v.drill.new_best)return{ANIM_CHEER,loopFrame(ANIM_CHEER,v.now)};
+  if(p.running)return{ANIM_LISTEN,loopFrame(ANIM_LISTEN,v.now)};
+ }
  if(v.activity==ACT_TUNER)return{ANIM_LISTEN,loopFrame(ANIM_LISTEN,v.now)};
  if(p.active)return{ANIM_STRUM,loopFrame(ANIM_STRUM,v.now)};
  if(v.now-v.active_at>UI_SLEEP_MS&&!p.running)return{ANIM_SLEEP,loopFrame(ANIM_SLEEP,v.now)};
@@ -195,9 +201,104 @@ inline View quantised(const View& v){
  clampTo(q.active_at,q.now);clampTo(q.notice_at,q.now);clampTo(q.fragment_at,q.now);clampTo(q.levelup_at,q.now);clampTo(q.summary_at,q.now);clampTo(q.last_pitch_at,q.now);
  return q;
 }
+template<class Canvas> void drawDrill(Canvas& c,const View& v){
+ const auto& d=v.drill;const auto& p=v.progress;
+ ring(c,d.ring_lit,d.new_best?UI_GOLD:UI_RED);
+ title(c,d.title,24,1,UI_GOLD);
+ centered(c,d.subtitle,41,1,UI_FADE);
+ // Small pixel-bat companion perched above the drill stage (uses listen / cheer / idle, no new art).
+ AnimFrame af=chooseAnim(v);
+ pet(c,spriteIndex(af),104,52,1);
+
+ if(d.viz==VIZ_TIMING){
+  // Centre beat line at x=120, +-30 ms pass brackets at x=84..156, and early/late note dots.
+  c.drawFastHLine(48,112,144,UI_DIM);
+  c.drawFastVLine(84,104,17,UI_FADE);
+  c.drawFastVLine(156,104,17,UI_FADE);
+  c.drawFastVLine(120,96,33,UI_GOLD);
+  text(c,"EARLY",48,92,1,UI_FADE);
+  text(c,"LATE",168,92,1,UI_FADE);
+  for(uint8_t i=0;i<d.dot_count;i++){
+   int ms=d.dots[i];
+   int px=120+(ms*60)/50;
+   if(px<48)px=48;
+   if(px>192)px=192;
+   bool ok=ms>=-d.pass_ms&&ms<=d.pass_ms;
+   bool newest=(i+1==d.dot_count);
+   int py=108+((i%3)-1)*4;
+   c.fillCircle(px,py,newest?4:2,ok?(newest?UI_GOLD:UI_INK):UI_RED);
+  }
+  title(c,d.mid,136,1,UI_INK);
+ }else if(d.viz==VIZ_PROMPT){
+  centered(c,d.big,92,3,d.wrong_flash?UI_RED:UI_INK);
+  title(c,d.mid,124,1,UI_GOLD);
+  if(p.calibrated&&p.active)c.fillRect(118,144,4,4,pulseColor(v.now));
+ }else if(d.viz==VIZ_BEND){
+  // Target horizontal bar at y=100, start line at y=132, live pitch bar + last-8 bends along bottom.
+  c.drawFastHLine(52,132,136,UI_DIM);
+  c.drawFastHLine(52,100,136,UI_GOLD);
+  int span=d.target_cents>0?d.target_cents:100;
+  int dy=(int(d.live_cents)*32)/span;
+  if(dy<-8)dy=-8;
+  if(dy>44)dy=44;
+  int py=132-dy;
+  uint16_t lc=(d.live_cents>=span-12&&d.live_cents<=span+12)?UI_GOLD:UI_INK;
+  c.fillRect(68,py-2,104,4,lc);
+  for(uint8_t i=0;i<d.bend_count&&i<8;i++){
+   int err=d.bend_hist[i];
+   uint16_t hc=(err>=-12&&err<=12)?UI_GOLD:UI_RED;
+   int hy=100-(err*16)/50;
+   if(hy<88)hy=88;
+   if(hy>134)hy=134;
+   c.fillCircle(64+i*16,hy,3,hc);
+  }
+  title(c,d.mid,140,1,UI_INK);
+ }else if(d.viz==VIZ_SCALE){
+  // 12 chromatic degree dots in two rows of 6; in-scale degrees outlined/lit, played degree highlighted.
+  for(int i=0;i<12;i++){
+   int col=i%6,row=i/6;
+   int cx=70+col*20,cy=98+row*18;
+   bool inScale=((d.scale_mask>>i)&1)!=0;
+   bool activeDeg=(d.last_rel_pc==i);
+   uint16_t dc=activeDeg?(d.last_in_scale?UI_GOLD:UI_RED):(inScale?UI_INK:UI_DIM);
+   c.fillCircle(cx,cy,activeDeg?5:(inScale?3:2),dc);
+  }
+  title(c,d.mid,136,1,d.wrong_flash?UI_RED:UI_INK);
+ }else if(d.viz==VIZ_BARS){
+  // Median reference line at y=114 and up to 12 per-note dB bars.
+  c.drawFastHLine(48,114,144,UI_GOLD);
+  for(uint8_t i=0;i<d.bar_count&&i<12;i++){
+   int bx=52+i*11;
+   int h2=d.db_bars[i]; // half-dB units relative to median
+   int bh=h2;
+   if(bh<-18)bh=-18;
+   if(bh>18)bh=18;
+   bool acc=((d.accent_mask>>i)&1)!=0;
+   uint16_t bc=acc?UI_GOLD:UI_INK;
+   if(bh>=0)c.fillRect(bx,114-bh,8,bh+2,bc);
+   else c.fillRect(bx,114,8,(-bh)+2,UI_DIM);
+  }
+  title(c,d.mid,138,1,UI_INK);
+ }
+
+ if(d.new_best){
+  c.fillRect(44,166,152,15,UI_GOLD);
+  centered(c,"NEW PERSONAL BEST",170,1,UI_BG);
+ }else if(!p.calibrated){
+  centered(c,"HOLD QUEST: CALIBRATE",170,1,UI_GOLD);
+ }else if(!p.running){
+  centered(c,"QUEST: PRESET  FOOT: GO",170,1,UI_GOLD);
+ }else{
+  centered(c,d.detail,170,1,d.wrong_flash?UI_RED:UI_INK);
+ }
+ if(v.now-v.notice_at<2200&&p.calibrated&&!d.new_best){
+  centered(c,v.notice,188,1,UI_FADE);
+ }
+}
 template<class Canvas> void drawActivity(Canvas& c,const View& v){
  switch(v.activity){
   case ACT_TUNER:drawTuner(c,v);break;
+  case ACT_DRILL:drawDrill(c,v);break;
   case ACT_PET:default:drawPet(c,v);break;
  }
 }

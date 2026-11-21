@@ -1,0 +1,48 @@
+# Timing trainer (PULSE): MODE/QUEST preset selection, LED beat, 4-bar speed ladder (+4/-4 BPM),
+# starts 8 BPM under saved best after reboot, and self-paced PULSE FREE mode.
+calibrate
+# MODE cycles Pet -> Tuner -> Drill (defaults to pulse-8th).
+press mode 100
+expect activity=tuner
+press mode 100
+expect activity=pulse-8th bpm=92 running=false
+# QUEST while paused steps through presets: pulse-8th -> pulse-free -> hunt-any -> hunt-str -> pulse-qtr.
+press quest 100
+expect activity=pulse-free
+press quest 100
+expect activity=hunt-any
+press quest 100
+expect activity=hunt-str
+press quest 100
+expect activity=pulse-qtr bpm=92
+# Start PULSE QTR: LED beat flashes at 92 BPM (beat_ms=652); QUEST tap is refused while running.
+press foot 100
+expect running=true beat_ms=652 led=true
+press quest 100
+expect activity=pulse-qtr notice=Pause_to_change_preset
+# Four clean bars (16 quarter notes at 92 BPM): raises BPM +4 to 96, saves best=92 in skills slot 0,
+# shows NEW PERSONAL BEST + cheer animation, and credits participation practice time (no score XP).
+notes 92 2 0 -18 E2 E2 E2 E2 A2 A2 A2 A2 D3 D3 D3 D3 G3 G3 G3 G3
+expect bpm=96 drill_best=92 drill_last=92 drill_rounds=1 skills_slot=0 anim=3
+golden drill_pulse_best
+# Rushing / sloppy round at 96 BPM (-12 ms/note rush + 45 ms jitter) fails the +-30 ms window.
+notes 96 45 -12 -18 E2 E2 E2 E2 A2 A2 A2 A2 D3 D3 D3 D3 G3 G3 G3 G3
+expect bpm=96 drill_best=92 drill_rounds=2
+golden drill_pulse_rushing
+# A second consecutive failed round lowers the ladder -4 BPM back to 92.
+notes 96 48 10 -18 E2 E2 E2 E2 A2 A2 A2 A2 D3 D3 D3 D3 G3 G3 G3 G3
+expect bpm=92 drill_rounds=3
+# Hold MODE to persist updated round count (skills slot toggles 0 -> 1), then reboot:
+# loads saved best (92 BPM) and starts 8 BPM below best (84 BPM).
+press mode 1300
+expect skills_slot=1
+reboot
+calibrate
+drill pulse-qtr
+expect activity=pulse-qtr drill_best=92 drill_rounds=3 bpm=84
+# Self-paced PULSE FREE (external metronome mode, beat_ms=0) infers BPM from your own spacing.
+drill pulse-free
+press foot 100
+expect beat_ms=0 running=true
+notes 108 2 0 -18 A2 A2 A2 A2 D3 D3 D3 D3 E3 E3 E3 E3 A2 A2 A2 A2
+expect drill_best=108 drill_rounds=4

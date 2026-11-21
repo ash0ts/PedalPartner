@@ -79,8 +79,9 @@ function persist(){try{localStorage.setItem('vex.store',btoa(String.fromCharCode
 function restoreStore(){
  try{
   const s=localStorage.getItem('vex.store');if(!s)return;
-  const b=atob(s);if(b.length!==128)return;
-  for(let i=0;i<128;i++)storeBytes[i]=b.charCodeAt(i);
+  const b=atob(s);if(b.length!==128&&b.length!==storeBytes.length)return;
+  storeBytes.fill(0xff);
+  for(let i=0;i<b.length;i++)storeBytes[i]=b.charCodeAt(i);
   M._vex_store_load();
  }catch(e){}
 }
@@ -143,7 +144,7 @@ function step(){
 function run(ms){for(let i=0;i<ms;i++)step();sim.dirty=true;}
 function telemetryLine(){
  const s=readState();
- note(`stage=${s.stage} rms=${s.rms.toFixed(5)} env=${s.env.toFixed(5)} peak=${s.peak.toFixed(3)} gate=${s.gate.toFixed(5)} active=${+s.active} hold_ms=${s.hold_ms} running=${+s.running} session_s=${Math.floor(s.session_ms/1000)} total_s=${Math.floor(s.active_ms/1000)} fragments=${s.fragments} drops=${s.credit_drops} pitch=yin hz=${s.hz.toFixed(2)} prob=${s.probability.toFixed(2)} yin_us=${M._vex_last_analysis_us()}`);
+ note(`stage=${s.stage} act=${s.activity} onsets=${s.onsets} bpm=${s.bpm} rms=${s.rms.toFixed(5)} env=${s.env.toFixed(5)} peak=${s.peak.toFixed(3)} gate=${s.gate.toFixed(5)} active=${+s.active} hold_ms=${s.hold_ms} running=${+s.running} session_s=${Math.floor(s.session_ms/1000)} total_s=${Math.floor(s.active_ms/1000)} fragments=${s.fragments} drops=${s.credit_drops} pitch=yin hz=${s.hz.toFixed(2)} prob=${s.probability.toFixed(2)} yin_us=${M._vex_last_analysis_us()}`);
 }
 
 // Audio sources -----------------------------------------------------------------------------------
@@ -439,11 +440,20 @@ function slotHtml(i,s){
  return `<h4>slot ${i} ${s.saved_slot===i?'· loaded':''} · ${valid?'valid':'invalid'}</h4><div class="mono">seq ${seq} · frag ${frag} · goal ${goal} · claimed ${claimed}<br>active ${active} ms · session ${session} ms</div><pre style="max-height:none;margin:6px 0 0">${hex}</pre>`;
 }
 
+function skillsSlotHtml(i,s){
+ const off=128+64*i,b=storeBytes.subarray(off,off+64),dv=new DataView(b.buffer,b.byteOffset,64);
+ const magic=dv.getUint32(0,true),ver=dv.getUint32(4,true),seq=dv.getUint32(8,true),sum=dv.getUint32(60,true);
+ const valid=magic===0x56585331&&ver===1&&sum===crc32(b,60);
+ const names=['pulse','hunt','bend','run','touch'];
+ const stats=names.map((n,k)=>`${n}:${dv.getUint16(12+k*6,true)}`).join(' · ');
+ return `<h4>skills ${i} (@${off}) ${s.skills_slot===i?'· loaded':''} · ${valid?'valid':'empty/invalid'}</h4><div class="mono">seq ${seq} · ${stats}</div>`;
+}
+
 let lastStoreSig='',lastPanelAt=0;
 function updatePanels(force){
  const s=readState();sim.lastState=s;
  $('clock').textContent=fmtClock(sim.now);
- $('led').classList.toggle('on',s.stage===2?!!sim.raw.foot:s.active);
+ $('led').classList.toggle('on',!!s.led);
  $('pose').textContent=sim.testPattern?'test pattern':(s.stage===4?`pose ${POSES[s.anim]||'?'}/${s.frame}`:'');
  $('notice').textContent=s.calibrating?'MUTE STRINGS...':s.notice;
  if(s.notice!==sim.lastNotice){
@@ -464,12 +474,13 @@ function updatePanels(force){
  const peak=$('m-peak');peak.style.width=`${Math.min(100,s.peak*100)}%`;peak.classList.toggle('clip',s.peak>=0.98);
  $('t-peak').textContent=s.peak.toFixed(3);
 
- const pitchWanted=s.stage===3||s.tuning;
- $('t-pitch').textContent=pitchWanted?`yin hz=${s.hz.toFixed(2)} prob=${s.probability.toFixed(2)} · midi ${s.pitch_midi} ${s.pitch_cents>=0?'+':''}${s.pitch_cents.toFixed(1)} c ${s.pitch_valid?'valid':''} · ${s.analyses} windows`:`pitch gated (stage ${s.stage} ${s.stage===4?'practice':'no audio'} · ${s.analyses} windows)`;
+ const pitchWanted=s.stage===3||s.tuning||s.activity.startsWith('hunt')||s.activity.startsWith('bend')||s.activity.startsWith('run');
+ $('t-pitch').textContent=pitchWanted?`yin hz=${s.hz.toFixed(2)} prob=${s.probability.toFixed(2)} · midi ${s.pitch_midi} ${s.pitch_cents>=0?'+':''}${s.pitch_cents.toFixed(1)} c ${s.pitch_valid?'valid':''} · ${s.analyses} windows`:`pitch gated (${s.activity} · ${s.analyses} windows)`;
  $('t-yin').textContent=`analyze ${M._vex_last_analysis_us()} µs`;
  if(sim.source&&sim.source.kind==='wav')$('wav-pos').textContent=`${(sim.source.pos/RATE).toFixed(1)} / ${(sim.source.total/RATE).toFixed(1)} s`;
  $('power').textContent=s.power?'power on':'POWER CUT · reboot to continue';
 
+ updateDrillsPanel(s);
  const evSig=`${s.onsets}:${s.note_midi}`;
  if(evSig!==sim.lastEventSig){sim.lastEventSig=evSig;sim.stripDirty=true;}
  if(sim.stripDirty||force)drawActivityStrip(s);
@@ -482,10 +493,12 @@ function updatePanels(force){
    $('state').innerHTML=window.VexScenario.stateNames(M).map(k=>`<tr><td>${k}</td><td>${typeof s[k]==='number'?(Number.isInteger(s[k])?s[k]:s[k].toFixed(4)):s[k]}</td></tr>`).join('');
   }
   if($('tab-eeprom').classList.contains('sel')){
-   const sig=Array.from(storeBytes).join(',')+s.saved_slot;
+   const sig=Array.from(storeBytes).join(',')+s.saved_slot+':'+s.skills_slot;
    if(sig!==lastStoreSig){
     lastStoreSig=sig;$('slot0').innerHTML=slotHtml(0,s);$('slot1').innerHTML=slotHtml(1,s);
     $('slot0').classList.toggle('live',s.saved_slot===0);$('slot1').classList.toggle('live',s.saved_slot===1);
+    $('skslot0').innerHTML=skillsSlotHtml(0,s);$('skslot1').innerHTML=skillsSlotHtml(1,s);
+    $('skslot0').classList.toggle('live',s.skills_slot===0);$('skslot1').classList.toggle('live',s.skills_slot===1);
    }
   }
   if(sim.logDirty){sim.logDirty=false;const pre=$('telemetry');pre.textContent=sim.telemetry.slice(-200).join('\n');pre.scrollTop=pre.scrollHeight;}
@@ -630,6 +643,103 @@ function selectInspectTab(tabName){
  sim.recDirty=true;lastStoreSig='';updatePanels(true);
 }
 
+// Guitar drills panel ("Play it for me" performances via shared protocol.h) -----------------------
+function execSim(line){
+ window.VexScenario.execLine(M,line);
+ if(M._vex_store_dirty())persist();
+ sim.now=M._vex_now();sim.audioClock=sim.now;
+ sampleStrip();
+}
+function initDrillsPanel(){
+ const wrap=$('drill-presets');if(!wrap)return;
+ wrap.innerHTML='';
+ const n=M._vex_preset_count();
+ for(let i=0;i<n;i++){
+  const slug=M.UTF8ToString(M._vex_preset_slug(i));
+  const title=M.UTF8ToString(M._vex_preset_title(i));
+  const b=document.createElement('button');
+  b.type='button';b.className='pill';b.dataset.drill=slug;b.textContent=title;
+  b.onclick=()=>{
+   setPaused(false);setInputMode('quiet');
+   if(sim.stage!==4){sim.stage=4;$('stage').value='4';boot(false);}
+   let st=readState();
+   if(!st.calibrated)execSim('calibrate');
+   execSim(`drill ${slug}`);
+   recordCommand(`drill ${slug}`);
+   renderScreenNow();updatePanels(true);
+  };
+  wrap.appendChild(b);
+ }
+ for(const b of document.querySelectorAll('[data-drill-play]')){
+  b.onclick=()=>playDrillPerformance(b.dataset.drillPlay);
+ }
+}
+function updateDrillsPanel(s){
+ for(const b of document.querySelectorAll('[data-drill]')){
+  b.classList.toggle('sel',s.activity===b.dataset.drill);
+ }
+ const el=$('drill-status');if(!el)return;
+ if(s.activity==='pet'||s.activity==='tuner'){
+  el.textContent=`on ${s.activity} · click a preset above to open Drill`;
+ }else{
+  el.textContent=`${s.activity} · ${s.running?'running':'paused'}${s.bpm?` · ${s.bpm} BPM`:''} · best ${s.drill_best} · rounds ${s.drill_rounds}`;
+ }
+}
+function playDrillPerformance(kind){
+ setPaused(false);setInputMode('quiet');
+ if(sim.stage!==4){sim.stage=4;$('stage').value='4';boot(false);}
+ let s=readState();
+ if(!s.calibrated){execSim('calibrate');s=readState();}
+ if(s.activity==='pet'||s.activity==='tuner'){execSim('drill pulse-8th');s=readState();}
+ if(!s.running){execSim('press foot 100');s=readState();}
+ const act=s.activity;
+ const PC=['C','C#','D','D#','E','F','F#','G','G#','A','Bb','B'];
+ if(act.startsWith('pulse')){
+  const is8=act==='pulse-8th',bpm=s.bpm||96,rate=is8?`${bpm}x2`:`${bpm}`;
+  const notes16='E2 E2 E2 E2 A2 A2 A2 A2 D3 D3 D3 D3 G3 G3 G3 G3';
+  const notes=is8?`${notes16} ${notes16}`:notes16;
+  if(kind==='steady')execSim(`notes ${rate} 2 0 -18 ${notes}`);
+  else if(kind==='rushing')execSim(`notes ${rate} 6 -9 -18 ${notes16}`);
+  else if(kind==='uneven')execSim(`notes ${rate} 46 0 -18 ${notes16}`);
+  else execSim(`notes ${rate} 3 0 -18 C#3 F3 F#3 C3 G#2 D#3 Bb2 E3`);
+ }else if(act.startsWith('hunt')){
+  const midiName=m=>`${PC[m%12]}${Math.floor(m/12)-1}`;
+  if(kind==='wrong'){
+   const wrongMidi=s.hunt_midi>0?(s.hunt_midi===40?41:40):((s.hunt_pc+1)%12+48);
+   execSim(`notes 140 0 0 -18 ${midiName(wrongMidi)}`);
+  }else{
+   const count=kind==='steady'?10:4;
+   for(let i=0;i<count;i++){
+    s=readState();
+    if(kind==='uneven'&&i%2===0)execSim('wait 1400');
+    const tok=s.hunt_midi>0?midiName(s.hunt_midi):`${PC[s.hunt_pc]}3`;
+    execSim(`notes ${kind==='rushing'?200:140} 0 0 -18 ${tok}`);
+   }
+  }
+ }else if(act.startsWith('bend')){
+  const tgt=act==='bend-whole'?200:100;
+  if(kind==='steady'){for(let i=0;i<4;i++)execSim(`bend 900 A3 ${tgt} 340 -16`);}
+  else if(kind==='rushing')execSim(`vib 1200 E4 5.6 42 -16`);
+  else if(kind==='uneven')execSim(`bend 900 D4 ${tgt+28} 340 -16`);
+  else execSim(`bend 900 A3 ${tgt-32} 340 -16`);
+ }else if(act.startsWith('run')){
+  if(kind==='steady')execSim('notes 112x2 2 0 -18 A2 C3 D3 E3 G3 A3 G3 E3 D3 C3 A2 C3 D3 E3 G3 A3');
+  else if(kind==='rushing')execSim('notes 128x2 5 -8 -18 A2 C3 D3 E3 G3 A3 G3 E3');
+  else if(kind==='uneven')execSim('notes 108x2 44 0 -18 A2 C3 D3 E3 G3 A3 G3 E3');
+  else execSim('notes 108x2 3 0 -18 A2 C3 C#3 D3 F3 G3 G#3 A3');
+ }else if(act.startsWith('touch')){
+  const acc3=act==='touch-acc3',acc4=act==='touch-acc4';
+  if(kind==='steady'){
+   if(acc3)execSim('notes 110x2 2 0 -20 A2@+6 A2 A2 D3@+6 D3 D3 E3@+6 E3 E3 A2@+6 A2 A2');
+   else if(acc4)execSim('notes 110x2 2 0 -20 A2@+6 A2 A2 A2 D3@+6 D3 D3 D3 E3@+6 E3 E3 E3');
+   else execSim('notes 110x2 2 0 -18 A2 A2 A2 A2 D3 D3 D3 D3 E3 E3 E3 E3');
+  }else if(kind==='rushing')execSim('notes 132x2 4 0 -18 A2 A2 A2 A2 D3 D3 D3 D3 E3 E3 E3 E3');
+  else if(kind==='uneven')execSim('notes 110x2 5 0 -20 A2@-6 A2@+5 A2@-4 A2@+7 D3@-5 D3@+4 D3@-7 D3@+6');
+  else execSim('notes 110x2 2 0 -18 A2 A2@+6 A2 D3 D3@+6 D3 E3 E3@+6 E3 A2 A2@+6 A2');
+ }
+ renderScreenNow();updatePanels(true);
+}
+
 // Wiring ------------------------------------------------------------------------------------------
 function wire(){
  $('pause').onclick=togglePause;
@@ -735,6 +845,7 @@ VexModule().then(mod=>{
  });
  galleryCtrl.init();
 
+ initDrillsPanel();
  wire();
  renderScreenNow();
  updatePanels(true);

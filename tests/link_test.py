@@ -15,7 +15,7 @@ whole=decode([data])
 kinds=[k for k,_ in whole];assert kinds==['text','band','state','band'],kinds
 assert whole[0][1].startswith('{"stage":4'),whole[0][1]
 y,h,px=whole[1][1];assert (y,h,len(px))==(36,100,100*240*2)
-state=whole[2][1];assert state['flush_us']==4321 and state['loop_max_us']==12000 and state['running'] and state['anim_name']=='strum',state
+state=whole[2][1];assert state['flush_us']==4321 and state['loop_max_us']==12000 and state['running'] and state['anim_name']=='strum' and state['activity_name']=='pet',state
 assert whole[3][1][:2]==(200,8)
 frame=link.Frame();frame.apply(y,h,px);assert frame.generation==1 and not frame.complete and len(frame.rgb())==240*240*3
 # Any chunking yields the same packets.

@@ -40,6 +40,7 @@ audio 1000 0 0 440 .99
 expect active_ms~=15190
 serial p
 press mode 100
+press mode 100
 press foot 100
 # Stale samples (unplugged cable) zero the hold as soon as freshness expires (<100 ms).
 audio 1000 .1 .3

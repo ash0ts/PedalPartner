@@ -13,8 +13,8 @@ def row(up_ms,**kw):
 
 events=[(0,'session',{'started':'2026-11-18T09:15:00','port':'/dev/cu.usbmodem1','note':'test'})]
 events.append((0.5,'text','VEX USB OK'))
-for i in range(10):events.append((1+i,'telemetry',row(1000*(i+1))))
-events.append((11,'telemetry',row(11000,peak=.99,in_level=3)))          # one clipped second after a level step
+for i in range(10):events.append((1+i,'telemetry',row(1000*(i+1),activity='pet',onsets=i*2,bpm=0)))
+events.append((11,'telemetry',row(11000,peak=.99,in_level=3,activity='pulse-8th',onsets=24,bpm=96)))          # one clipped second after a level step
 events.append((12,'telemetry',row(500,fragments=3,flush_max_us=42000,credit_drops=2,spi_hz=24000000)))   # reboot: uptime restarts; a slow flush
 events.append((13,'state',{'now_ms':600,'flush_us':5000}))
 events.append((14,'state',{'now_ms':300,'flush_us':4000}))              # second reboot seen through state packets
@@ -26,6 +26,7 @@ assert s['draw_us']=={'median':720,'max':910} and s['credit_drops']==2
 assert s['flush_us']['max']==5000 and s['flush_max_us']==42000 and s['flush_us']['samples']==14
 assert s['clip_seconds']==1 and s['peak']['max']==.99
 assert s['fragments']=={'first':2,'last':3} and s['gate']==.004 and s['active_seconds']==12
+assert s['activities']==['pet','pulse-8th'] and s['onsets_max']==24 and s['bpm_max']==96
 assert s['dma_gate']['keep_blocking_driver'] is False and s['dma_gate']['limit_us']==33333
 text=bench_report.render(s)
 assert 'reboots 2' in text and 'draw_us median 720 max 910' in text and 'credit_drops 2' in text and '09 Quest award' in text and 'open the DMA-driver task' in text and '06 Input attenuation' in text,text

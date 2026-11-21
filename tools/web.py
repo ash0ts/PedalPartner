@@ -26,7 +26,8 @@ EXPORTS=['_vex_boot','_vex_reset','_vex_now','_vex_controls','_vex_tick','_vex_o
          '_vex_event_count','_vex_event',
          '_vex_render','_vex_test','_vex_frame_ptr','_vex_store_ptr','_vex_store_size','_vex_store_load','_vex_store_dirty','_vex_powercut',
          '_vex_state_schema','_vex_state_ptr','_vex_state_str','_vex_state','_vex_notice',
-         '_vex_last_analysis_us','_vex_pose','_vex_display_ms']
+         '_vex_last_analysis_us','_vex_pose','_vex_display_ms',
+         '_vex_preset_count','_vex_preset_slug','_vex_preset_title']
 ART=ROOT/'art'
 
 def tracked_sources():
@@ -41,6 +42,11 @@ GOLDEN_GROUPS={
     'personality.txt':'Animations & banners',
     'stages_and_tuner.txt':'Stages & tuner',
     'real_audio.txt':'Reference recording',
+    'drill_pulse.txt':'Guitar drills',
+    'drill_hunt.txt':'Guitar drills',
+    'drill_bend.txt':'Guitar drills',
+    'drill_run.txt':'Guitar drills',
+    'drill_touch.txt':'Guitar drills',
 }
 
 def build_manifest():

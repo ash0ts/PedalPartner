@@ -10,14 +10,17 @@ FRAME_W=FRAME_H=240
 STATE=struct.Struct('<5I5f6IhH4Bb3B')
 STATE_FIELDS=('now_ms','active_ms','session_ms','fragments','sequence','gate','rms','peak','cents','cpu',
               'tx_bytes','flush_us','flush_max_us','yin_us','yin_max_us','loop_max_us','midi','goal_minutes',
-              'stage','flags','anim','frame','saved_slot','cadence_mul','level','pad')
+              'stage','flags','anim','frame','saved_slot','cadence_mul','level','activity')
 FLAGS=('running','calibrated','active','tuning','calibrating','claimed','codec','pitch_valid')
 ANIMS=('idle','blink','strum','cheer','levelup','listen','sleep')
+ACTIVITIES=('pet','tuner','pulse','hunt','bend','run','touch')
 assert STATE.size==76,STATE.size
 def parse_state(payload):
-    values=dict(zip(STATE_FIELDS,STATE.unpack(payload)));flags=values.pop('flags');values.pop('pad')
+    values=dict(zip(STATE_FIELDS,STATE.unpack(payload)));flags=values.pop('flags')
     for i,name in enumerate(FLAGS):values[name]=bool(flags>>i&1)
     values['anim_name']=ANIMS[values['anim']] if values['anim']<len(ANIMS) else str(values['anim'])
+    act=values['activity']
+    values['activity_name']=ACTIVITIES[act] if act<len(ACTIVITIES) else str(act)
     return values
 def parse(buf,at=0):
     """Parse one packet at buf[at:]. Returns (consumed, kind, value): consumed 0 = need more bytes,

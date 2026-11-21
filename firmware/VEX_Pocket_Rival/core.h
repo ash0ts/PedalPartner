@@ -21,7 +21,7 @@ struct Onset { uint32_t sample=0; float rms=0, peak=0; };
 
 // Foreground screens on stage 4. One table defines whether each screen credits practice, starts on
 // the footswitch or runs pitch analysis, so adding a drill does not scatter flags across App and UI.
-enum Activity : uint8_t { ACT_PET=0, ACT_TUNER=1, ACT_COUNT=2 };
+enum Activity : uint8_t { ACT_PET=0, ACT_TUNER=1, ACT_DRILL=2, ACT_COUNT=3 };
 struct ActivityDef {
  Activity id;
  const char* name;
@@ -30,8 +30,9 @@ struct ActivityDef {
  PitchMode pitch_mode;
 };
 constexpr ActivityDef ACTIVITIES[ACT_COUNT]={
- {ACT_PET,"pet","Tap footswitch to start",true,true,PITCH_OFF},
- {ACT_TUNER,"tuner","Rig handles muting",false,false,PITCH_TUNER},
+ {ACT_PET,  "pet",  "Tap footswitch to start", true,  true,  PITCH_OFF},
+ {ACT_TUNER,"tuner","Rig handles muting",      false, false, PITCH_TUNER},
+ {ACT_DRILL,"drill","QUEST: preset  FOOT: go", true,  true,  PITCH_OFF},
 };
 inline const ActivityDef& activityDef(Activity a){return ACTIVITIES[uint8_t(a)<ACT_COUNT?uint8_t(a):0];}
 inline void midiNoteName(int midi,char out[8]){
@@ -78,11 +79,58 @@ inline Pitch pitch(float hz,float probability){
 // 48 bytes; two 64-byte EEPROM slots. CRC-32/ISO-HDLC protects payload.
 struct Record {uint32_t magic,version,sequence,fragments,goal_index,claimed;uint64_t active_ms,session_ms;uint32_t checksum,padding;};
 static_assert(sizeof(Record)==48,"Record layout changed: version and migration required");
-inline uint32_t crc(const Record&r){uint32_t c=0xffffffffu;const auto*p=(const uint8_t*)&r;for(size_t i=0;i<offsetof(Record,checksum);++i){c^=p[i];for(int j=0;j<8;j++)c=(c>>1)^(0xedb88320u&uint32_t(-int32_t(c&1)));}return ~c;}
+inline uint32_t crcBytes(const uint8_t* p,size_t n){uint32_t c=0xffffffffu;for(size_t i=0;i<n;++i){c^=p[i];for(int j=0;j<8;j++)c=(c>>1)^(0xedb88320u&uint32_t(-int32_t(c&1)));}return ~c;}
+inline uint32_t crc(const Record&r){return crcBytes((const uint8_t*)&r,offsetof(Record,checksum));}
 inline Record record(const Progress&p,uint32_t seq){Record r{};r.magic=0x56455831;r.version=1;r.sequence=seq;r.fragments=p.fragments;r.goal_index=p.goal_index;r.claimed=p.claimed;r.active_ms=p.active_ms;r.session_ms=p.session_ms;r.checksum=crc(r);return r;}
 inline bool valid(const Record&r){return r.magic==0x56455831&&r.version==1&&r.goal_index<3&&r.claimed<2&&r.checksum==crc(r);}
 inline bool newer(uint32_t a,uint32_t b){return int32_t(a-b)>0;}
 inline void restore(Progress&p,const Record&r){p.active_ms=r.active_ms;p.session_ms=r.session_ms;p.fragments=r.fragments;p.goal_index=r.goal_index;p.claimed=r.claimed;p.running=false;p.calibrated=false;p.active=false;p.hold_ms=0;p.credit_drops=0;}
+
+// Two-slot CRC-protected skills block at EEPROM 128 and 192 (64 bytes each, explicit little-endian).
+// Holds personal-best, last score and round count for up to 8 drills; never affects XP or Record v1.
+enum SkillId : uint8_t { SKILL_PULSE=0, SKILL_HUNT=1, SKILL_BEND=2, SKILL_RUN=3, SKILL_TOUCH=4, SKILL_SLOTS=8 };
+struct SkillStat { uint16_t best=0, last=0, rounds=0; };
+struct Skills {
+ uint32_t sequence=0;
+ SkillStat stats[SKILL_SLOTS]{};
+};
+constexpr int SKILLS_SLOT_A=128, SKILLS_SLOT_B=192, SKILLS_BYTES=64;
+constexpr uint32_t SKILLS_MAGIC=0x56585331u, SKILLS_VERSION=1u;
+
+inline void putLe16(uint8_t* p,uint16_t v){p[0]=uint8_t(v&0xffu);p[1]=uint8_t((v>>8)&0xffu);}
+inline void putLe32(uint8_t* p,uint32_t v){p[0]=uint8_t(v&0xffu);p[1]=uint8_t((v>>8)&0xffu);p[2]=uint8_t((v>>16)&0xffu);p[3]=uint8_t((v>>24)&0xffu);}
+inline uint16_t getLe16(const uint8_t* p){return uint16_t(p[0])|(uint16_t(p[1])<<8);}
+inline uint32_t getLe32(const uint8_t* p){return uint32_t(p[0])|(uint32_t(p[1])<<8)|(uint32_t(p[2])<<16)|(uint32_t(p[3])<<24);}
+
+inline void packSkills(const Skills& s,uint32_t seq,uint8_t out[SKILLS_BYTES]){
+ putLe32(out+0,SKILLS_MAGIC);
+ putLe32(out+4,SKILLS_VERSION);
+ putLe32(out+8,seq);
+ for(int i=0;i<SKILL_SLOTS;i++){
+  int off=12+i*6;
+  putLe16(out+off+0,s.stats[i].best);
+  putLe16(out+off+2,s.stats[i].last);
+  putLe16(out+off+4,s.stats[i].rounds);
+ }
+ putLe32(out+60,crcBytes(out,60));
+}
+inline bool unpackSkills(const uint8_t in[SKILLS_BYTES],Skills& out){
+ if(getLe32(in+0)!=SKILLS_MAGIC||getLe32(in+4)!=SKILLS_VERSION)return false;
+ if(getLe32(in+60)!=crcBytes(in,60))return false;
+ out.sequence=getLe32(in+8);
+ for(int i=0;i<SKILL_SLOTS;i++){
+  int off=12+i*6;
+  out.stats[i].best=getLe16(in+off+0);
+  out.stats[i].last=getLe16(in+off+2);
+  out.stats[i].rounds=getLe16(in+off+4);
+ }
+ return true;
+}
+inline uint32_t skillsHash(const Skills& s){
+ uint8_t buf[SKILLS_BYTES];
+ packSkills(s,0,buf);
+ return getLe32(buf+60);
+}
 struct Button {
  bool raw=false,stable=false,held=false;uint32_t changed=0,down=0;
  int update(bool pressed,uint32_t now){

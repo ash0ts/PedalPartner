@@ -121,11 +121,12 @@ The firmware is instrumented so the questions the desktop cannot answer (how lon
 From stage 2 up, the sketch prints **one JSON line per second**, for example:
 
 ```json
-{"stage":4,"up_ms":42310,"codec":1,"rms":0.05012,"peak":0.201,"gate":0.00400,"active":1,"running":1,"session_s":42,"total_s":642,"fragments":2,"level":2,"credit_drops":0,"cpu":11.3,"memory":12,"tx_bytes":28800,"tx_max_bytes":115200,"draw_us":720,"draw_max_us":910,"flush_us":3400,"flush_max_us":17100,"loop_max_us":18240,"cadence_ms":100,"diff":1,"full":0,"link":0,"test":0,"spi_hz":16000000,"in_level":0,"anim":2,"frame":3,"pitch":"yin","hz":0.00,"prob":0.00,"yin_us":0,"yin_max_us":2210}
+{"stage":4,"up_ms":42310,"codec":1,"activity":"pulse-8th","onsets":32,"bpm":96,"rms":0.05012,"peak":0.201,"gate":0.00400,"active":1,"running":1,"session_s":42,"total_s":642,"fragments":2,"level":2,"credit_drops":0,"cpu":11.3,"memory":12,"tx_bytes":28800,"tx_max_bytes":115200,"draw_us":720,"draw_max_us":910,"flush_us":3400,"flush_max_us":17100,"loop_max_us":18240,"cadence_ms":100,"diff":1,"full":0,"link":0,"test":0,"spi_hz":16000000,"in_level":0,"anim":2,"frame":3,"pitch":"yin","hz":0.00,"prob":0.00,"yin_us":0,"yin_max_us":2210}
 ```
 
 | Field | Meaning |
 |---|---|
+| `activity`, `onsets`, `bpm` | Current foreground screen or drill preset slug (`pet`, `tuner`, `pulse-8th`, `hunt-str`, …), cumulative note events detected since boot, and active drill BPM (`0` when not in a tempo drill). |
 | `draw_us`, `draw_max_us` | `micros()` around rendering into the RAM canvas plus the dirty-band row diff (`vex::bands`), before SPI begins. |
 | `flush_us`, `flush_max_us` | `micros()` around the SPI band transfer (`Panel::begin/writeBand/end` + shadow copy) for the last cadence (`0` if no rows changed), and the maximum since boot. Must stay well under `cadence_ms × 1000`; the DMA gate compares `flush_max_us` directly against SPI budget. |
 | `credit_drops` | Practice ticks rejected since boot because a loop pass exceeded 100 ms (`dt > 100` while running with fresh unclipped audio). Should stay `0`. |
