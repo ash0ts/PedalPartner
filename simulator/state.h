@@ -49,6 +49,11 @@ inline void stateFields(const StateSource& s, Emit&& emit) {
  emit.f("hz", s.analyzer.hz);
  emit.f("probability", s.analyzer.probability);
  emit.u("analyses", s.analyses);
+ emit.u("onsets", s.app.notes.total_events);
+ emit.i("note_midi", s.app.notes.latest().midi);
+ emit.f("note_cents", s.app.notes.latest().cents);
+ emit.f("bend_cents", s.app.notes.latest().bend_cents);
+ emit.f("note_peak", s.app.notes.latest().peak);
  emit.u("now_ms", s.app.now);
  emit.i("anim", f.anim);
  emit.i("frame", f.frame);

@@ -1,0 +1,15 @@
+{
+  "name": "ref_open_strings",
+  "kind": "real",
+  "pitch_mode": "tuner",
+  "wav": "../guitar_notes_left_only.wav",
+  "expected": [
+    {"note": "E2"},
+    {"note": "A2"},
+    {"note": "D3"},
+    {"note": "G3"},
+    {"note": "B3"},
+    {"note": "E4"},
+    {"note": "A4"}
+  ]
+}

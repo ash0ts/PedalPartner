@@ -3,6 +3,22 @@
 #include <stddef.h>
 #include <math.h>
 namespace vex {
+// Pitch analysis budgets selected per activity:
+// - PITCH_TUNER: 55..1400 Hz, 2048 window, 2048 hop (46.4 ms; classic tuner & note finder)
+// - PITCH_FAST:  140..1400 Hz, 1024 window, 512 hop (11.6 ms; ~0.22 M ops for bends & vibrato)
+// - PITCH_RUN:   55..1400 Hz, 2048 window, 1024 hop (23.2 ms; scale runs, with 2048 fallback)
+enum PitchMode : uint8_t { PITCH_OFF=0, PITCH_TUNER=1, PITCH_FAST=2, PITCH_RUN=3 };
+struct PitchProfile { uint16_t window, hop, tau_min, tau_max; };
+constexpr PitchProfile pitchProfile(PitchMode m, bool slowRunFallback=false) {
+ switch (m) {
+  case PITCH_FAST:  return {1024, 512,  44100/1400, 44100/140 + 1};
+  case PITCH_RUN:   return {2048, uint16_t(slowRunFallback ? 2048 : 1024), 44100/1400, 44100/55 + 1};
+  case PITCH_TUNER: return {2048, 2048, 44100/1400, 44100/55 + 1};
+  case PITCH_OFF: default: return {0, 0, 0, 0};
+ }
+}
+struct Onset { uint32_t sample=0; float rms=0, peak=0; };
+
 // Foreground screens on stage 4. One table defines whether each screen credits practice, starts on
 // the footswitch or runs pitch analysis, so adding a drill does not scatter flags across App and UI.
 enum Activity : uint8_t { ACT_PET=0, ACT_TUNER=1, ACT_COUNT=2 };
@@ -10,13 +26,23 @@ struct ActivityDef {
  Activity id;
  const char* name;
  const char* enter_notice;
- bool credits_practice, allows_run, wants_pitch;
+ bool credits_practice, allows_run;
+ PitchMode pitch_mode;
 };
 constexpr ActivityDef ACTIVITIES[ACT_COUNT]={
- {ACT_PET,"pet","Tap footswitch to start",true,true,false},
- {ACT_TUNER,"tuner","Rig handles muting",false,false,true},
+ {ACT_PET,"pet","Tap footswitch to start",true,true,PITCH_OFF},
+ {ACT_TUNER,"tuner","Rig handles muting",false,false,PITCH_TUNER},
 };
 inline const ActivityDef& activityDef(Activity a){return ACTIVITIES[uint8_t(a)<ACT_COUNT?uint8_t(a):0];}
+inline void midiNoteName(int midi,char out[8]){
+ static constexpr const char* NAMES[12]={"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"};
+ if(midi<=0||midi>127){out[0]='-';out[1]='\0';return;}
+ const char* n=NAMES[midi%12];int oct=midi/12-1,k=0;
+ while(*n)out[k++]=*n++;
+ if(oct<0){out[k++]='-';oct=-oct;}
+ if(oct>=10)out[k++]=char('0'+oct/10);
+ out[k++]=char('0'+oct%10);out[k]='\0';
+}
 // Hold practice activity across inter-strum gaps; silence longer than this earns nothing.
 constexpr uint16_t ACTIVITY_HOLD_MS=500;
 struct Progress {

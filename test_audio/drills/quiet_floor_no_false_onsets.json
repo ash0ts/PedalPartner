@@ -1,0 +1,9 @@
+{
+  "name": "quiet_floor_no_false_onsets",
+  "kind": "synthetic",
+  "pitch_mode": "tuner",
+  "commands": [
+    "tone 2000 110 -65"
+  ],
+  "expected": []
+}

@@ -118,10 +118,17 @@ void loop(){
   if(fresh)app.observe(rms,peak,now);
   if(app.wantsPitch()&&noteNode.available())app.observePitch(noteNode.read(),noteNode.probability(),now);
 #else
-  if(analyzer.takeLevel(rms,peak))app.observe(rms,peak,now);
-  if(app.wantsPitch()){
+  analyzer.setGate(app.progress.gate);
+  uint32_t sc=0;
+  if(analyzer.takeLevel(rms,peak,&sc))app.observe(rms,peak,now,sc);
+  vex::Onset ons;while(analyzer.takeOnset(ons))app.observeOnset(ons,now);
+  vex::PitchMode pm=app.pitchMode();
+  if(pm!=vex::PITCH_OFF){
    uint32_t started=micros();
-   if(analyzer.analyze()){timing.yin_us=micros()-started;if(timing.yin_us>timing.yin_max_us)timing.yin_max_us=timing.yin_us;app.observePitch(analyzer.hz,analyzer.probability,millis());}
+   if(analyzer.analyze(pm,app.slow_run_hop)){
+    timing.yin_us=micros()-started;if(timing.yin_us>timing.yin_max_us)timing.yin_max_us=timing.yin_us;
+    app.observePitch(analyzer.hz,analyzer.probability,millis(),analyzer.pitch_sample,vex::pitchProfile(pm,app.slow_run_hop).window);
+   }
   }else{analyzer.skip();timing.yin_us=0;}
 #endif
  }

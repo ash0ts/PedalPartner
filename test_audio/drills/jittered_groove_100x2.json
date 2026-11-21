@@ -1,0 +1,18 @@
+{
+  "name": "jittered_groove_100x2",
+  "kind": "synthetic",
+  "pitch_mode": "tuner",
+  "commands": [
+    "notes 100x2 14 3 -18 E2 A2 D3 G3 B3 E4 G3 D3"
+  ],
+  "expected": [
+    {"note": "E2"},
+    {"note": "A2"},
+    {"note": "D3"},
+    {"note": "G3"},
+    {"note": "B3"},
+    {"note": "E4"},
+    {"note": "G3"},
+    {"note": "D3"}
+  ]
+}

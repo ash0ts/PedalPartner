@@ -16,7 +16,8 @@ const sim={
  lastNotice:'',notices:[],telemetry:[],logDirty:false,
  record:[],span:null,recDirty:false,
  lastState:null,testPattern:false,
- strip:[],stripHead:0,stripDirty:true
+ strip:[],stripHead:0,stripDirty:true,lastEventSig:'',
+ clipRec:{active:false,chunks:[],samples:0,maxSamples:RATE*30,blobUrl:null}
 };
 
 let M,audioPtr,storeBytes,image,ctx,stripCtx,sessionCtrl,galleryCtrl,stripIdx;
@@ -31,12 +32,12 @@ function readState(){
 }
 
 // Fast zero-alloc sample every 50 simulated ms for the 30 s activity strip.
-function clearStrip(){sim.strip.length=0;sim.stripHead=0;sim.stripDirty=true;}
+function clearStrip(){sim.strip.length=0;sim.stripHead=0;sim.stripDirty=true;sim.lastEventSig='';}
 function sampleStrip(){
  const p=M._vex_state()>>3;
  const gate=M.HEAPF64[p+stripIdx.gate],rms=M.HEAPF64[p+stripIdx.rms],peak=M.HEAPF64[p+stripIdx.peak];
  const active=M.HEAPF64[p+stripIdx.active]!==0,env=M.HEAPF64[p+stripIdx.env],hold=M.HEAPF64[p+stripIdx.hold_ms];
- const item={rms,env,peak,gate,active,holding:active&&rms<=gate&&hold>0,clipped:peak>=0.98};
+ const item={at:sim.now,rms,env,peak,gate,active,holding:active&&rms<=gate&&hold>0,clipped:peak>=0.98};
  if(sim.strip.length<STRIP_LEN)sim.strip.push(item);
  else{sim.strip[sim.stripHead]=item;sim.stripHead=(sim.stripHead+1)%STRIP_LEN;}
  sim.stripDirty=true;
@@ -85,7 +86,39 @@ function restoreStore(){
 }
 
 // One simulated millisecond -----------------------------------------------------------------------
+function stopClipRecording(){
+ const cr=sim.clipRec;if(!cr.active)return;
+ cr.active=false;
+ const btn=$('clip-rec');btn.classList.remove('on');btn.textContent='Record clip';
+ if(!cr.samples){$('clip-info').textContent='0 samples captured';return;}
+ const pcm=new Int16Array(cr.samples);let off=0;
+ for(const ch of cr.chunks){pcm.set(ch,off);off+=ch.length;}
+ cr.chunks=[];
+ const wavBytes=window.VexScenario.encodeWav16Mono(pcm,RATE);
+ const rawName=($('clip-name').value||'take_01').trim().replace(/[^a-zA-Z0-9_-]/g,'_')||'take_01';
+ const fileName=rawName.endsWith('.wav')?rawName:`${rawName}.wav`;
+ if(cr.blobUrl)URL.revokeObjectURL(cr.blobUrl);
+ cr.blobUrl=URL.createObjectURL(new Blob([wavBytes],{type:'audio/wav'}));
+ window.__lastClipWav={fileName,samples:cr.samples,durationMs:Math.round(cr.samples*1000/RATE),bytes:wavBytes.byteLength};
+ const dl=$('clip-dl');dl.href=cr.blobUrl;dl.download=fileName;dl.textContent=`${fileName} (${(cr.samples/RATE).toFixed(1)}s)`;dl.hidden=false;
+ $('clip-info').textContent=`saved ${fileName} · ${(cr.samples/RATE).toFixed(2)} s`;
+ try{dl.click();}catch(_){}
+ note(`recorded clip ${fileName} (${cr.samples} samples, ${wavBytes.byteLength} B)`);
+}
+function toggleClipRecording(){
+ const cr=sim.clipRec;
+ if(cr.active){stopClipRecording();return;}
+ cr.active=true;cr.chunks=[];cr.samples=0;
+ const btn=$('clip-rec');btn.classList.add('on');btn.textContent='Stop & save WAV';
+ $('clip-dl').hidden=true;$('clip-info').textContent='recording 44.1 kHz PCM…';
+ note('clip recording armed');
+}
 function pushBlock(block,now){
+ if(sim.clipRec.active){
+  const copy=new Int16Array(block);
+  sim.clipRec.chunks.push(copy);sim.clipRec.samples+=copy.length;
+  if(sim.clipRec.samples>=sim.clipRec.maxSamples)stopClipRecording();
+ }
  M.HEAP16.set(block,audioPtr>>1);
  M._vex_audio_push(BLOCK,now);
 }
@@ -300,14 +333,18 @@ function scenarioText(){
  return out.join('\n');
 }
 
-// 30 s Activity strip renderer --------------------------------------------------------------------
+// 30 s Activity strip + Note lane renderer --------------------------------------------------------
 function drawActivityStrip(s){
  if(!stripCtx)return;
- const c=$('activity-strip'),w=c.width,h=c.height;
+ const c=$('activity-strip'),w=c.width,h=c.height,laneH=20,plotH=h-laneH;
  stripCtx.clearRect(0,0,w,h);
  const n=sim.strip.length;
  const at=i=>sim.strip.length<STRIP_LEN?sim.strip[i]:sim.strip[(sim.stripHead+i)%STRIP_LEN];
- const yOf=v=>h-6-Math.sqrt(Math.min(1,Math.max(0,v)/0.16))*(h-12);
+ const yOf=v=>laneH+plotH-6-Math.sqrt(Math.min(1,Math.max(0,v)/0.16))*(plotH-11);
+
+ // Dedicated top note lane background + separator.
+ stripCtx.fillStyle='#16131d';stripCtx.fillRect(0,0,w,laneH);
+ stripCtx.fillStyle='#2a2533';stripCtx.fillRect(0,laneH-1,w,1);
 
  // 5-second vertical grid lines across the 30 s window (100 samples = 5 s).
  stripCtx.strokeStyle='#24202b';stripCtx.lineWidth=1;
@@ -320,14 +357,14 @@ function drawActivityStrip(s){
   const p=at(i),x=(startCol+i)*colW;
   if(p.holding){
    holdCount++;
-   stripCtx.fillStyle='rgba(201,162,74,0.28)';stripCtx.fillRect(x,0,colW+0.6,h);
+   stripCtx.fillStyle='rgba(201,162,74,0.28)';stripCtx.fillRect(x,laneH,colW+0.6,plotH);
    stripCtx.fillStyle='#c9a24a';stripCtx.fillRect(x,h-3,colW+0.6,3);
   }else if(p.active){
    creditedCount++;
-   stripCtx.fillStyle='rgba(111,174,122,0.18)';stripCtx.fillRect(x,0,colW+0.6,h);
+   stripCtx.fillStyle='rgba(111,174,122,0.18)';stripCtx.fillRect(x,laneH,colW+0.6,plotH);
    stripCtx.fillStyle='#6fae7a';stripCtx.fillRect(x,h-3,colW+0.6,3);
   }
-  if(p.clipped){stripCtx.fillStyle='#c2425c';stripCtx.fillRect(x,0,colW+0.6,3);}
+  if(p.clipped){stripCtx.fillStyle='#c2425c';stripCtx.fillRect(x,laneH,colW+0.6,3);}
  }
 
  // Gate line.
@@ -349,9 +386,33 @@ function drawActivityStrip(s){
   stripCtx.stroke();
  }
 
+ // Note lane: onset ticks and settled note names across the trailing 30 s window.
+ const winSpanMs=STRIP_LEN*STRIP_STEP_MS,winStartMs=sim.now-winSpanMs;
+ const events=window.VexScenario.readRecentEvents(M).filter(e=>e.onsetMs>=winStartMs&&e.onsetMs<=sim.now+50);
+ stripCtx.font='10px ui-monospace,SFMono-Regular,Menlo,monospace';
+ stripCtx.fillStyle='#6f6774';stripCtx.fillText('NOTES',4,13);
+ let lastLabelRight=38;
+ const visibleNotes=[];
+ for(const ev of events){
+  const x=Math.max(1,Math.min(w-2,((ev.onsetMs-winStartMs)/winSpanMs)*w));
+  stripCtx.fillStyle=ev.legato?'#c2425c':'#e8c468';
+  stripCtx.fillRect(Math.round(x),2,1.6,laneH-3);
+  stripCtx.fillStyle='rgba(232,196,104,0.22)';
+  stripCtx.fillRect(Math.round(x),laneH,1,plotH-3);
+  const tag=ev.pitched&&ev.note?ev.note:'';
+  if(tag)visibleNotes.push(tag);
+  if(tag&&x+3>=lastLabelRight&&x<w-18){
+   stripCtx.fillStyle=ev.legato?'#f0a4b2':'#ece6da';
+   stripCtx.fillText(tag,Math.round(x)+3,13);
+   lastLabelRight=x+3+tag.length*6.4+3;
+  }
+ }
+
  c.dataset.totalSamples=String(n);
  c.dataset.creditedSamples=String(creditedCount);
  c.dataset.holdSamples=String(holdCount);
+ c.dataset.noteEvents=String(events.length);
+ c.dataset.lastNotes=visibleNotes.slice(-12).join(',');
 
  let label;
  if(s.stage!==4)label=`stage ${s.stage} · practice inactive`;
@@ -409,6 +470,8 @@ function updatePanels(force){
  if(sim.source&&sim.source.kind==='wav')$('wav-pos').textContent=`${(sim.source.pos/RATE).toFixed(1)} / ${(sim.source.total/RATE).toFixed(1)} s`;
  $('power').textContent=s.power?'power on':'POWER CUT · reboot to continue';
 
+ const evSig=`${s.onsets}:${s.note_midi}`;
+ if(evSig!==sim.lastEventSig){sim.lastEventSig=evSig;sim.stripDirty=true;}
  if(sim.stripDirty||force)drawActivityStrip(s);
  if(sessionCtrl)sessionCtrl.evaluate();
 
@@ -586,6 +649,7 @@ function wire(){
  $('syn-db').oninput=e=>$('syn-db-t').textContent=`${e.target.value} dBFS`;
  $('wav-play').onclick=async()=>{try{$('wav-play').disabled=true;const pcm=await loadWav();setSource(wavSource(pcm));note('playing test recording');}catch(e){note('WAV failed: '+e.message);}finally{$('wav-play').disabled=false;}};
  $('mic-start').onclick=async()=>{if(mic){stopSource('stopped');return;}try{setSource(await micSource());$('mic-start').textContent='Stop Mac input';note('Mac input started');}catch(e){$('mic-info').textContent='Microphone unavailable: '+e.message;}};
+ $('clip-rec').onclick=toggleClipRecording;
 
  const drawer=$('inspect-drawer');
  if(localStorage.getItem('vex.inspect')==='1')drawer.open=true;

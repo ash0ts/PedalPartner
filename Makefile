@@ -10,16 +10,19 @@ SEND ?=
 HEADERS := $(wildcard firmware/VEX_Pocket_Rival/*.h)
 ART := $(wildcard art/*.json art/*/*.json art/*/*.png)
 
-.PHONY: test sim sim-build art art-check motion web web-check firmware firmware-all setup-firmware upload monitor ports bench bench-report measure-check cad cad-check render render-meshes hero pack-mentor pack-studio docs check clean
+.PHONY: test eval sim sim-build art art-check motion web web-check firmware firmware-all setup-firmware upload monitor ports bench bench-report measure-check cad cad-check render render-meshes hero pack-mentor pack-studio docs check clean
 build:
 	mkdir -p build
-build/core-tests: tests/core_tests.cpp $(HEADERS) | build
+build/core-tests: tests/core_tests.cpp $(HEADERS) $(wildcard simulator/*.h) | build
 	$(CXX) $(CXXFLAGS) $< -o $@
 build/vex-sim: simulator/main.cpp $(wildcard simulator/*.h) $(HEADERS) | build
 	$(CXX) $(CXXFLAGS) $< -o $@
+eval: build/vex-sim
+	$(PYTHON) tools/eval_audio.py
 test: build/core-tests build/vex-sim
 	./build/core-tests
 	$(PYTHON) tests/simulator_test.py
+	$(PYTHON) tools/eval_audio.py --quiet
 	$(PYTHON) tests/pack_test.py
 	$(PYTHON) tests/art_test.py
 	$(PYTHON) tests/link_test.py

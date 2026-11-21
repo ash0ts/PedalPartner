@@ -1,0 +1,22 @@
+{
+  "name": "fast_scale_run_130x4",
+  "kind": "synthetic",
+  "pitch_mode": "run",
+  "commands": [
+    "notes 130x4 0 0 -18 G2 A2 B2 C3 D3 E3 F#3 G3 A3 B3 C4 D4"
+  ],
+  "expected": [
+    {"onset_ms": 50.0, "note": "G2"},
+    {"onset_ms": 165.38, "note": "A2"},
+    {"onset_ms": 280.77, "note": "B2"},
+    {"onset_ms": 396.15, "note": "C3"},
+    {"onset_ms": 511.54, "note": "D3"},
+    {"onset_ms": 626.92, "note": "E3"},
+    {"onset_ms": 742.31, "note": "F#3"},
+    {"onset_ms": 857.69, "note": "G3"},
+    {"onset_ms": 973.08, "note": "A3"},
+    {"onset_ms": 1088.46, "note": "B3"},
+    {"onset_ms": 1203.85, "note": "C4"},
+    {"onset_ms": 1319.23, "note": "D4"}
+  ]
+}
