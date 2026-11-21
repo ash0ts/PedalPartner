@@ -444,8 +444,9 @@ function skillsSlotHtml(i,s){
  const off=128+64*i,b=storeBytes.subarray(off,off+64),dv=new DataView(b.buffer,b.byteOffset,64);
  const magic=dv.getUint32(0,true),ver=dv.getUint32(4,true),seq=dv.getUint32(8,true),sum=dv.getUint32(60,true);
  const valid=magic===0x56585331&&ver===1&&sum===crc32(b,60);
- const names=['pulse','hunt','bend','run','touch'];
- const stats=names.map((n,k)=>`${n}:${dv.getUint16(12+k*6,true)}`).join(' · ');
+ const defs=[['pulse','pulse-qtr'],['hunt','hunt-str'],['bend','bend-half'],['run','run-penta'],['touch','touch-acc3']];
+ const fmt=window.VexSession&&window.VexSession.fmtBest?window.VexSession.fmtBest:(_,v)=>String(v);
+ const stats=defs.map(([n,act],k)=>{const v=dv.getUint16(12+k*6,true);return `${n}:${v?fmt(act,v):'—'}`;}).join(' · ');
  return `<h4>skills ${i} (@${off}) ${s.skills_slot===i?'· loaded':''} · ${valid?'valid':'empty/invalid'}</h4><div class="mono">seq ${seq} · ${stats}</div>`;
 }
 
@@ -509,7 +510,7 @@ function updatePanels(force){
 
 let storeSig=0;
 function persistIfChanged(){
- let h=0;for(let i=0;i<128;i++)h=(h*31+storeBytes[i])>>>0;
+ let h=0;for(let i=0;i<storeBytes.length;i++)h=(h*31+storeBytes[i])>>>0;
  if(h!==storeSig){storeSig=h;persist();}
 }
 
@@ -644,6 +645,35 @@ function selectInspectTab(tabName){
 }
 
 // Guitar drills panel ("Play it for me" performances via shared protocol.h) -----------------------
+const DRILL_FAMILIES=[
+ {prefix:'pulse',label:'Timing',walk:'pulse',
+  plays:{steady:'Clean 4-bar take (+4 BPM)',rushing:'Rushing (−9 ms/note)',uneven:'Uneven (±46 ms jitter)',wrong:'Off-grid notes'},
+  hint:'Anchors on your first pick. Keep within ±30 ms for 4 bars to climb +4 BPM; amber LED flashes the beat (except PULSE FREE).'},
+ {prefix:'hunt',label:'Note finder',walk:'hunt',
+  plays:{steady:'Find all 10 notes',rushing:'Fast 4-note streak',uneven:'Slow / hesitant finds',wrong:'Wrong string / note'},
+  hint:'HUNT STR checks exact string + pitch register (e.g. F#2 on E6 vs F#3 on D); HUNT ANY accepts any octave. Slow notes repeat sooner.'},
+ {prefix:'bend',label:'Bend & vib',walk:'bend',
+  plays:{steady:'8 clean target bends',rushing:'Steady E4 vibrato',uneven:'Over-bent (+28 c sharp)',wrong:'Under-bent (−32 c flat)'},
+  hint:'Fret a base note (≥ D3) then bend up +100 c (1/2) or +200 c (full) and hold the top. Holding steady wobble reports vibrato Hz & cents.'},
+ {prefix:'run',label:'Scale runs',walk:'run',
+  plays:{steady:'Clean 16-note scale run',rushing:'Brisk 128 BPM run',uneven:'Uneven spacing run',wrong:'Out-of-key notes (red)'},
+  hint:'First note of each 16-note phrase sets your key root. In-scale notes light gold; outside notes flash red and protect your clean BPM best.'},
+ {prefix:'touch',label:'Dynamics',walk:'touch',
+  plays:{steady:'Clean take (hits accents)',rushing:'Fast even picking',uneven:'Uneven volume (±6 dB)',wrong:'Accent on wrong beat'},
+  hint:'Pitch is gated off. Bars plot each pick’s dB level vs your running median; ACC3 / ACC4 require ≥ +4 dB on beat 1 of each group.'}
+];
+function familyForActivity(act){
+ return DRILL_FAMILIES.find(f=>act&&act.startsWith(f.prefix))||DRILL_FAMILIES[0];
+}
+function selectDrillBySlug(slug){
+ setPaused(false);setInputMode('quiet');
+ if(sim.stage!==4){sim.stage=4;$('stage').value='4';boot(false);}
+ let st=readState();
+ if(!st.calibrated)execSim('calibrate');
+ execSim(`drill ${slug}`);
+ recordCommand(`drill ${slug}`);
+ renderScreenNow();updatePanels(true);
+}
 function execSim(line){
  window.VexScenario.execLine(M,line);
  if(M._vex_store_dirty())persist();
@@ -653,22 +683,29 @@ function execSim(line){
 function initDrillsPanel(){
  const wrap=$('drill-presets');if(!wrap)return;
  wrap.innerHTML='';
+ const buckets=new Map(DRILL_FAMILIES.map(f=>[f.prefix,[]]));
  const n=M._vex_preset_count();
  for(let i=0;i<n;i++){
   const slug=M.UTF8ToString(M._vex_preset_slug(i));
   const title=M.UTF8ToString(M._vex_preset_title(i));
-  const b=document.createElement('button');
-  b.type='button';b.className='pill';b.dataset.drill=slug;b.textContent=title;
-  b.onclick=()=>{
-   setPaused(false);setInputMode('quiet');
-   if(sim.stage!==4){sim.stage=4;$('stage').value='4';boot(false);}
-   let st=readState();
-   if(!st.calibrated)execSim('calibrate');
-   execSim(`drill ${slug}`);
-   recordCommand(`drill ${slug}`);
-   renderScreenNow();updatePanels(true);
-  };
-  wrap.appendChild(b);
+  const fam=familyForActivity(slug);
+  buckets.get(fam.prefix).push({slug,title});
+ }
+ for(const fam of DRILL_FAMILIES){
+  const row=document.createElement('div');
+  row.className='drill-fam';row.dataset.fam=fam.prefix;
+  const lbl=document.createElement('span');
+  lbl.className='drill-fam-lbl';lbl.textContent=fam.label;
+  lbl.style.cursor='pointer';lbl.title=`Open ${fam.label} step-by-step walkthrough`;
+  lbl.onclick=()=>{if(sessionCtrl)sessionCtrl.setTrack(fam.walk);};
+  const pills=document.createElement('div');pills.className='drill-fam-pills';
+  for(const item of buckets.get(fam.prefix)){
+   const b=document.createElement('button');
+   b.type='button';b.className='pill';b.dataset.drill=item.slug;b.textContent=item.title;
+   b.onclick=()=>selectDrillBySlug(item.slug);
+   pills.appendChild(b);
+  }
+  row.appendChild(lbl);row.appendChild(pills);wrap.appendChild(row);
  }
  for(const b of document.querySelectorAll('[data-drill-play]')){
   b.onclick=()=>playDrillPerformance(b.dataset.drillPlay);
@@ -678,11 +715,25 @@ function updateDrillsPanel(s){
  for(const b of document.querySelectorAll('[data-drill]')){
   b.classList.toggle('sel',s.activity===b.dataset.drill);
  }
+ const fam=familyForActivity(s.activity);
+ const onDrill=s.activity!=='pet'&&s.activity!=='tuner';
+ for(const row of document.querySelectorAll('.drill-fam')){
+  row.classList.toggle('active',onDrill&&row.dataset.fam===fam.prefix);
+ }
+ for(const b of document.querySelectorAll('[data-drill-play]')){
+  const k=b.dataset.drillPlay;
+  if(fam.plays[k])b.textContent=fam.plays[k];
+ }
+ const hintEl=$('drill-hint');
+ if(hintEl){
+  hintEl.textContent=onDrill?fam.hint:'On the pedal: tap MODE twice (Pet → Tuner → Drill), tap QUEST while paused to cycle presets, and tap FOOTSWITCH to start/pause.';
+ }
  const el=$('drill-status');if(!el)return;
- if(s.activity==='pet'||s.activity==='tuner'){
-  el.textContent=`on ${s.activity} · click a preset above to open Drill`;
+ const fmt=window.VexSession&&window.VexSession.fmtBest?window.VexSession.fmtBest:(_,v)=>String(v);
+ if(!onDrill){
+  el.textContent=`currently on ${s.activity.toUpperCase()} · click any preset below or tap MODE twice`;
  }else{
-  el.textContent=`${s.activity} · ${s.running?'running':'paused'}${s.bpm?` · ${s.bpm} BPM`:''} · best ${s.drill_best} · rounds ${s.drill_rounds}`;
+  el.textContent=`${s.activity} · ${s.running?'running':'paused'}${s.bpm?` · ${s.bpm} BPM`:''} · best ${fmt(s.activity,s.drill_best)} · rounds ${s.drill_rounds}`;
  }
 }
 function playDrillPerformance(kind){
@@ -696,12 +747,12 @@ function playDrillPerformance(kind){
  const PC=['C','C#','D','D#','E','F','F#','G','G#','A','Bb','B'];
  if(act.startsWith('pulse')){
   const is8=act==='pulse-8th',bpm=s.bpm||96,rate=is8?`${bpm}x2`:`${bpm}`;
-  const notes16='E2 E2 E2 E2 A2 A2 A2 A2 D3 D3 D3 D3 G3 G3 G3 G3';
+  const notes16='D3 D3 D3 D3 G3 G3 G3 G3 B3 B3 B3 B3 E4 E4 E4 E4';
   const notes=is8?`${notes16} ${notes16}`:notes16;
   if(kind==='steady')execSim(`notes ${rate} 2 0 -18 ${notes}`);
-  else if(kind==='rushing')execSim(`notes ${rate} 6 -9 -18 ${notes16}`);
-  else if(kind==='uneven')execSim(`notes ${rate} 46 0 -18 ${notes16}`);
-  else execSim(`notes ${rate} 3 0 -18 C#3 F3 F#3 C3 G#2 D#3 Bb2 E3`);
+  else if(kind==='rushing')execSim(`notes ${rate} 6 -9 -18 ${notes}`);
+  else if(kind==='uneven')execSim(`notes ${rate} 46 0 -18 ${notes}`);
+  else execSim(`notes ${rate} 55 11 -18 ${notes}`);
  }else if(act.startsWith('hunt')){
   const midiName=m=>`${PC[m%12]}${Math.floor(m/12)-1}`;
   if(kind==='wrong'){
@@ -733,12 +784,12 @@ function playDrillPerformance(kind){
  }else if(act.startsWith('touch')){
   const acc3=act==='touch-acc3',acc4=act==='touch-acc4';
   if(kind==='steady'){
-   if(acc3)execSim('notes 110x2 2 0 -20 A2@+6 A2 A2 D3@+6 D3 D3 E3@+6 E3 E3 A2@+6 A2 A2');
-   else if(acc4)execSim('notes 110x2 2 0 -20 A2@+6 A2 A2 A2 D3@+6 D3 D3 D3 E3@+6 E3 E3 E3');
-   else execSim('notes 110x2 2 0 -18 A2 A2 A2 A2 D3 D3 D3 D3 E3 E3 E3 E3');
-  }else if(kind==='rushing')execSim('notes 132x2 4 0 -18 A2 A2 A2 A2 D3 D3 D3 D3 E3 E3 E3 E3');
-  else if(kind==='uneven')execSim('notes 110x2 5 0 -20 A2@-6 A2@+5 A2@-4 A2@+7 D3@-5 D3@+4 D3@-7 D3@+6');
-  else execSim('notes 110x2 2 0 -18 A2 A2@+6 A2 D3 D3@+6 D3 E3 E3@+6 E3 A2 A2@+6 A2');
+   if(acc3)execSim('notes 110x2 2 0 -20 D3@+6 D3 D3 G3@+6 G3 G3 B3@+6 B3 B3 D3@+6 D3 D3');
+   else if(acc4)execSim('notes 110x2 2 0 -20 D3@+6 D3 D3 D3 G3@+6 G3 G3 G3 B3@+6 B3 B3 B3');
+   else execSim('notes 110x2 2 0 -18 D3 D3 D3 D3 G3 G3 G3 G3 B3 B3 B3 B3');
+  }else if(kind==='rushing')execSim('notes 132x2 4 0 -18 D3 D3 D3 D3 G3 G3 G3 G3 B3 B3 B3 B3');
+  else if(kind==='uneven')execSim('notes 110x2 5 0 -20 D3@-6 D3@+5 D3@-4 D3@+7 G3@-5 G3@+4 G3@-7 G3@+6 B3@-5 B3@+6 B3@-4 B3@+5');
+  else execSim('notes 110x2 2 0 -18 D3 D3@+6 D3 G3 G3@+6 G3 B3 B3@+6 B3 D3 D3@+6 D3');
  }
  renderScreenNow();updatePanels(true);
 }
@@ -831,6 +882,8 @@ VexModule().then(mod=>{
   exitTestPattern:()=>{if(sim.testPattern)setTestPattern(false);},
   press:(name,ms)=>{setPaused(false);pressSync(name,ms);renderScreenNow();updatePanels(true);},
   advance:ms=>{setPaused(false);run(ms);renderScreenNow();updatePanels(true);},
+  selectDrill:slug=>selectDrillBySlug(slug),
+  playDrill:kind=>playDrillPerformance(kind),
   reboot:()=>{recordCommand('reboot');boot(true);renderScreenNow();updatePanels(true);}
  });
  sessionCtrl.resetProgress();
