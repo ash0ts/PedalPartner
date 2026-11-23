@@ -4,7 +4,7 @@ This brief explains what VEX is, what is locked in for the **current R1.1 protot
 
 ## 1. What the device is
 
-VEX is a small guitar practice companion (`86 × 146 × 45 mm` nominal) with a pixel-art bat on a round 1.28" (`32.4 mm` active, `240 × 240`) TFT display. While the player practises, VEX detects playing activity, awards participation XP, runs 5/10/20-minute quests, grants one fragment per completed session, and provides a single-note tuner.
+VEX is a small guitar practice companion (`86 × 146 × 45 mm` nominal) with a pixel-art bat on a round 1.28" (`32.4 mm` active, `240 × 240`) TFT display. While the player practises, VEX detects playing activity, awards participation XP, runs 5/10/20-minute quests, grants one fragment per completed session, and provides a single-note tuner plus five single-note guitar drills (`PULSE`, `HUNT`, `BEND`, `RUN`, `TOUCH`, with tempo beat pulses on the existing status LED).
 
 In R1.1, VEX listens on a **buffered dry branch** of the player's rig (single ¼" input jack, USB 5 V power, no audio output or bypass switching). That keeps the first hardware build electrically simple while firmware, animations and game feel are refined on real guitars.
 
@@ -67,7 +67,7 @@ Paths below exist both in the repository (https://github.com/ash0ts/PedalPartner
 | Cut profiles & print notes | `hardware/generated/drawings/Foot_Plate_2mm_Aluminum.dxf`, `Window_1mm_Polycarbonate.dxf`, `hardware/generated/stl/*.stl`, `docs/PRINTING.md`, `docs/VEX_Pocket_Rival_1to1_Templates.pdf` |
 | Purchasing, fasteners & hookup | `docs/SHOPPING.md`, `hardware/data/BOM.csv`, `fasteners.csv`, `wiring.csv`, `docs/SOURCES.md`, `firmware/VEX_Pocket_Rival/config.h` |
 | Assembly & bench sequence | `docs/VEX_Pocket_Rival_Mentor_Guide.pdf` (`docs/BUILD_GUIDE.md`), `docs/BRINGUP.md`, `docs/HANDOFF.md` |
-| Visuals & UI behaviour | `assets/marketing/vex-hero.jpg`, `assets/motion/vex-motion.mp4`, `assets/motion/storyboard.png`, `assets/screens/contact_sheet.png` |
+| Visuals & UI behaviour | `assets/marketing/vex-hero.jpg`, `assets/motion/vex-motion.mp4`, `assets/motion/storyboard.png`, `assets/screens/contact_sheet.png`, `docs/DRILLS.md` |
 | Design rationale & V2 roadmap | `docs/DECISIONS.md`, `docs/EXTENSIBILITY.md` |
 | Licences & CAD attribution | `LICENSE` (MIT for original work), `docs/THIRD_PARTY.md`, `hardware/vendor/PROVENANCE.md`, `hardware/vendor/ADAFRUIT_LICENSE.txt` |
 

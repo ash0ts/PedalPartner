@@ -1,6 +1,6 @@
 # An extensible practice companion
 
-Status: architecture proposal, 17 November 2026. Reviewed against R1.1 commit `b97ae66db5bb4e309c0f24ae5083732490a7c6ce`. The interfaces and later features described below are not implemented unless explicitly identified as existing.
+Status: architecture proposal, 17 November 2026. Reviewed against R1.1 commit `b97ae66db5bb4e309c0f24ae5083732490a7c6ce`. Since that review, R1.1 extracted shared `app.h`, `analyzer.h`, `notes.h`, `drills.h` (five single-note drills with `Skills` v1 at EEPROM 128/192; see [DRILLS.md](DRILLS.md)) and `link.h` (bench mirror; see [HANDOFF.md](HANDOFF.md)); session history, save-version migration tooling, framed USB application sync, adaptive coaching policy and a host companion app remain future work as described below.
 
 ## Product boundary
 

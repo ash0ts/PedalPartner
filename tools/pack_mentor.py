@@ -113,8 +113,9 @@ components and building the R1.1 3D-printed and laser-cut prototype enclosure.
    (renders of the actual CAD). `assets/motion/vex-motion.mp4`, `storyboard.png` and
    `assets/screens/contact_sheet.png` show the 240 x 240 UI and character.
 6. `docs/VEX_Pocket_Rival_Mentor_Guide.pdf` (`docs/BUILD_GUIDE.md`) covers wiring,
-   staged bring-up and physical acceptance checks; `docs/DECISIONS.md` and
-   `docs/EXTENSIBILITY.md` cover rationale and future V2 scope.
+   staged bring-up and physical acceptance checks; `docs/DRILLS.md`,
+   `docs/DECISIONS.md` and `docs/EXTENSIBILITY.md` cover UI/drill behaviour,
+   rationale and future V2 scope.
 
 Nominal enclosure 86 x 146 x 45 mm; active screen 32.4 mm. USB 5 V only. Buffered dry
 audio input only. No audio output or bypass. There is no PCB schematic file, force
