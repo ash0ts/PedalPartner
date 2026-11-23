@@ -9,7 +9,7 @@ A practical first build for a hobbyist alone, a hobbyist with a mentor, or a des
 
 ### THE OBJECT
 
-A black, crimson and ochre practice companion with a round pixel pet, activity XP and an experimental tuner.
+A black, crimson and ochre practice companion with a round pixel pet, activity XP, a tuner and five single-note drills.
 
 ### THE FIRST BUILD
 
@@ -63,7 +63,7 @@ Add the audio board and attenuator. Learn signal level, RMS, clipping and calibr
 
 Fit the real parts, assemble the case, route wires and verify readability and strength. Then test the companion alongside your rig.
 
-**Checkpoint:** R1 does not provide audio bypass, silent muting, 9 V pedal power, MIDI control, daily streaks or technique assessment.
+**Checkpoint:** R1 does not provide audio bypass, silent muting, 9 V pedal power, MIDI control, daily streaks or chord/polyphonic scoring.
 
 ## 04. The important design choices
 
@@ -358,13 +358,13 @@ Keep the foot action predictable
 
 |Control|Tap|Hold 1.2 seconds|
 |---|---|---|
-|MODE|Practice / tuner; pauses practice|Save current progress|
-|QUEST|While paused: choose 5/10/20 min; resets session|Calibrate noise; pauses practice|
-|FOOT|Start / pause (practice mode, calibrated)|New session; keeps lifetime XP and fragments|
-|Tuner|Large note and cents, A440, single notes only|No audio muting; your rig's tuner or mute handles that|
+|MODE|Pet / tuner / drills; pauses practice|Save progress and drill bests|
+|QUEST|Paused: 5/10/20 min (Pet) or drill preset|Calibrate noise; pauses practice|
+|FOOT|Start / pause (Pet or Drills, calibrated)|New session; keeps XP, fragments, bests|
+|Tuner / Drills|A440 single-note tuner + 5 guitar drills|No audio muting or output; LED pulses tempo|
 |VEX|Riffs while active; rests after 30s without activity|No death, debt or punishment for missed days|
 
-**Checkpoint:** Streaks, timed schedules, rhythm scores, bend challenges and battles are future work. No clock/calendar or technique judging is implied.
+**Checkpoint:** Participation XP stays separate from drill bests (docs/DRILLS.md). Calendar streaks, chords and battles remain future work.
 
 ## 20. Understand the CAD
 
@@ -556,7 +556,7 @@ Change quest rules in core.h. Add a test proving the reward happens once at the 
 
 ### 3 / BETTER CHALLENGES
 
-Add rhythm/bend scoring as separate exercises with known targets. Keep participation XP independent. Test noise, chords and wrong notes before trusting scores.
+Five single-note drills live in drill_*.h (docs/DRILLS.md) with Skills bests separate from XP. Test noise, chords and wrong notes before trusting a new drill.
 
 ### 4 / HARDWARE NEXT
 
@@ -595,7 +595,7 @@ Actual display/audio behavior, component revisions, wiring clearance, electrical
 
 ### TARGET BUILD EVIDENCE
 
-make setup-firmware and make firmware-all compile all four stages without hardware (passes locally, 17 Nov 2026). Display timing is instrumented (flush_us, tx_bytes) but unmeasured until a board is on the bench.
+make setup-firmware and make firmware-all compile all four stages without hardware (passes locally, 20 Nov 2026). Display timing is instrumented (flush_us, tx_bytes) but unmeasured until a board is on the bench.
 
 ### PHYSICAL RELEASE
 
@@ -631,11 +631,11 @@ Shared C++ practice logic and screen renderer run locally
 
 ### RUN
 
-From the repo: make test, then make sim. Open http://127.0.0.1:8765. No Arduino toolchain or third-party Python packages are required for the simulator.
+From the repo: make test, then make sim. Open http://127.0.0.1:8765. Emscripten builds the shared firmware to WebAssembly; no Arduino toolchain is needed for the simulator.
 
 ### EXERCISE
 
-Calibrate, start, choose Playing and advance five active minutes. Try silence, clipping, stale samples, tuner, Save, Reboot and corrupt-record fallback.
+Follow the Step-by-step guide through First Run and the five guitar drills, or test silence, clipping, tuner, Save, Reboot and torn-write recovery.
 
 ### COMPILE
 
@@ -643,7 +643,7 @@ Install Arduino CLI; make setup-firmware; make firmware-all. This compiles all f
 
 ### UNDERSTAND THE LIMIT
 
-The simulator injects RMS/peak/Hz; it does not emulate the ADC, pitch detector, USB noise, switches or physical screen optics.
+The browser runs the shared C++ App, YIN/onset analyzer, NoteTracker, drills and renderer; it does not emulate the codec, USB noise, switches or screen optics.
 
 ### WITH A TEENSY ATTACHED
 

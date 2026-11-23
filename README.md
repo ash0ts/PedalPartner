@@ -1,6 +1,6 @@
 # PedalPartner
 
-**VEX / Pocket Rival** is a first-build guitar practice companion: a pixel bat that earns participation XP while you play, with short practice quests and an experimental tuner. It listens to a buffered dry branch of your rig. Your existing guitar audio path stays independent.
+**VEX / Pocket Rival** is a first-build guitar practice companion: a pixel bat that earns participation XP while you play, with short practice quests, a single-note tuner and five single-note guitar drills. It listens to a buffered dry branch of your rig. Your existing guitar audio path stays independent.
 
 ![VEX / Pocket Rival — studio render of the actual R1.1 CAD assembly](assets/marketing/vex-hero.jpg)
 
@@ -29,6 +29,7 @@ Where the documents say "mentor", read: an experienced second person. Everything
 | Review or modify the design | [CAD review map](docs/CAD_REVIEW.md), [grouped STEP](hardware/generated/VEX_Pocket_Rival_Assembly.step) |
 | Print or cut parts | [Fabrication instructions](docs/PRINTING.md), [STLs](hardware/generated/stl), [DXFs](hardware/generated/drawings), [1:1 templates](docs/VEX_Pocket_Rival_1to1_Templates.pdf) |
 | Try the software without hardware | [Local development](docs/LOCAL_DEVELOPMENT.md) |
+| Practise or add a guitar drill | [Guitar drills](docs/DRILLS.md) — five single-note drills (`PULSE`, `HUNT`, `BEND`, `RUN`, `TOUCH`), boundaries and add-a-drill recipe |
 | Draw VEX: sprites, colours, fonts, motion | [Art pipeline](docs/ART.md) — PNG + JSON in `art/` with per-animation play sequences, no C++; [motion video](assets/motion/vex-motion.mp4) from the shared renderer |
 | Debug on a real Teensy | [Bench loop](docs/LOCAL_DEVELOPMENT.md#4-bench-loop-with-a-teensy-attached) — `make bench STAGE=n`, `make monitor`, `make bench-report`, serial knobs and a display test pattern |
 | Parts arrived: bench and enclosure in parallel | [Bring-up runbook](docs/BRINGUP.md) — three sessions, two gates, `make measure-check` says what to print now |
@@ -46,7 +47,7 @@ make test
 make sim
 ```
 
-`make sim` also needs Emscripten (`brew install emscripten`). Open **http://127.0.0.1:8765**: the firmware's shared state machine, analyzer and renderer run in the browser as WebAssembly. Hold QUEST to calibrate, tap the footswitch, advance five active minutes, then try silence, clipping, stale samples, the tuner with a synth note or your Mac input, saving, a power cut and rebooting. It does not emulate the Teensy's codec, timing or electronics.
+`make sim` also needs Emscripten (`brew install emscripten`). Open **http://127.0.0.1:8765**: the firmware's shared state machine, analyzer, note tracker, five guitar drills and renderer run in the browser as WebAssembly. Follow the progressive **Step-by-step guide** through **First Run** (calibrate, start, strum across chord gaps, finish a quest, check the tuner, save and reboot) and the five drills (**Timing**, **Note Finder**, **Bend & Vibrato**, **Scale Run**, **Dynamics**), or feed a synth note, the reference WAV or your Mac input. It does not emulate the Teensy's codec, timing or electronics.
 
 With Arduino CLI installed, `make setup-firmware` installs pinned dependencies and `make firmware-all` compiles all four bring-up stages **without uploading**. See the [full instructions](docs/LOCAL_DEVELOPMENT.md).
 
@@ -69,6 +70,6 @@ The sketch prints what it measures (`flush_us`, `flush_max_us`, `loop_max_us`, `
 - Automatic CI runs only a short Linux desktop test job. Firmware and CAD builds are manual under [Actions](https://github.com/ash0ts/PedalPartner/actions). All four stages compile locally with the pinned Teensy core; nothing has run on a board yet, so SPI timing, tearing and perceived motion are still bench questions the Device tab is built to answer.
 - This is a **review prototype**, not a physically validated pedal. Purchased parts, solder/header heights, cable fit, power/noise, display readability and foot-load behavior still need bench tests. [Evidence and limits](docs/HANDOFF.md).
 
-R1.1 uses Teensy 4.1, Audio Adapter D/D2, Adafruit 6178 and USB 5 V. It has no audio output, bypass, muting or 9 V pedal-power input. No technique scoring or calendar streaks are claimed.
+R1.1 uses Teensy 4.1, Audio Adapter D/D2, Adafruit 6178 and USB 5 V. It has no audio output, bypass, muting or 9 V pedal-power input. Participation XP claims no technique score and there are no calendar streaks or polyphonic chord claims; the five single-note drills track separate personal bests within the monophonic limits in [docs/DRILLS.md](docs/DRILLS.md).
 
 Original project work uses the existing [MIT license](LICENSE). Imported CAD and fonts retain their own terms; see [third-party notices](docs/THIRD_PARTY.md).
